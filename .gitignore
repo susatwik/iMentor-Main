@@ -80,3 +80,12 @@ git_log.txt
 GAP_ANALYSIS_AND_PLAN.md
 dump.rdb
 server/dump.rdb
+
+# Local architecture/prompt notes (do not push)
+SKILL_TREE_STUDENT_ANALYSIS.md
+SYSTEM_PERFORMANCE_BUGS.md
+app/prompt.md
+
+# Local/generated course content (do not push)
+server/course_bootstrap/
+server/Cpurses/
