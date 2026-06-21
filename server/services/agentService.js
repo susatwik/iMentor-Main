@@ -938,6 +938,12 @@ async function processAgenticRequest(
     toolCall = null;
   }
 
+  // --- DETERMINISTIC CODE OVERRIDE ---
+  if (requestContext?.intent === 'code' && !requestContext?.isWebSearchEnabled && !requestContext?.isAcademicSearchEnabled && !requestContext?.documentContextName) {
+    log.info('AI', `[CODE_OVERRIDE] intent="code" — forcing direct_answer`);
+    toolCall = null;
+  }
+
   if ((!toolCall || !toolCall.tool_name) && requestContext?.intent === 'research') {
     toolCall = {
       tool_name: requestContext?.isAcademicSearchEnabled ? 'academic_search' : 'web_search',
@@ -985,93 +991,119 @@ async function processAgenticRequest(
     const finalSystemPrompt = CHAT_MAIN_SYSTEM_PROMPT();
 
     let directAnswer;
-    if (onToken) {
-      // STREAMING PATH — all providers now supported via unified streaming service
-      const messagesForStreaming = [
-        ...chatHistory.map(m => ({ role: m.role, content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content) })),
-        { role: 'user', content: userQuery }
-      ];
+    const fb = getFallbackService();
+    if (fb && typeof fb.callWithFallback === 'function') {
+      const fallbackResult = await fb.callWithFallback({
+        chatHistory,
+        userQuery,
+        systemPrompt: finalSystemPrompt,
+        options: {
+          ...llmOptions,
+          geminiModel: llmOptions.geminiModel,
+          groqModel: llmOptions.groqModel,
+          model: llmOptions.model
+        },
+        preferredProvider: llmProvider,
+        preferLocalFirst: llmProvider === 'sglang' || llmProvider === 'ollama',
+        userApiKeys: {
+          gemini: llmOptions.apiKey && llmProvider === 'gemini' ? llmOptions.apiKey : process.env.GEMINI_API_KEY,
+          groq: llmOptions.apiKey && llmProvider === 'groq' ? llmOptions.apiKey : process.env.GROQ_API_KEY
+        },
+        ollamaUrl: llmOptions.ollamaUrl || process.env.OLLAMA_API_BASE_URL,
+        onToken: onToken
+      });
+      directAnswer = fallbackResult.thinking 
+        ? `<thinking>\n${fallbackResult.thinking}\n</thinking>\n${fallbackResult.text}`
+        : fallbackResult.text;
+    } else {
+      if (onToken) {
+        // STREAMING PATH — all providers now supported via unified streaming service
+        const messagesForStreaming = [
+          ...chatHistory.map(m => ({ role: m.role, content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content) })),
+          { role: 'user', content: userQuery }
+        ];
 
-      const isThinkingModel = /qwen3|qwq|deepseek.*r1|gemma3|gemma-3/i.test(llmOptions.model || llmOptions.geminiModel || '');
+        const isThinkingModel = /qwen3|qwq|deepseek.*r1|gemma3|gemma-3/i.test(llmOptions.model || llmOptions.geminiModel || '');
 
-      if (llmProvider === 'gemini' || llmProvider === 'groq' || llmProvider === 'anthropic' || llmProvider === 'mistral') {
-        directAnswer = await llmStreamingService.streamCompletion({
-          messages: messagesForStreaming,
-          provider: llmProvider,
-          model: llmOptions.geminiModel || llmOptions.model,
-          apiKey: llmOptions.apiKey,
-          systemPrompt: finalSystemPrompt,
-          onToken: onToken,
-          options: { ...llmOptions, handleThinkingTags: isThinkingModel }
-        });
-      } else if (llmProvider === 'ollama') {
-        // Ollama uses its own streamChat which handles thinking models natively
-        directAnswer = await ollamaService.streamChat(
-          chatHistory,
-          userQuery,
-          finalSystemPrompt,
-          llmOptions,
-          (token) => {
-            if (typeof token === 'string') {
-              onToken({ type: 'token', content: token });
-            } else {
-              onToken(token);
-            }
-          }
-        );
-      } else if (llmProvider === 'sglang') {
-        directAnswer = await llmStreamingService.streamCompletion({
-          messages: messagesForStreaming,
-          provider: 'sglang',
-          model: llmOptions.model,
-          systemPrompt: finalSystemPrompt,
-          onToken: onToken,
-          options: llmOptions,
-        });
-      } else {
-        // Unknown provider — try unified streaming, fall back to non-streaming
-        try {
+        if (llmProvider === 'gemini' || llmProvider === 'groq' || llmProvider === 'anthropic' || llmProvider === 'mistral') {
           directAnswer = await llmStreamingService.streamCompletion({
             messages: messagesForStreaming,
             provider: llmProvider,
-            model: llmOptions.model,
+            model: llmOptions.geminiModel || llmOptions.model,
             apiKey: llmOptions.apiKey,
+            systemPrompt: finalSystemPrompt,
+            onToken: onToken,
+            options: { ...llmOptions, handleThinkingTags: isThinkingModel }
+          });
+        } else if (llmProvider === 'ollama') {
+          // Router uses its own streamChat which handles thinking models natively
+          directAnswer = await ollamaService.streamChat(
+            chatHistory,
+            userQuery,
+            finalSystemPrompt,
+            llmOptions,
+            (token) => {
+              if (typeof token === 'string') {
+                onToken({ type: 'token', content: token });
+              } else {
+                onToken(token);
+              }
+            }
+          );
+        } else if (llmProvider === 'sglang') {
+          directAnswer = await llmStreamingService.streamCompletion({
+            messages: messagesForStreaming,
+            provider: 'sglang',
+            model: llmOptions.model,
             systemPrompt: finalSystemPrompt,
             onToken: onToken,
             options: llmOptions,
           });
-        } catch {
-          if (!llmService) throw new Error(`No streaming support for provider: ${llmProvider}`);
+        } else {
+          // Unknown provider — try unified streaming, fall back to non-streaming
+          try {
+            directAnswer = await llmStreamingService.streamCompletion({
+              messages: messagesForStreaming,
+              provider: llmProvider,
+              model: llmOptions.model,
+              apiKey: llmOptions.apiKey,
+              systemPrompt: finalSystemPrompt,
+              onToken: onToken,
+              options: llmOptions,
+            });
+          } catch {
+            if (!llmService) throw new Error(`No streaming support for provider: ${llmProvider}`);
+            directAnswer = await llmService.generateContentWithHistory(
+              chatHistory, userQuery, finalSystemPrompt, llmOptions
+            );
+          }
+        }
+      } else {
+        // NON-STREAMING PATH
+        if (!llmService) {
+          // SGLang via direct REST
+          const axios = require('axios');
+          const sglUrl  = process.env.SGLANG_CHAT_URL   || 'http://localhost:8000/v1';
+          const sglModel = process.env.SGLANG_CHAT_MODEL || 'Qwen/Qwen2.5-7B-Instruct-AWQ';
+          const msgs = [
+            ...(finalSystemPrompt ? [{ role: 'system', content: finalSystemPrompt }] : []),
+            ...chatHistory.map(m => ({ role: m.role === 'model' ? 'assistant' : m.role, content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content) })),
+            { role: 'user', content: userQuery },
+          ];
+          const r = await axios.post(`${sglUrl}/chat/completions`, {
+            model: sglModel, messages: msgs,
+            max_tokens: Math.min(4096, Math.max(512, sglangCaps.getModelMaxContext() - Math.ceil(msgs.map(m => m.content).join(' ').length / 3.5) - 256)),
+            temperature: 0.7, stream: false,
+          }, { timeout: 60000 });
+          directAnswer = r.data?.choices?.[0]?.message?.content?.trim() || '';
+        } else {
           directAnswer = await llmService.generateContentWithHistory(
-            chatHistory, userQuery, finalSystemPrompt, llmOptions
+            chatHistory,
+            userQuery,
+            finalSystemPrompt,
+            llmOptions
           );
         }
-      }
-    } else {
-      // NON-STREAMING PATH
-      if (!llmService) {
-        // SGLang via direct REST
-        const axios = require('axios');
-        const sglUrl  = process.env.SGLANG_CHAT_URL   || 'http://localhost:8000/v1';
-        const sglModel = process.env.SGLANG_CHAT_MODEL || 'Qwen/Qwen2.5-7B-Instruct-AWQ';
-        const msgs = [
-          ...(finalSystemPrompt ? [{ role: 'system', content: finalSystemPrompt }] : []),
-          ...chatHistory.map(m => ({ role: m.role === 'model' ? 'assistant' : m.role, content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content) })),
-          { role: 'user', content: userQuery },
-        ];
-        const r = await axios.post(`${sglUrl}/chat/completions`, {
-          model: sglModel, messages: msgs,
-          max_tokens: Math.min(4096, Math.max(512, sglangCaps.getModelMaxContext() - Math.ceil(msgs.map(m => m.content).join(' ').length / 3.5) - 256)),
-          temperature: 0.7, stream: false,
-        }, { timeout: 60000 });
-        directAnswer = r.data?.choices?.[0]?.message?.content?.trim() || '';
-      } else {
-        directAnswer = await llmService.generateContentWithHistory(
-          chatHistory,
-          userQuery,
-          finalSystemPrompt,
-          llmOptions
-        );
       }
     }
 
@@ -1182,44 +1214,70 @@ async function processAgenticRequest(
     );
 
     let finalAnswerWithThinking;
-    if (llmProvider === 'sglang') {
-      // SGLang: llmService is null — use streaming service or direct REST
-      if (onToken) {
-        const synthMessages = [
-          ...chatHistory.map(m => ({ role: m.role === 'model' ? 'assistant' : m.role, content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content) })),
-          { role: 'user', content: synthesizerUserQuery }
-        ];
-        finalAnswerWithThinking = await llmStreamingService.streamCompletion({
-          messages: synthMessages,
-          provider: 'sglang',
-          model: llmOptions.model,
-          systemPrompt: finalSystemPrompt,
-          onToken: onToken,
-          options: llmOptions,
-        });
-      } else {
-        const axios = require('axios');
-        const sglUrl = process.env.SGLANG_CHAT_URL || 'http://localhost:8000/v1';
-        const sglModel = process.env.SGLANG_CHAT_MODEL || 'Qwen/Qwen2.5-7B-Instruct-AWQ';
-        const synthMsgs = [
-          ...(finalSystemPrompt ? [{ role: 'system', content: finalSystemPrompt }] : []),
-          ...chatHistory.map(m => ({ role: m.role === 'model' ? 'assistant' : m.role, content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content) })),
-          { role: 'user', content: synthesizerUserQuery }
-        ];
-        const sglResp = await axios.post(`${sglUrl}/chat/completions`, {
-          model: sglModel, messages: synthMsgs,
-          max_tokens: Math.min(4096, Math.max(512, sglangCaps.getModelMaxContext() - Math.ceil(synthMsgs.map(m => m.content).join(' ').length / 3.5) - 256)),
-          temperature: 0.7, stream: false
-        }, { timeout: 60000 });
-        finalAnswerWithThinking = sglResp.data?.choices?.[0]?.message?.content?.trim() || '';
-      }
-    } else {
-      finalAnswerWithThinking = await llmService.generateContentWithHistory(
+    const fb = getFallbackService();
+    if (fb && typeof fb.callWithFallback === 'function') {
+      const fallbackResult = await fb.callWithFallback({
         chatHistory,
-        synthesizerUserQuery,
-        finalSystemPrompt,
-        llmOptions
-      );
+        userQuery: synthesizerUserQuery,
+        systemPrompt: finalSystemPrompt,
+        options: {
+          ...llmOptions,
+          geminiModel: llmOptions.geminiModel,
+          groqModel: llmOptions.groqModel,
+          model: llmOptions.model
+        },
+        preferredProvider: llmProvider,
+        preferLocalFirst: llmProvider === 'sglang' || llmProvider === 'ollama',
+        userApiKeys: {
+          gemini: llmOptions.apiKey && llmProvider === 'gemini' ? llmOptions.apiKey : process.env.GEMINI_API_KEY,
+          groq: llmOptions.apiKey && llmProvider === 'groq' ? llmOptions.apiKey : process.env.GROQ_API_KEY
+        },
+        ollamaUrl: llmOptions.ollamaUrl || process.env.OLLAMA_API_BASE_URL,
+        onToken: onToken
+      });
+      finalAnswerWithThinking = fallbackResult.thinking 
+        ? `<thinking>\n${fallbackResult.thinking}\n</thinking>\n${fallbackResult.text}`
+        : fallbackResult.text;
+    } else {
+      if (llmProvider === 'sglang') {
+        // SGLang: llmService is null — use streaming service or direct REST
+        if (onToken) {
+          const synthMessages = [
+            ...chatHistory.map(m => ({ role: m.role === 'model' ? 'assistant' : m.role, content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content) })),
+            { role: 'user', content: synthesizerUserQuery }
+          ];
+          finalAnswerWithThinking = await llmStreamingService.streamCompletion({
+            messages: synthMessages,
+            provider: 'sglang',
+            model: llmOptions.model,
+            systemPrompt: finalSystemPrompt,
+            onToken: onToken,
+            options: llmOptions,
+          });
+        } else {
+          const axios = require('axios');
+          const sglUrl = process.env.SGLANG_CHAT_URL || 'http://localhost:8000/v1';
+          const sglModel = process.env.SGLANG_CHAT_MODEL || 'Qwen/Qwen2.5-7B-Instruct-AWQ';
+          const synthMsgs = [
+            ...(finalSystemPrompt ? [{ role: 'system', content: finalSystemPrompt }] : []),
+            ...chatHistory.map(m => ({ role: m.role === 'model' ? 'assistant' : m.role, content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content) })),
+            { role: 'user', content: synthesizerUserQuery }
+          ];
+          const sglResp = await axios.post(`${sglUrl}/chat/completions`, {
+            model: sglModel, messages: synthMsgs,
+            max_tokens: Math.min(4096, Math.max(512, sglangCaps.getModelMaxContext() - Math.ceil(synthMsgs.map(m => m.content).join(' ').length / 3.5) - 256)),
+            temperature: 0.7, stream: false
+          }, { timeout: 60000 });
+          finalAnswerWithThinking = sglResp.data?.choices?.[0]?.message?.content?.trim() || '';
+        }
+      } else {
+        finalAnswerWithThinking = await llmService.generateContentWithHistory(
+          chatHistory,
+          synthesizerUserQuery,
+          finalSystemPrompt,
+          llmOptions
+        );
+      }
     }
 
     const thinkingMatch = finalAnswerWithThinking.match(

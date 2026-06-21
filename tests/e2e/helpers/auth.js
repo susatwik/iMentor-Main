@@ -35,8 +35,8 @@ export async function loginAs(page, email = 'ultra.boy7@gmail.com', password = '
  */
 export async function sendMessage(page, text, waitMs = 60000) {
   // The textarea has rotating placeholders; match broadly or fall back to textarea
-  const input = page.locator('textarea').first();
-  await input.waitFor({ state: 'visible', timeout: 10000 });
+  const input = page.locator('textarea:visible').first();
+  await input.waitFor({ state: 'visible', timeout: 15000 });
   await input.fill(text);
 
   // Press Enter or click Send

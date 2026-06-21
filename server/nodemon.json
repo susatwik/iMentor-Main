@@ -1,5 +1,15 @@
 {
   "watch": ["."],
-  "ext": "js,mjs,cjs,json",
-  "ignore": ["app_logs/*", "node_modules/*", "scripts/test*.js", "assets/*", "backup_assets/*", "generated_docs/*"]
+  "ext": "js,mjs,cjs",
+  "ignore": [
+    "app_logs/*",
+    "node_modules/*",
+    "scripts/test*.js",
+    "assets/*",
+    "backup_assets/*",
+    "generated_docs/*",
+    "**/data/*",
+    "**/course_bootstrap/*",
+    "**/*.json"
+  ]
 }

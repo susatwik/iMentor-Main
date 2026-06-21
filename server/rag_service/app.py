@@ -1,7 +1,10 @@
 import os
 import sys
 import traceback
-import resource as _resource
+try:
+    import resource as _resource
+except ImportError:
+    _resource = None
 import asyncio
 import logging
 import uuid
@@ -81,7 +84,7 @@ try:
     import knowledge_engine
     import media_processor
     import aiohttp
-    import fine_tuner
+    # fine_tuner imported lazily in /finetune route
     import pdf_processor
     import socratic_precompute
     import subtopic_notes_generator
@@ -322,6 +325,8 @@ _MEM_LIMIT_BYTES = 256 * 1024 * 1024
 _CPU_LIMIT_SECS  = 3
 
 def _sandbox_preexec():
+    if _resource is None:
+        return
     try:
         _resource.setrlimit(_resource.RLIMIT_AS,  (_MEM_LIMIT_BYTES, _MEM_LIMIT_BYTES))
         _resource.setrlimit(_resource.RLIMIT_CPU, (_CPU_LIMIT_SECS,  _CPU_LIMIT_SECS))
@@ -1678,6 +1683,7 @@ async def finetune_route(body: FinetuneRequest):
 
     def fine_tuning_task():
         try:
+            import fine_tuner
             fine_tuner.run_fine_tuning(body.dataset_path, body.model_name_to_update, body.jobId)
         except Exception as e:
             logger.error(f"Background fine-tuning job {body.jobId} failed: {e}", exc_info=True)

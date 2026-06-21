@@ -90,8 +90,8 @@ const SUPPORT_LEVELS = {
  * Tries preferred provider first, then falls back through all available providers.
  */
 async function generateWithFallback(chatHistory, currentQuery, systemPrompt, llmConfig, additionalOptions = {}) {
-    const preferredProvider = llmConfig?.llmProvider || 'gemini';
-    const allProviders = ['sglang', 'gemini', 'groq', 'claude', 'openai', 'ollama'];
+    const preferredProvider = llmConfig?.llmProvider || 'sglang';
+    const allProviders = ['sglang', 'groq', 'gemini', 'claude', 'openai', 'ollama'];
     const providers = [
         preferredProvider,
         ...allProviders.filter(p => p !== preferredProvider)

@@ -149,8 +149,8 @@ mongoose.connect(mongoUri)
           longestStreak: 5 + i,
           currentEnergy: 85,
           badges: [
-            { name: 'Socratic Spark', earnedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
-            { name: 'Quiz Master', earnedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) }
+            { badgeId: 'socratic_spark', name: 'Socratic Spark', earnedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+            { badgeId: 'quiz_master', name: 'Quiz Master', earnedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) }
           ]
         });
         await gamification.save();

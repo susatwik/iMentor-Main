@@ -22,6 +22,7 @@ apiClient.interceptors.request.use((config) => {
  */
 export function useUserLevel(userId = null) {
     const [level, setLevel] = useState(null);
+    const [totalXP, setTotalXP] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -38,7 +39,9 @@ export function useUserLevel(userId = null) {
                 if (response && response.data && isMounted) {
                     // Prioritize XP level as it's the primary visible metric in the UI
                     const newLevel = response.data.xpLevel || response.data.level || 1;
+                    const xp = response.data.totalXP || response.data.totalXp || response.data.xp || 0;
                     setLevel(newLevel);
+                    setTotalXP(xp);
                     setError(null);
                 }
             } catch (err) {
@@ -48,6 +51,7 @@ export function useUserLevel(userId = null) {
                 if (isMounted) {
                     setError(err.message);
                     setLevel(1); // Default to level 1 if error
+                    setTotalXP(0);
                 }
             } finally {
                 if (isMounted) {
@@ -68,5 +72,5 @@ export function useUserLevel(userId = null) {
         };
     }, [userId]);
 
-    return { level, loading, error };
+    return { level, totalXP, loading, error };
 }

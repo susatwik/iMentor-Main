@@ -1,21 +1,26 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const mongoose = require('mongoose');
+const { connectRedis } = require('../config/redisClient');
 const { startSocraticSession, processTutorResponse } = require('../services/socraticTutorService');
 
 const mockLlmConfig = {
-    llmProvider: 'ollama',
-    ollamaModel: process.env.OLLAMA_DEFAULT_MODEL || 'qwen2.5',
-    ollamaUrl: process.env.OLLAMA_API_BASE_URL || 'https://payroll-preferences-lobby-convert.trycloudflare.com'
+    llmProvider: 'groq',
+    groqModel: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+    apiKey: process.env.GROQ_API_KEY
 };
 
 async function testTutorModel() {
     console.log("--- STARTING TUTOR MODEL TEST ---");
 
-    const topic = "Quantum Physics";
-    const context = "Quantum physics deals with the behavior of matter and energy at the scale of atoms and subatomic particles.";
-
-    console.log(`\n1. Testing startSocraticSession for topic: ${topic}`);
     try {
+        await mongoose.connect(process.env.MONGO_URI);
+        await connectRedis();
+
+        const topic = "Quantum Physics";
+        const context = "Quantum physics deals with the behavior of matter and energy at the scale of atoms and subatomic particles.";
+
+        console.log(`\n1. Testing startSocraticSession for topic: ${topic}`);
         const intro = await startSocraticSession(topic, context, mockLlmConfig);
         console.log("Tutor Intro:", intro.substring(0, 150) + "...");
 
@@ -56,6 +61,12 @@ async function testTutorModel() {
 
     } catch (error) {
         console.error("❌ TEST FAILED:", error);
+    } finally {
+        await mongoose.disconnect();
+        const { redisClient } = require('../config/redisClient');
+        if (redisClient && redisClient.isOpen) {
+            await redisClient.disconnect();
+        }
     }
 
     process.exit(0);
