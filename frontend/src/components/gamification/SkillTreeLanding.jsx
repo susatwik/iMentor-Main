@@ -10,6 +10,7 @@ import {
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import SkillTreeCourseSelectorWrapper from './SkillTreeCourseSelectorWrapper.jsx';
 
 const SkillTreeLanding = () => {
     const navigate = useNavigate();
@@ -308,6 +309,28 @@ const SkillTreeLanding = () => {
                                     <div>
                                         <h3 className="text-xl font-bold text-white">Choose Your Topic</h3>
                                         <p className="text-sm text-zinc-500">Enter a course or topic to explore</p>
+                                    </div>
+                                </div>
+
+                                <SkillTreeCourseSelectorWrapper
+                                    onContinue={(selectedTopic) => {
+                                        // selectedTopic may be { courseName, source } or a plain string
+                                        const courseName = typeof selectedTopic === 'object' && selectedTopic !== null
+                                            ? (selectedTopic.courseName || selectedTopic.canonical || '')
+                                            : String(selectedTopic || '');
+                                        if (!courseName.trim()) return;
+                                        setTopic(courseName.trim());
+                                        setTimeout(() => handleNext(), 100);
+                                    }}
+                                    isGenerating={loading}
+                                />
+
+                                <div className="relative my-6">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-zinc-800" />
+                                    </div>
+                                    <div className="relative flex justify-center">
+                                        <span className="bg-zinc-900 px-4 text-sm text-zinc-500">or type a topic</span>
                                     </div>
                                 </div>
 

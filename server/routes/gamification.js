@@ -16,6 +16,8 @@ const geminiService = require('../services/geminiService');
 const ollamaService = require('../services/ollamaService');
 const groqService = require('../services/groqService');
 const { getCurriculumStructure } = require('../services/socraticTutorService');
+const conceptQuestionRepository = require('../services/conceptQuestionRepository');
+const skillTreeGameService = require('../services/skillTreeGameService');
 const log = require('../utils/logger');
 
 // All routes require authentication
@@ -333,14 +335,77 @@ router.post('/skill-tree/diagnostic', async (req, res) => {
     }
 });
 
-// Helper for legacy LLM fallback
+// Helper for LLM fallback with repository-first strategy
 async function generateDiagnosticWithLLM(topic, req, res) {
-    // [Implementation from original route...]
-    // (For brevity in this diff, I'll move the original logic here)
-    let previousQuestionsBlock = '';
-    // ... (rest of original logic)
-    // For now, I'll just return a simplified fallback OR keep it if possible
-    return res.status(501).json({ message: 'Dynamic generation currently disabled. Please select a pre-configured course like "Machine Learning".' });
+    try {
+        // 1. Check repository first
+        try {
+            const repoQuestions = await conceptQuestionRepository.getReusableQuestionsByConcept({
+                concept_id: topic,
+                question_text: topic,
+                limit: 5,
+                threshold: 0.8
+            });
+            if (repoQuestions && repoQuestions.length >= 3) {
+                const questions = repoQuestions.slice(0, 5).map(q => ({
+                    question: q.question || q.question_text,
+                    options: q.options || [],
+                    level: q.difficulty || 'beginner',
+                    skillId: q.concept_id,
+                    type: 'mcq'
+                }));
+                log.success('GAMIFICATION', `Served ${questions.length} repository diagnostic questions for "${topic}"`);
+                return res.json({ questions, source: 'repository' });
+            }
+        } catch (repoErr) {
+            log.warn('GAMIFICATION', `Repository lookup for "${topic}" failed: ${repoErr.message}`);
+        }
+
+        // 2. Generate via LLM
+        log.info('GAMIFICATION', `Generating diagnostic questions via LLM for "${topic}"`);
+        const diagnostic = await skillTreeGameService.getDiagnosticQuiz(topic, req.user._id);
+        const questions = (diagnostic.questions || []).map(q => ({
+            question: q.question || q,
+            options: q.options || [],
+            level: 'beginner',
+            type: q.options?.length ? 'mcq' : 'open-ended'
+        }));
+        if (questions.length === 0) {
+            return res.status(503).json({ message: 'AI Service could not generate diagnostic questions. Please try again.' });
+        }
+
+        // 3. Save generated questions to repository for future reuse
+        try {
+            const conceptId = topic.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+            for (const q of questions) {
+                if (q.options?.length > 0) {
+                    await conceptQuestionRepository.createQuestion({
+                        question_id: `${conceptId}_diag_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                        concept_id: conceptId,
+                        conceptId: conceptId,
+                        question_text: q.question,
+                        question: q.question,
+                        options: q.options,
+                        correct_answer: '',
+                        answer: '',
+                        explanation: '',
+                        difficulty: q.level || 'medium',
+                        source: 'diagnostic-llm',
+                        createdBy: String(req.user._id),
+                        version: 1
+                    }).catch(() => {});
+                }
+            }
+        } catch (saveErr) {
+            log.warn('GAMIFICATION', `Failed to save diagnostic questions to repository: ${saveErr.message}`);
+        }
+
+        log.success('GAMIFICATION', `Generated ${questions.length} LLM-based diagnostic questions for "${topic}"`);
+        return res.json({ questions });
+    } catch (llmError) {
+        log.error('GAMIFICATION', `LLM diagnostic generation failed for "${topic}": ${llmError.message}`);
+        return res.status(503).json({ message: 'AI Service Unavailable. Please try a pre-configured course.' });
+    }
 }
 
 // @route   POST /api/gamification/skill-tree/diagnostic/submit
@@ -703,6 +768,49 @@ router.post('/skill-tree/level-questions', async (req, res) => {
                 log.warn('SYSTEM', `Error checking cached questions: ${cacheErr.message}`);
                 // Continue to generate new questions
             }
+        }
+
+        // 3. Check concept question repository for reusable questions
+        try {
+            const reusableQuestions = await conceptQuestionRepository.getReusableQuestionsByConcept({
+                concept_id: levelName || topic,
+                question_text: `${topic} ${levelName}`,
+                limit: 5,
+                threshold: 0.8
+            });
+            if (reusableQuestions && reusableQuestions.length >= 3) {
+                log.success('GAMIFICATION', `Serving ${reusableQuestions.length} repository questions for "${levelName}"`);
+                const questions = reusableQuestions.slice(0, 5).map(q => ({
+                    question: q.question || q.question_text,
+                    options: q.options || [],
+                    correctIndex: typeof q.correctIndex === 'number' ? q.correctIndex : 0,
+                    explanation: q.explanation || ''
+                }));
+                // Cache the questions in the game
+                if (gameId) {
+                    try {
+                        const game = await SkillTreeGame.findOne({ _id: gameId, userId: req.user._id });
+                        if (game) {
+                            const levelIdx = typeof levelId !== 'undefined'
+                                ? game.levels.findIndex(l => String(l.id) === String(levelId))
+                                : game.levels.findIndex(l => l.name === levelName);
+                            if (levelIdx !== -1) {
+                                const existingSeen = Array.isArray(game.levels[levelIdx].seenQuestions) ? game.levels[levelIdx].seenQuestions : [];
+                                const newQTexts = questions.map(q => q.question).filter(Boolean);
+                                game.levels[levelIdx].questions = questions;
+                                game.levels[levelIdx].seenQuestions = [...new Set([...existingSeen, ...newQTexts])];
+                                await game.save();
+                            }
+                        }
+                    } catch (saveErr) {
+                        log.warn('SYSTEM', `Failed to persist repository questions: ${saveErr.message}`);
+                    }
+                }
+                return res.json({ questions, cached: true, source: 'repository' });
+            }
+        } catch (repoErr) {
+            log.warn('GAMIFICATION', `Repository lookup failed for "${levelName}": ${repoErr.message}`);
+            // Fall through to LLM generation
         }
 
         const prompt = `You are a strict technical interviewer creating a quiz for "${topic}".

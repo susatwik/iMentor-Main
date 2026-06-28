@@ -5,6 +5,7 @@ const { logger } = require('../utils/logger');
 const geminiService = require('./geminiService');
 const socraticTutorService = require('./socraticTutorService');
 const { decrypt } = require('../utils/crypto');
+const { safeParseLLMJson } = require('../utils/safeParseLLMJson');
 
 /**
  * Get internal LLM config for a user
@@ -101,7 +102,7 @@ const { queryPythonRagService } = require('./ragQueryService');
  * @param {object|null} studentInsights
  * @param {string[]} seenQuestions - question texts already shown to this user for this level
  */
-async function generateDynamicQuestions(userId, topic, levelName, difficulty, studentInsights = null, seenQuestions = []) {
+async function generateDynamicQuestions(userId, topic, levelName, difficulty, studentInsights = null, seenQuestions = [], generationContext = null) {
     try {
         let ragContext = "";
         try {
@@ -132,12 +133,29 @@ async function generateDynamicQuestions(userId, topic, levelName, difficulty, st
             `;
         }
 
+        const repositoryContext = generationContext ? `
+            REPOSITORY CONTENT FOR THIS EXACT CONCEPT:
+            Learning Objectives:
+            ${(generationContext.learningObjectives || []).map((item, index) => `${index + 1}. ${item}`).join('\n') || 'None stored'}
+
+            Concept Notes:
+            ${generationContext.notes || 'None stored'}
+
+            Flashcards:
+            ${(generationContext.flashcards || []).map((card, index) => `${index + 1}. ${card.front || ''} -> ${card.back || ''}`).join('\n') || 'None stored'}
+
+            Course Topics and Subtopics:
+            ${(generationContext.subtopics || []).join(', ') || levelName}
+        ` : "";
+
         const prompt = `
             You are the "iMentor" Assessment Engine.
             Topic: "${topic}"
             Sub-topic/Level: "${levelName}"
             Difficulty: "${difficulty}"
             
+            ${repositoryContext}
+
             ${ragContext ? `GROUND TRUTH CONTEXT from user's study materials:\n"${ragContext}"\n` : ""}
             
             ${personalizationContext}
@@ -149,11 +167,14 @@ async function generateDynamicQuestions(userId, topic, levelName, difficulty, st
             1. Each question must have 4 options.
             2. Provide exactly one correctIndex (0-3).
             3. Provide a helpful explanation for the correct answer.
-            4. Tone should be encouraging and educational.
-            ${ragContext ? "5. IMPORTANT: Ground the questions in the provided context if possible." : ""}
-            ${difficulty === 'boss' ? "6. BOSS MODE: Make questions challenging, requiring synthesis of multiple concepts." : ""}
-            7. If personalization data is provided, ensure questions address those specific gaps.
-            8. Return ONLY a JSON object with a "questions" key.
+            4. Every question must test specific knowledge from the exact sub-topic/level, not broad motivation to learn it.
+            5. Use the repository content above first: learning objectives, concept notes, flashcards, subtopics, examples, and applications.
+            6. Do not ask generic template questions such as "Why study this?", "What helps most when learning this?", or "What is a practical use of this?" unless the repository content gives a specific application to test.
+            7. Tone should be encouraging and educational.
+            ${ragContext ? "8. IMPORTANT: Ground the questions in the provided context if possible." : ""}
+            ${difficulty === 'boss' || difficulty === 'expert' ? "9. EXPERT MODE: Make questions challenging, requiring synthesis of multiple concepts." : ""}
+            10. If personalization data is provided, ensure questions address those specific gaps.
+            11. Return ONLY a JSON object with a "questions" key.
             
             Example format:
             {
@@ -171,14 +192,12 @@ async function generateDynamicQuestions(userId, topic, levelName, difficulty, st
         const llmConfig = await getUserLLMConfig(userId);
         let responseText = await socraticTutorService.generateWithFallback([], prompt, null, llmConfig);
 
-        try {
-            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-            const data = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
-            return data.questions || [];
-        } catch (parseErr) {
-            logger.error('[SkillTreeGameService] Question JSON Parse Error:', parseErr);
+        const parsed = safeParseLLMJson(responseText);
+        if (!parsed || !Array.isArray(parsed.questions)) {
+            logger.error('[SkillTreeGameService] Question JSON Parse Error: invalid format');
             throw new Error('Failed to generate valid questions JSON');
         }
+        return parsed.questions;
 
     } catch (error) {
         logger.error('[SkillTreeGameService] Error generating questions:', error);
