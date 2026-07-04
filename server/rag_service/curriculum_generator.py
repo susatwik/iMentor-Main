@@ -1,8 +1,16 @@
 # server/rag_service/curriculum_generator.py
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable
 import curriculum_graph_handler
+
+# Import Provider Manager
+try:
+    from llm_provider_manager import get_llm_manager, reset_llm_manager
+    _PROVIDER_MANAGER_AVAILABLE = True
+except ImportError:
+    _PROVIDER_MANAGER_AVAILABLE = False
+    logging.getLogger(__name__).warning("Provider Manager not available")
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +43,7 @@ TEXT TO ANALYZE:
 {text}
 """
 
-def generate_curriculum_from_text(text: str, course_name: str, llm_fn) -> Dict:
+def generate_curriculum_from_text(text: str, course_name: str, llm_fn: Optional[Callable] = None) -> Dict:
     """
     Extracts curriculum structure from text using an LLM and saves it to Neo4j.
     
@@ -43,17 +51,38 @@ def generate_curriculum_from_text(text: str, course_name: str, llm_fn) -> Dict:
         text: The source document text.
         course_name: The name of the subject/document.
         llm_fn: A function that takes a prompt and returns LLM output string.
+                If None, uses the Provider Manager.
     """
     try:
         if not text or len(text.strip()) < 100:
             logger.warning(f"Text too short for curriculum extraction: {course_name}")
             return {"success": False, "error": "Text too short"}
 
-        # Truncate text if it's too long for the LLM (simple heuristic)
-        # Assuming llm_fn handles its own context limits but better safe
-        prompt = CURRICULUM_GENERATION_PROMPT.format(text=text[:15000]) 
+        # Truncate text if it's too long for the LLM
+        prompt = CURRICULUM_GENERATION_PROMPT.format(text=text[:15000])
         
-        response_text = llm_fn(prompt)
+        # Use Provider Manager if no llm_fn provided
+        if llm_fn is None and _PROVIDER_MANAGER_AVAILABLE:
+            manager = get_llm_manager()
+            provider = manager.get_healthy_provider()
+            if provider:
+                def _provider_llm(p: str) -> str:
+                    result = provider.generate(
+                        messages=[{"role": "user", "content": p}],
+                        model="",
+                        temperature=0.3,
+                        max_tokens=4000,
+                    )
+                    return result or ""
+                response_text = _provider_llm(prompt)
+            else:
+                logger.warning("No healthy provider found for curriculum generation")
+                return {"success": False, "error": "No LLM provider available"}
+        elif llm_fn is not None:
+            response_text = llm_fn(prompt)
+        else:
+            logger.warning("No llm_fn provided and Provider Manager unavailable")
+            return {"success": False, "error": "No LLM provider available"}
         logger.error(f"DEBUG: LLM RAW RESPONSE: {response_text[:500]}...")
         
         # Robust JSON extraction

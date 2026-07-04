@@ -30,6 +30,14 @@ from typing import Optional
 
 import config
 
+# Import Provider Manager
+try:
+    from llm_provider_manager import get_llm_manager
+    _PROVIDER_MANAGER_AVAILABLE = True
+except ImportError:
+    _PROVIDER_MANAGER_AVAILABLE = False
+    logging.getLogger(__name__).warning("Provider Manager not available, using legacy LLM calls")
+
 logger = logging.getLogger(__name__)
 
 
@@ -306,6 +314,26 @@ def _call_groq(prompt: str) -> Optional[str]:
 
 
 def _call_llm(prompt: str) -> Optional[str]:
+    """Provider Manager (SGLang → Grok → Gemini → Ollama)."""
+    # Use Provider Manager if available
+    if _PROVIDER_MANAGER_AVAILABLE:
+        try:
+            manager = get_llm_manager()
+            result = manager.generate(
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user",   "content": prompt},
+                ],
+                model=os.getenv("SGLANG_HEAVY_MODEL", "Qwen/Qwen2.5-7B-Instruct-AWQ"),
+                temperature=0.35,
+                max_tokens=2400,
+            )
+            if result and len(result.strip()) > 300:
+                logger.info("Subtopic lecture generated via Provider Manager")
+                return result.strip()
+        except Exception as e:
+            logger.debug(f"Provider Manager subtopic lecture failed: {e}")
+
     """Try Groq → Gemini → SGLang in order (fastest first)."""
     return _call_groq(prompt) or _call_gemini(prompt) or _call_sglang(prompt)
 

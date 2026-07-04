@@ -31,6 +31,14 @@ from typing import Dict, List, Optional, Tuple
 import config
 from sglang_caps import get_model_max_context
 
+# Import Provider Manager
+try:
+    from llm_provider_manager import get_llm_manager
+    _PROVIDER_MANAGER_AVAILABLE = True
+except ImportError:
+    _PROVIDER_MANAGER_AVAILABLE = False
+    logging.getLogger(__name__).warning("Provider Manager not available, using legacy LLM calls")
+
 logger = logging.getLogger(__name__)
 
 _CACHE_TTL = 7 * 24 * 3600  # 7 days
@@ -454,19 +462,42 @@ def _call_ollama(prompt: str) -> Optional[str]:
 
 
 def _call_llm(prompt: str) -> Optional[str]:
-    """SGLang (primary) → Gemini (admin-validated only). Ollama is NEVER used for generation."""
+    """Provider Manager (SGLang → Grok → Gemini → Ollama)."""
+    # Use Provider Manager if available
+    if _PROVIDER_MANAGER_AVAILABLE:
+        try:
+            manager = get_llm_manager()
+            system_msg = "You are an expert educator. Always output valid JSON."
+            result = manager.generate(
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": prompt}
+                ],
+                model=_SGLANG_HEAVY_MODEL,
+                temperature=0.1,
+                max_tokens=3000,
+            )
+            if result:
+                return result
+        except Exception as e:
+            logger.warning(f"STN: Provider Manager failed: {e}")
+
     # ── 1. SGLang (primary — constrained JSON) ────────────────────────────────
     sglang_result = _call_sglang(prompt)
     if sglang_result:
-        return json.dumps(sglang_result)  # Convert dict to JSON string for compatibility
+        return json.dumps(sglang_result)
 
     # ── 2. Gemini — ONLY if admin has validated the key ───────────────────────
     gemini_result = _call_gemini(prompt)
     if gemini_result:
         return gemini_result
 
-    # Ollama is NOT used for LLM generation tasks
-    logger.error("subtopic_notes: No LLM available. Ensure SGLang is running on port 8000.")
+    # ── 3. Ollama — local fallback ────────────────────────────────────────────
+    ollama_result = _call_ollama(prompt)
+    if ollama_result:
+        return ollama_result
+
+    logger.error("subtopic_notes: No LLM available. Ensure at least one provider is configured.")
     return None
 
 

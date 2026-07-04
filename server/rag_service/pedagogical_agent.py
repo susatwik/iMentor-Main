@@ -26,6 +26,14 @@ from typing import Dict, List, Optional
 
 import config
 
+# Import Provider Manager
+try:
+    from llm_provider_manager import get_llm_manager
+    _PROVIDER_MANAGER_AVAILABLE = True
+except ImportError:
+    _PROVIDER_MANAGER_AVAILABLE = False
+    logging.getLogger(__name__).warning("Provider Manager not available, using legacy LLM calls")
+
 logger = logging.getLogger(__name__)
 
 PEDAGOGICAL_COLLECTION = getattr(config, "PEDAGOGICAL_QDRANT_COLLECTION", "pedagogical_notes")
@@ -102,6 +110,26 @@ def setup_pedagogical_collection():
 # =============================================================================
 
 def _call_sglang(system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> Optional[str]:
+    """Call LLM via Provider Manager (SGLang → Grok → Gemini → Ollama)."""
+    # Use Provider Manager if available
+    if _PROVIDER_MANAGER_AVAILABLE:
+        try:
+            manager = get_llm_manager()
+            result = manager.generate(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": user_prompt},
+                ],
+                model=_SGLANG_HEAVY_MODEL,
+                temperature=0.3,
+                max_tokens=max_tokens,
+            )
+            if result:
+                return result.strip()
+        except Exception as e:
+            logger.warning(f"PedagogicalAgent Provider Manager failed: {e}")
+
+    # Legacy fallback: direct SGLang call
     if not _sglang_client:
         return None
     try:

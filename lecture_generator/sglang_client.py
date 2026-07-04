@@ -1,9 +1,6 @@
 """
 SGLang client for the lecture generator.
-Uses the OpenAI SDK pointed at the SGLang /v1 endpoint —
-exactly the same pattern as subtopic_notes_generator.py and skill_tree_generator.py.
-
-No Ollama. No cloud calls unless GEMINI_API_VALIDATED=true.
+Uses the LLM Provider Manager with fallback: SGLang → Grok → Gemini → Ollama
 """
 import json
 import logging
@@ -15,14 +12,21 @@ from lecture_generator import config
 
 logger = logging.getLogger(__name__)
 
-# ── Lazy-initialised clients (mirrors subtopic_notes_generator.py) ─────
+# Import Provider Manager
+try:
+    from server.rag_service.llm_provider_manager import get_llm_manager
+    _PROVIDER_MANAGER_AVAILABLE = True
+except ImportError:
+    _PROVIDER_MANAGER_AVAILABLE = False
+    logger.warning("Provider Manager not available, falling back to legacy client")
 
+# Legacy clients for backward compatibility
 _sglang_client = None
 _gemini_client = None
 
 
-def _get_sglang() :
-    """Return (or create) the SGLang OpenAI-compatible client."""
+def _get_sglang():
+    """Return (or create) the SGLang OpenAI-compatible client (legacy)."""
     global _sglang_client
     if _sglang_client is not None:
         return _sglang_client
@@ -39,7 +43,7 @@ def _get_sglang() :
 
 
 def _get_gemini():
-    """Return Gemini client only if admin has validated the key."""
+    """Return Gemini client only if admin has validated the key (legacy)."""
     global _gemini_client
     if _gemini_client is not None:
         return _gemini_client
@@ -59,7 +63,16 @@ def _get_gemini():
 # ── Health check ───────────────────────────────────────────────────────
 
 def check_health() -> bool:
-    """Ping SGLang's /models endpoint (same as sglangService.js checkHealth)."""
+    """Ping the first healthy provider."""
+    if _PROVIDER_MANAGER_AVAILABLE:
+        try:
+            manager = get_llm_manager()
+            provider = manager.get_healthy_provider()
+            return provider is not None
+        except Exception as exc:
+            logger.warning("Provider Manager health check failed: %s", exc)
+    
+    # Legacy fallback
     client = _get_sglang()
     if client is None:
         return False
@@ -79,7 +92,7 @@ def generate(
     params: Optional[dict] = None,
 ) -> Optional[str]:
     """
-    Plain text generation via SGLang → Gemini fallback.
+    Plain text generation via Provider Manager (SGLang → Grok → Gemini → Ollama).
     Returns the response string or None if all providers fail.
     """
     p = params or config.NOTE_PARAMS
@@ -88,6 +101,22 @@ def generate(
         {"role": "user",   "content": user},
     ]
 
+    # Use Provider Manager if available
+    if _PROVIDER_MANAGER_AVAILABLE:
+        try:
+            manager = get_llm_manager()
+            result = manager.generate(
+                messages=messages,
+                model=config.LG_MODEL,
+                temperature=p.get("temperature", 0.25),
+                max_tokens=p.get("max_tokens", 3500),
+            )
+            if result:
+                return result.strip()
+        except Exception as exc:
+            logger.warning("Provider Manager generation failed: %s — trying legacy fallback", exc)
+
+    # Legacy fallback: SGLang → Gemini
     # ── 1. SGLang (primary) ───────────────────────────────────────────
     client = _get_sglang()
     if client:
@@ -114,7 +143,7 @@ def generate(
         except Exception as exc:
             logger.error("Gemini fallback also failed: %s", exc)
 
-    logger.error("No LLM available. Ensure SGLang is running on %s", config.LG_URL)
+    logger.error("No LLM available. Ensure at least one provider is configured.")
     return None
 
 
@@ -126,14 +155,29 @@ def generate_structured(
     params: Optional[dict] = None,
 ) -> Optional[dict]:
     """
-    Constrained JSON generation using SGLang's json_schema response_format.
-    Mirrors the exact call pattern in subtopic_notes_generator.py _call_sglang().
-
+    Constrained JSON generation using Provider Manager with fallback.
     Returns a validated dict on success, or None on failure.
-    Falls back to Gemini (plain text + JSON parse) if SGLang fails.
     """
     p = params or config.SCHEMA_PARAMS
 
+    # Use Provider Manager if available
+    if _PROVIDER_MANAGER_AVAILABLE:
+        try:
+            manager = get_llm_manager()
+            result = manager.generate_structured(
+                system_prompt=system,
+                user_prompt=user,
+                schema=schema_model.model_json_schema(),
+                model=config.LG_MODEL,
+                temperature=p.get("temperature", 0.1),
+                max_tokens=p.get("max_tokens", 4000),
+            )
+            if result:
+                return result
+        except Exception as exc:
+            logger.warning("Provider Manager structured generation failed: %s — trying legacy", exc)
+
+    # Legacy fallback
     messages = [
         {"role": "system", "content": f"{system}\nAlways output valid JSON matching the required schema."},
         {"role": "user",   "content": user},

@@ -141,17 +141,29 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 # Groq — fast cloud LLM for fallback generation (lecture notes, study Qs, etc.)
 GROQ_API_KEY   = os.getenv('GROQ_API_KEY', '')
 GROQ_MODEL_NAME = os.getenv('GROQ_MODEL_NAME', 'llama-3.3-70b-versatile')
-# ─── Ollama REMOVED — All LLM inference uses SGLang ────────────────────────
-# Legacy variables kept as empty/disabled for backward compatibility
-OLLAMA_BASE_URL = ''  # Ollama removed — use SGLANG_HEAVY_URL instead
 
-# STN model is now handled by SGLang, not Ollama
-OLLAMA_STN_MODEL = os.getenv('SGLANG_HEAVY_MODEL', 'Qwen/Qwen2.5-7B-Instruct-AWQ')
+# ─── LLM Provider Fallback Configuration ────────────────────────────────────
+# Priority order for LLM providers. First healthy provider will be used.
+# Options: sglang, grok, gemini, ollama
+LLM_PROVIDER_PRIORITY = os.getenv('LLM_PROVIDER_PRIORITY', 'sglang,grok,gemini,ollama')
+
+# Grok (xAI) — secondary provider
+GROK_MODEL = os.getenv('GROK_MODEL', 'grok-2-latest')
+
+# Ollama — local fallback (re-enabled for fallback pipeline)
+OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://localhost:11434')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5:7b-instruct')
+
+# ─── SGLang — primary LLM for all generation tasks ───────────────────────────
+SGLANG_ENABLED      = os.getenv('SGLANG_ENABLED', 'true').lower() == 'true'
+SGLANG_HEAVY_URL    = os.getenv('SGLANG_HEAVY_URL', 'http://localhost:8000/v1')
+SGLANG_HEAVY_MODEL  = os.getenv('SGLANG_HEAVY_MODEL', 'Qwen/Qwen2.5-7B-Instruct-AWQ')
+
 TURNITIN_API_URL = os.getenv('TURNITIN_API_URL')
 TURNITIN_API_KEY = os.getenv('TURNITIN_API_KEY')
 TURNITIN_API_SECRET = os.getenv('TURNITIN_API_SECRET')
 
-NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7688")
 NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")

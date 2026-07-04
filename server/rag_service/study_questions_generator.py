@@ -39,6 +39,14 @@ import config
 from sglang_caps import get_model_max_context
 from prompts import STUDY_QUESTIONS_GENERATION_PROMPT
 
+# Import Provider Manager
+try:
+    from llm_provider_manager import get_llm_manager
+    _PROVIDER_MANAGER_AVAILABLE = True
+except ImportError:
+    _PROVIDER_MANAGER_AVAILABLE = False
+    logging.getLogger(__name__).warning("Provider Manager not available, using legacy LLM calls")
+
 logger = logging.getLogger(__name__)
 
 _CACHE_TTL = 7 * 24 * 3600  # 7 days
@@ -192,8 +200,7 @@ def _push_questions_to_qdrant(course: str, subtopic_id: str, payload: Dict) -> b
 
 
 # =============================================================================
-# LLM CALL  —  SGLang (primary) → Gemini (admin-validated only)
-# Ollama is NEVER used here — it is for embeddings only.
+# LLM CALL  —  Provider Manager (SGLang → Grok → Gemini → Ollama)
 # =============================================================================
 
 _sglang_client = None
@@ -209,14 +216,34 @@ _gemini_dead = False
 
 
 def _call_llm(prompt: str) -> Optional[str]:
-    """SGLang → Gemini (admin-validated only). No Ollama fallback."""
+    """Provider Manager (SGLang → Grok → Gemini → Ollama)."""
     global _gemini_dead
 
-    # ── 1. SGLang (primary) ───────────────────────────────────────────────────
+    # Use Provider Manager if available
+    if _PROVIDER_MANAGER_AVAILABLE:
+        try:
+            manager = get_llm_manager()
+            system_msg = "You are an expert curriculum designer. Output only valid JSON."
+            result = manager.generate(
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user",   "content": prompt},
+                ],
+                model=config.SGLANG_HEAVY_MODEL,
+                temperature=0.3,
+                max_tokens=4000,
+            )
+            if result:
+                text = result.strip()
+                logger.info(f"StudyQ LLM: Provider Manager ok ({len(text)} chars)")
+                return text
+        except Exception as e:
+            logger.warning(f"StudyQ LLM: Provider Manager failed: {e}")
+
+    # ── 1. SGLang (primary — legacy fallback) ───────────────────────────────────
     if _sglang_client:
         try:
-            # Compute a safe completion budget from the live model context length
-            _SGLANG_MAX_CONTEXT = get_model_max_context()  # reads /v1/models once, then cached
+            _SGLANG_MAX_CONTEXT = get_model_max_context()
             _SAFETY_BUFFER = 256
             system_msg = "You are an expert curriculum designer. Output only valid JSON."
             estimated_input_tokens = int((len(system_msg) + len(prompt)) / 3.5)
@@ -258,8 +285,7 @@ def _call_llm(prompt: str) -> Optional[str]:
     elif not config.GEMINI_VALIDATED and config.GEMINI_API_KEY:
         logger.warning("StudyQ LLM: SGLang unavailable and Gemini not admin-validated — cannot generate.")
 
-    # Ollama is NOT used for LLM generation tasks
-    logger.error("StudyQ LLM: No LLM available. Ensure SGLang is running on port 8000.")
+    logger.error("StudyQ LLM: No LLM available. Ensure at least one provider is configured.")
     return None
 
 

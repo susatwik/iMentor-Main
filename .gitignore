@@ -89,3 +89,4 @@ app/prompt.md
 # Local/generated course content (do not push)
 server/course_bootstrap/
 server/Cpurses/
+server/rag_service/.venv/

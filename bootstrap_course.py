@@ -46,6 +46,9 @@ if _missing:
     print(f"   Run:  pip install {' '.join(_missing)}")
     sys.exit(1)
 
+# Import Provider Manager for LLM fallback
+from server.rag_service.llm_provider_manager import get_llm_manager
+
 from lecture_generator import config as lg_config
 from lecture_generator import sglang_client
 from lecture_generator.concept_extractor import extract_knowledge_graph, KnowledgeGraph
@@ -188,8 +191,18 @@ def bootstrap(
         print(f"    Blueprint: {syllabus.summary} → ~{syllabus.concept_count_hint()} concepts", flush=True)
 
     lg_config.validate()
-    if not sglang_client.check_health():
-        print("    ⚠  SGLang not reachable — concept extraction may fail.")
+    
+    # Use Provider Manager for health check and fallback
+    llm_manager = get_llm_manager()
+    health_results = llm_manager.check_all_health()
+    healthy_provider = llm_manager.get_healthy_provider()
+    if healthy_provider:
+        print(f"    ✓  LLM Provider: {healthy_provider.config.name}", flush=True)
+    else:
+        print(f"    ⚠  No healthy LLM provider found — concept extraction may fail", flush=True)
+        for ptype, result in health_results.items():
+            status = "✅" if result.healthy else "❌"
+            print(f"       {status} {ptype.value}", flush=True)
 
     kg = extract_knowledge_graph(course_name, source_text, syllabus=syllabus)
     if kg:
