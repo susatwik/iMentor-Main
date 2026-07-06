@@ -189,7 +189,7 @@ def find_syllabus(course_dir: str, course_name: str = "") -> Optional["Syllabus"
     Auto-detect syllabus.csv in a course directory.
     Tries: syllabus.csv, Syllabus.csv, SYLLABUS.csv
     """
-    for candidate in ["syllabus.csv", "Syllabus.csv", "SYLLABUS.csv"]:
+    for candidate in ["syllabus_unified.csv", "syllabus.csv", "Syllabus.csv", "SYLLABUS.csv"]:
         path = os.path.join(course_dir, candidate)
         syl = load_syllabus(path, course_name=course_name)
         if syl is not None:

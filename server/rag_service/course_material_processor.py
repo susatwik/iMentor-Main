@@ -340,7 +340,9 @@ def _find_csvs(course_dir: str) -> Dict[str, Optional[str]]:
         fpath = os.path.join(course_dir, fname)
         if not os.path.isfile(fpath):
             continue
-        if lname == "syllabus.csv":
+        if lname == "syllabus_unified.csv":
+            result["syllabus"] = fpath
+        elif lname == "syllabus.csv" and result["syllabus"] is None:
             result["syllabus"] = fpath
         elif lname == "modules.csv":
             result["modules"] = fpath

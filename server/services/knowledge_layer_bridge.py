@@ -316,7 +316,7 @@ def create_knowledge_bridge() -> KnowledgeLayerBridge:
     
     # Try to connect to Qdrant
     qdrant_host = os.getenv("QDRANT_HOST", "localhost")
-    qdrant_port = int(os.getenv("QDRANT_PORT", "2003"))
+    qdrant_port = int(os.getenv("QDRANT_PORT", "6335"))
     
     try:
         from qdrant_client import QdrantClient

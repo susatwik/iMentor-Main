@@ -20,6 +20,10 @@ class EeCsvToUnifiedConverter {
   convert(csvPath, outputPath) {
     log.info('EE→Unified Converter', `Converting ${csvPath} → ${outputPath}`);
 
+    if (csvPath === outputPath) {
+      throw new Error('Input and output paths are the same — refusing to overwrite');
+    }
+
     const csv = fs.readFileSync(csvPath, 'utf8');
     const rows = this._parseCsv(csv);
 
@@ -28,6 +32,11 @@ class EeCsvToUnifiedConverter {
     }
 
     const headers = rows[0];
+    // Validate that input is a 22-column CSV, not already unified
+    const headerStr = headers.join(',').toLowerCase();
+    if (headerStr.startsWith('module,lecture number')) {
+      throw new Error('Input CSV appears to already be in unified format (5-column). Refusing to re-convert.');
+    }
     const colMap = this._buildColumnMap(headers);
     const dataRows = rows.slice(1);
 

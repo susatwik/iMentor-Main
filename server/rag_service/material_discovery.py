@@ -543,8 +543,10 @@ def process_syllabus_discovery(
 
     Returns the number of Markdown files successfully created.
     """
-    # Find syllabus
-    syllabus_path = os.path.join(course_dir, "syllabus.csv")
+    # Find syllabus (prefer unified format)
+    syllabus_path = os.path.join(course_dir, "syllabus_unified.csv")
+    if not os.path.exists(syllabus_path):
+        syllabus_path = os.path.join(course_dir, "syllabus.csv")
     if not os.path.exists(syllabus_path):
         for candidate in ["modules.csv", "topics.csv", "subtopics.csv"]:
             p = os.path.join(course_dir, candidate)

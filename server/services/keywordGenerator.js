@@ -8,11 +8,11 @@ class KeywordGenerator {
       'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from',
       'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the',
       'to', 'was', 'were', 'will', 'with', 'basic', 'introduction', 'course',
-      'electrical', 'engineering', 'analysis', 'circuit', 'digital', 'system',
+
     ];
     this.minWordLength = options.minWordLength || 3;
     this.maxKeywords = options.maxKeywords || 20;
-    this.confidenceThreshold = options.confidenceThreshold || 0.3;
+    this.confidenceThreshold = options.confidenceThreshold || 0.05;
   }
 
   async generateKeywords(text, context = {}) {
@@ -72,7 +72,7 @@ class KeywordGenerator {
       let totalFrequency = 0;
 
       for (const variant of variants) {
-        const regex = new RegExp(`\b${variant}\b`, 'gi');
+        const regex = new RegExp(`\\b${variant}\\b`, 'gi');
         const matches = text.match(regex);
         const frequency = matches ? matches.length : 0;
 

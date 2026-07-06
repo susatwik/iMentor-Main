@@ -236,7 +236,7 @@ class GrokProvider(BaseProvider):
         super().__init__(config)
         self.api_key = os.getenv("GROK_API_KEY")
         self.base_url = os.getenv("GROK_URL", "https://api.x.ai/v1")
-        self.default_model = os.getenv("GROK_MODEL", "grok-2-1212")
+        self.default_model = os.getenv("GROK_MODEL", "grok-2-latest")
 
     def _get_client(self) -> OpenAI:
         if self._client is None:
@@ -531,7 +531,7 @@ class LLMProviderManager:
             ProviderType.SGLANG: ProviderConfig("sglang", True, 30, 2, 1.0),
             ProviderType.GROK: ProviderConfig("grok", True, 30, 2, 1.0),
             ProviderType.GEMINI: ProviderConfig("gemini", True, 30, 2, 1.0),
-            ProviderType.OLLAMA: ProviderConfig("ollama", True, 60, 1, 2.0),
+            ProviderType.OLLAMA: ProviderConfig("ollama", True, 300, 1, 2.0),
         }
 
         for pname in self.priority:
