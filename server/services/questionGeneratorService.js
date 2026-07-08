@@ -1,262 +1,337 @@
-// server/services/questionGeneratorService.js
+const axios = require('axios');
 const { callWithFallback } = require('./llmFallbackService');
 const { getCurriculumStructure } = require('./socraticTutorService');
-const { queryPythonRagService } = require('./ragQueryService');
 const log = require('../utils/logger');
 
-/**
- * Shared Question Generator Service
- * Centralizes the adaptive quiz generation logic, ensuring:
- *  - Unified LLM invocation via callWithFallback
- *  - Proper curriculum hierarchy fallback when PDF RAG context is missing
- *  - Exact question layout structure and difficulty distributions
- */
+const PYTHON_RAG_URL = process.env.PYTHON_RAG_SERVICE_URL || 'http://127.0.0.1:2001';
 
-/**
- * Generate Socratic Quiz: 10 questions (7 MCQs, 3 Descriptive)
- */
+const BANNED_PHRASES = [
+    'Foundational multiple-choice',
+    'core principles',
+    'baseline optimization',
+    'primary methodology',
+    'legacy framework',
+    'architectural trade-off',
+    'Option A',
+    'Option B',
+    'Option C',
+    'Option D',
+    'standard implementation approach',
+    'core theoretical framework',
+    'deprecated technique',
+    'auxiliary optimization'
+];
+
+async function fetchLectureContent(courseName, moduleId, moduleName) {
+    const structure = await getCurriculumStructure(courseName);
+    if (!structure || !structure.modules || structure.modules.length === 0) {
+        return null;
+    }
+
+    const targetMod = structure.modules.find(m => m.id === moduleId || m.name === moduleName || m.id === moduleName);
+    const mods = targetMod ? [targetMod] : structure.modules;
+
+    const modParts = mods.map(m => {
+        let str = `## Module: ${m.name}\n${m.description ? m.description + '\n' : ''}`;
+        if (m.topics) {
+            for (const t of m.topics) {
+                str += `\n### ${t.name}\n`;
+                if (t.subtopics) {
+                    for (const s of t.subtopics) {
+                        str += `- **${s.name}**`;
+                        if (s.description) str += `: ${s.description}`;
+                        str += '\n';
+                    }
+                }
+            }
+        }
+        return str;
+    });
+
+    const fullContext = modParts.join('\n\n');
+
+    const lectureParts = [];
+    const subtopicBatch = [];
+    for (const mod of mods) {
+        if (mod.topics) {
+            for (const topic of mod.topics) {
+                if (topic.subtopics) {
+                    for (const sub of topic.subtopics) {
+                        subtopicBatch.push({ topic: topic.name, sub });
+                    }
+                }
+            }
+        }
+    }
+
+    const MAX_CONCURRENT = 2;
+    for (let i = 0; i < Math.min(subtopicBatch.length, 4); i += MAX_CONCURRENT) {
+        const batch = subtopicBatch.slice(i, i + MAX_CONCURRENT);
+        const batchResults = await Promise.allSettled(batch.map(({ topic, sub }) =>
+            axios.get(
+                `${PYTHON_RAG_URL}/curriculum/${encodeURIComponent(courseName)}/lecture/${encodeURIComponent(sub.id)}`,
+                { timeout: 3000, params: { subtopic_name: sub.name, topic_name: topic } }
+            ).then(resp => {
+                if (resp.data && resp.data.markdown) {
+                    const md = resp.data.markdown;
+                    if (md.length > 300 && !md.includes('⚠️')) {
+                        return { topic, subtopic: sub.name, content: md.slice(0, 2000) };
+                    }
+                }
+                return null;
+            }).catch(() => null)
+        ));
+        for (const r of batchResults) {
+            if (r.status === 'fulfilled' && r.value) {
+                const entry = `## ${r.value.subtopic}\n${r.value.content}`;
+                if (!lectureParts.includes(entry)) {
+                    lectureParts.push(entry);
+                }
+            }
+        }
+    }
+
+    if (lectureParts.length > 0) {
+        return `[[WITH_LECTURE]]\n${lectureParts.join('\n\n')}`;
+    }
+
+    return `[[CURRICULUM_ONLY]]\n${fullContext}`;
+}
+
+function parseLLMResponse(rawText, defaultDifficulty) {
+    let text = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    // Strategy 1: direct parse
+    try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed.MCQ || parsed.Descriptive) {
+            const combined = [
+                ...(Array.isArray(parsed.MCQ) ? parsed.MCQ : []),
+                ...(Array.isArray(parsed.Descriptive) ? parsed.Descriptive : [])
+            ];
+            if (combined.length > 0) return combined;
+        }
+    } catch {}
+
+    // Strategy 2: repair typographic chars and try again
+    const repaired = text
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u2013\u2014]/g, '-');
+
+    try {
+        const parsed = JSON.parse(repaired);
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed.MCQ || parsed.Descriptive) {
+            const combined = [
+                ...(Array.isArray(parsed.MCQ) ? parsed.MCQ : []),
+                ...(Array.isArray(parsed.Descriptive) ? parsed.Descriptive : [])
+            ];
+            if (combined.length > 0) return combined;
+        }
+    } catch {}
+
+    // Strategy 3: try to find array bounds and extract with aggressive repair
+    const arrStart = repaired.indexOf('[');
+    const arrEnd = repaired.lastIndexOf(']');
+    if (arrStart !== -1 && arrEnd > arrStart) {
+        let arrText = repaired.slice(arrStart, arrEnd + 1);
+        arrText = arrText
+            .replace(/,\s*\]/g, ']')
+            .replace(/,\s*}/g, '}')
+            .replace(/([{,])\s*(\w+)\s*:/g, '$1"$2":')
+            .replace(/:\s*'([^']*)'/g, ':"$1"');
+        try {
+            const parsed = JSON.parse(arrText);
+            if (Array.isArray(parsed)) return parsed;
+        } catch {}
+    }
+
+    // Strategy 4: wrap object in array if it's {MCQ:[], Descriptive:[]}
+    const braceObj = repaired.match(/^\{[\s\S]*\}$/);
+    if (braceObj) {
+        try {
+            const parsed = JSON.parse(braceObj[0]);
+            if (parsed.MCQ || parsed.Descriptive) {
+                const combined = [
+                    ...(Array.isArray(parsed.MCQ) ? parsed.MCQ : []),
+                    ...(Array.isArray(parsed.Descriptive) ? parsed.Descriptive : [])
+                ];
+                if (combined.length > 0) return combined;
+            }
+        } catch {}
+    }
+
+    // Strategy 5: extract individual objects with regex
+    const items = [];
+    const qRegex = /\{[^{]*?"(?:question|instruction)"\s*:\s*"[^"]*?"[^}]*?\}/gs;
+    let match;
+    while ((match = qRegex.exec(repaired)) !== null) {
+        try {
+            const item = JSON.parse(match[0]);
+            if (item.question || item.instruction) {
+                items.push(item);
+            }
+        } catch {}
+    }
+    if (items.length > 0) return items;
+
+    // Strategy 6: loose extraction of any brace-delimited blocks
+    const loose = text.match(/\{[^{}]*\}/gs);
+    if (loose) {
+        for (const block of loose) {
+            try {
+                const item = JSON.parse(block);
+                if (item.question || item.instruction) {
+                    items.push(item);
+                }
+            } catch {}
+        }
+    }
+    return items.length > 0 ? items : null;
+}
+
 async function generateSocraticQuiz({ courseName, moduleId, moduleName, user }) {
     try {
         const learningStage = user?.profile?.learningStage || 'Beginner';
-
-        // 1. Determine target difficulty and specific instructions based on history
-        const quizScores = user?.profile?.quizScores || [];
-        const sameContextAttempts = quizScores.filter(q => 
-            q.courseName === courseName && 
-            (!moduleId || q.moduleId === moduleId)
-        );
-
-        let targetDifficulty = learningStage;
-        let stageSpecificPrompt = '';
-
-        if (sameContextAttempts.length > 0) {
-            const latestAttempt = sameContextAttempts.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-            const prevScore = latestAttempt.score;
-
-            if (prevScore <= 40) {
-                targetDifficulty = 'Beginner';
-                stageSpecificPrompt = `
-- The student's previous score on this quiz was ${prevScore}%. Focus on FOUNDATIONAL questions, basic terminology, and core concepts.
-- Include a helpful hint within the question text to guide the student towards the correct path.
-- Keep the questions encouraging and not overly complex.
-`;
-            } else if (prevScore <= 75) {
-                targetDifficulty = 'Intermediate';
-                stageSpecificPrompt = `
-- The student's previous score on this quiz was ${prevScore}%. Focus on APPLICATION questions, explaining "why" mechanisms work, and predicting behavior under normal changes.
-- Formulate questions that require the student to apply concepts to straightforward scenarios or compare two basic approaches/mechanisms.
-- Do not provide direct hints, but keep the scope well-defined.
-`;
-            } else {
-                targetDifficulty = 'Advanced';
-                stageSpecificPrompt = `
-- The student's previous score on this quiz was ${prevScore}%. Focus on ADVANCED REASONING questions, system architecture, trade-offs, edge cases, scalability, optimization, and complex predictions.
-- Formulate questions that ask them to analyze system-wide trade-offs under constraints, predict outcomes of multi-variable parameter modifications, or debug/optimize a scenario.
-- Questions should demand deep, detailed technical reasoning. Do not provide hints.
-`;
-            }
-        } else {
-            if (learningStage === 'Beginner') {
-                stageSpecificPrompt = `
-- The student is a BEGINNER. Focus on basic terminology, core concepts, and intuitive understanding.
-- Formulate questions that ask for reflection, simple explanations of basic mechanisms, or use of analogies.
-- Include a helpful hint within the question text to guide the student towards the correct path.
-- Keep the questions encouraging and not overly complex.
-`;
-            } else if (learningStage === 'Intermediate') {
-                stageSpecificPrompt = `
-- The student is at an INTERMEDIATE stage. Focus on standard applications, explaining "why" mechanisms work, and predicting behavior under normal changes.
-- Formulate questions that require the student to apply concepts to straightforward scenarios or compare two basic approaches/mechanisms.
-- Do not provide direct hints, but keep the scope well-defined.
-`;
-            } else {
-                stageSpecificPrompt = `
-- The student is ADVANCED. Focus on system architecture, trade-offs, edge cases, scalability, optimization, and complex predictions.
-- Formulate questions that ask them to analyze system-wide trade-offs under constraints, predict outcomes of multi-variable parameter modifications, or debug/optimize a scenario.
-- Questions should demand deep, detailed technical reasoning.
-`;
-            }
-        }
-
-        // 2. Inject rolling weak/strong topic instructions (cutoff: 70%)
         const weakTopics = user?.profile?.weakTopics || [];
         const strongTopics = user?.profile?.strongTopics || [];
-        let compositionPrompt = '';
 
+        let compositionPrompt = '';
         if (weakTopics.length > 0) {
-            compositionPrompt += `\n- The student struggles with the following topics: ${weakTopics.join(', ')}. Allocate at least 4 questions directly testing these weak topics to provide reinforcement, but explain them with simpler scaffolding or hints.\n`;
+            compositionPrompt += `\n- The student struggles with: ${weakTopics.join(', ')}. Allocate more questions to these topics with supportive scaffolding.\n`;
         }
         if (strongTopics.length > 0) {
-            compositionPrompt += `\n- The student has mastered or performs strongly in the following topics: ${strongTopics.join(', ')}. If any questions are generated for these topics, make them highly challenging (Advanced scenario-based questions) to test the depth of their mastery.\n`;
+            compositionPrompt += `\n- The student excels at: ${strongTopics.join(', ')}. Make questions on these topics challenging.\n`;
         }
 
-        // 3. Build search query and retrieve RAG context
-        let searchQuery = '';
-        let completedModules = [];
-        const progress = user?.curriculumProgress?.get(courseName);
-        completedModules = progress?.completedModules || [];
+        log.info('QUIZ', `Fetching lecture content for ${courseName} / ${moduleName || moduleId}`);
+        const contextText = await fetchLectureContent(courseName, moduleId, moduleName);
 
-        if (completedModules.length > 0 && !moduleId && !moduleName) {
-            searchQuery = `Explain core concepts, definitions, design trade-offs, architecture, and mechanisms for the following completed modules: ${completedModules.join(', ')} of course ${courseName}.`;
-        } else if (moduleName || moduleId) {
-            searchQuery = `Explain core concepts, definitions, design trade-offs, architecture, and mechanisms for module: ${moduleName || moduleId} of course ${courseName}.`;
-        } else {
-            searchQuery = `Explain core concepts, definitions, design trade-offs, architecture, and mechanisms for the entire course ${courseName}.`;
-        }
+        const hasLectureContent = contextText && contextText.startsWith('[[WITH_LECTURE]]');
+        const curriculumOnly = contextText && contextText.startsWith('[[CURRICULUM_ONLY]]');
+        const cleanContext = hasLectureContent
+            ? contextText.replace('[[WITH_LECTURE]]\n', '')
+            : curriculumOnly
+                ? contextText.replace('[[CURRICULUM_ONLY]]\n', '')
+                : contextText;
 
-        let contextText = 'No course material context available.';
-        let ragResult = null;
-        try {
-            ragResult = await queryPythonRagService(
-                searchQuery,
-                courseName,
-                true, // enable Neo4j graph search
-                null,
-                5,
-                user?._id
-            );
-            if (ragResult && ragResult.toolOutput) {
-                contextText = ragResult.toolOutput;
-            }
-        } catch (ragError) {
-            log.warn('QUIZ', `RAG query failed: ${ragError.message}. Falling back to curriculum metadata.`);
-        }
+        const prompt = `Generate 10 questions (7 MCQ, 3 Descriptive) for "${courseName}"${moduleName ? ' module: ' + moduleName : ''}. Level: ${learningStage}.
 
-        // Check if context is empty or uninformative and use curriculum structure metadata fallback
-        if (!ragResult || !ragResult.toolOutput || ragResult.toolOutput.trim() === '' || ragResult.toolOutput.includes('No context found') || ragResult.toolOutput === 'No course material context available.') {
-            const structure = await getCurriculumStructure(courseName);
-            if (structure && structure.modules && structure.modules.length > 0) {
-                let fallbackParts = [];
-                const targetMod = structure.modules.find(m => m.id === moduleId || m.name === moduleName || m.id === moduleName);
-                
-                if (targetMod) {
-                    fallbackParts.push(`Module: ${targetMod.name}`);
-                    if (targetMod.description) fallbackParts.push(`Description: ${targetMod.description}`);
-                    if (targetMod.topics && targetMod.topics.length > 0) {
-                        const topicsList = targetMod.topics.map(t => {
-                            let topicStr = `- Topic: ${t.name}`;
-                            if (t.subtopics && t.subtopics.length > 0) {
-                                topicStr += ` (Subtopics: ${t.subtopics.map(s => s.name).join(', ')})`;
-                            }
-                            return topicStr;
-                        }).join('\n');
-                        fallbackParts.push(`Topics to cover:\n${topicsList}`);
-                    }
-                } else {
-                    fallbackParts.push(`Course Curriculum Structure for ${courseName}:`);
-                    structure.modules.forEach(m => {
-                        let mStr = `- Module: ${m.name}`;
-                        if (m.topics && m.topics.length > 0) {
-                            mStr += ` (Topics: ${m.topics.map(t => t.name).join(', ')})`;
-                        }
-                        fallbackParts.push(mStr);
-                    });
-                }
-                contextText = fallbackParts.join('\n\n');
-            }
-        }
+Content:
+${cleanContext}
 
-        // 4. Construct Socratic generator prompt
-        const prompt = `You are a Socratic tutor generating an academic quiz.
-Based on the following course material context, generate exactly 10 diverse, true Socratic questions tailored to the student's current learning stage: "${targetDifficulty}".
-
-Course Name: ${courseName}
-${moduleName ? `Module: ${moduleName}` : ''}
-
-Context:
-"${contextText}"
-
-QUIZ COMPOSITION RULES:
-- Generate exactly 10 questions.
-- Exactly 7 questions must be Multiple Choice Questions (type: "MCQ") with 4 choices.
-- Exactly 3 questions must be Descriptive Questions (type: "Descriptive").
-- MCQ questions MUST include an array of 4 strings in 'options' and a 0-based integer 'correctIndex'. Do not prefix options with letters like "A)", "B)", etc.
-- Descriptive questions MUST NOT contain 'options' or 'correctIndex'.
-
-SOCRATIC QUESTION TYPES TO CHOOSE FROM:
-1. Reflection Question: Ask the student to reflect on their intuition or explain how a concept relates to what they've seen.
-2. Reasoning Question: Ask the student to explain the underlying "why" or the mathematical/logical necessity behind a concept.
-3. Prediction Question: Ask the student to predict the behavioral/system changes if a constraint, mechanism, or parameter is modified.
-4. Comparison/Trade-off Question: Ask the student to compare two alternative approaches or evaluate design trade-offs.
-5. Application Question: Ask the student to apply the concept to analyze a practical scenario or solve a problem.
-
-LEARNING STAGE ADAPTATION GUIDELINES:${stageSpecificPrompt}
+Rules:
+- Reference real subtopics, definitions, formulas, terms from content above
+- MCQ: EXACTLY 4 plain text options, correctIndex (0-based), hint required
+- Descriptive: output (expected answer), hint required
 ${compositionPrompt}
-
-Return ONLY a valid JSON array of 10 objects. Do NOT include markdown blocks (like \`\`\`json) or extra text.
-JSON format:
-[
-  {
-    "instruction": "The Socratic question text",
-    "type": "MCQ",
-    "options": ["First option", "Second option", "Third option", "Fourth option"],
-    "correctIndex": 0,
-    "output": "A detailed explanation of why the correct choice is correct.",
-    "topic": "Specific topic name",
-    "difficulty": "${targetDifficulty}",
-    "hint": "A helpful hint (if student is Beginner/Intermediate, else empty string)"
-  },
-  {
-    "instruction": "A descriptive reasoning question text",
-    "type": "Descriptive",
-    "output": "The ideal detailed answer containing key factual points that a student should touch upon.",
-    "topic": "Specific topic name",
-    "difficulty": "${targetDifficulty}",
-    "hint": "A helpful hint (if student is Beginner/Intermediate, else empty string)"
-  }
-]
-`;
+- BANNED phrases: core principles, baseline optimization, primary methodology, legacy framework, architectural trade-offs, standard implementation approach, core theoretical framework
+- Return only valid JSON array. Example: [{"instruction":"What is ...?","type":"MCQ","options":["opt1","opt2","opt3","opt4"],"correctIndex":0,"output":"","topic":"subtopic","difficulty":"${learningStage}","hint":"..."}]`;
 
         const preferredProvider = process.env.NODE_ENV === 'development' ? 'ollama' : 'sglang';
+        const modelOverride = process.env.TEST_OLLAMA_MODEL || undefined;
         const fallbackResult = await callWithFallback({
             userQuery: prompt,
             preferredProvider,
-            preferLocalFirst: true
+            preferLocalFirst: true,
+            options: modelOverride ? { model: modelOverride, temperature: 0.3 } : { temperature: 0.3 }
         });
 
         if (fallbackResult.provider === 'none') {
             throw new Error('All LLM providers are offline/unavailable.');
         }
 
-        const responseText = fallbackResult.text;
-        let cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const questions = JSON.parse(cleanText);
-
-        if (!Array.isArray(questions) || questions.length === 0) {
+        const parsed = parseLLMResponse(fallbackResult.text, learningStage);
+        if (!parsed || parsed.length === 0) {
             throw new Error('LLM did not return a valid array of questions.');
         }
+        const questions = parsed;
 
-        return questions.map((q, idx) => {
-            const isMCQ = q.type === 'MCQ' || (Array.isArray(q.options) && q.options.length > 0);
-            return {
-                instruction: q.instruction || q.question || `Question ${idx + 1}`,
-                type: isMCQ ? 'MCQ' : 'Descriptive',
-                options: isMCQ ? (q.options || []).map(o => String(o).replace(/^[A-Da-d][.):\-]\s*/, '')) : undefined,
-                correctIndex: isMCQ ? (typeof q.correctIndex === 'number' ? q.correctIndex : 0) : undefined,
-                output: q.output || q.explanation || '',
-                topic: q.topic || 'General',
-                difficulty: q.difficulty || targetDifficulty,
-                hint: q.hint || ''
-            };
-        });
+        const containsBanned = (text) => {
+            if (!text) return false;
+            return BANNED_PHRASES.some(phrase => text.toLowerCase().includes(phrase.toLowerCase()));
+        };
+
+        const hasBanned = questions.some(q =>
+            containsBanned(q.instruction) ||
+            (Array.isArray(q.options) && q.options.some(o => containsBanned(o))) ||
+            containsBanned(q.output) ||
+            containsBanned(q.explanation)
+        );
+
+        if (hasBanned) {
+            log.warn('QUIZ', 'Generated quiz contains banned placeholder phrases. Retrying once...');
+            const retryResult = await callWithFallback({
+                userQuery: prompt.replace('Return ONLY valid JSON array.', 'FATAL: Your previous response used placeholder phrases. This is FORBIDDEN. Every question MUST reference real subtopic names, real definitions, and real engineering concepts from the course content. Return ONLY valid JSON array.'),
+                preferredProvider,
+                preferLocalFirst: true,
+                options: modelOverride ? { model: modelOverride, temperature: 0.3 } : { temperature: 0.3 }
+            });
+            if (retryResult.provider !== 'none') {
+                const retryParsed = parseLLMResponse(retryResult.text, learningStage);
+                if (retryParsed && retryParsed.length > 0) {
+                    const retryHasBanned = retryParsed.some(q =>
+                        containsBanned(q.instruction) ||
+                        (Array.isArray(q.options) && q.options.some(o => containsBanned(o))) ||
+                        containsBanned(q.output)
+                    );
+                    if (!retryHasBanned) {
+                        return normalizeQuestions(retryParsed, learningStage);
+                    }
+                }
+            }
+            throw new Error('Retry still produced placeholder questions.');
+        }
+
+        return normalizeQuestions(questions, learningStage);
 
     } catch (err) {
-        log.warn('QUESTION_GENERATOR', `Socratic quiz generation failed: ${err.message}. Generating resilient offline fallback questions.`);
-        return generateSocraticOfflineFallback({ courseName, moduleName: moduleName || moduleId });
+        log.error('QUIZ', `Socratic quiz generation failed: ${err.message}`);
+        if (err.message.includes('placeholder') || err.message.includes('banned')) {
+            throw new Error('Quiz generation failed: could not produce lecture-derived questions. Try again later.');
+        }
+        throw new Error(`Quiz generation failed: ${err.message}`);
     }
 }
 
-/**
- * Generate Skill Tree Level Questions: 6 MCQs (3 Easy, 2 Medium, 1 Hard)
- */
+function normalizeQuestions(questions, defaultDifficulty) {
+    return questions.map((q, idx) => {
+        const isMCQ = q.type === 'MCQ' || (Array.isArray(q.options) && q.options.length > 0);
+        let correctIndex = undefined;
+        if (isMCQ) {
+            if (typeof q.correctIndex === 'number') {
+                correctIndex = q.correctIndex;
+            } else if (typeof q.answer === 'number') {
+                correctIndex = q.answer;
+            } else if (typeof q.answer === 'string' && /^\d+$/.test(q.answer)) {
+                correctIndex = parseInt(q.answer);
+            } else {
+                correctIndex = 0;
+            }
+        }
+        return {
+            instruction: q.instruction || q.question || `Question ${idx + 1}`,
+            type: isMCQ ? 'MCQ' : 'Descriptive',
+            options: isMCQ ? (q.options || []).map(o => String(o).replace(/^[A-Da-d][.):\-]\s*/, '')) : undefined,
+            correctIndex,
+            output: q.output || q.answer_text || q.explanation || q.answerText || '',
+            topic: q.topic || 'General',
+            difficulty: q.difficulty || defaultDifficulty,
+            hint: q.hint || ''
+        };
+    });
+}
+
 async function generateSkillTreeQuestions({ topic, levelId, levelName, difficulty, user, seenQuestions = [] }) {
     try {
-        // 1. Fetch RAG Context
         const searchQuery = `Explain core concepts, definitions, design trade-offs, architecture, and practical code examples for: ${levelName} under the topic: ${topic}.`;
         let contextText = 'No course material context available.';
         let ragResult = null;
 
         try {
+            const { queryPythonRagService } = require('./ragQueryService');
             ragResult = await queryPythonRagService(
                 searchQuery,
                 topic,
@@ -272,12 +347,10 @@ async function generateSkillTreeQuestions({ topic, levelId, levelName, difficult
             log.warn('QUESTION_GENERATOR', `RAG query failed for skill tree: ${ragError.message}. Falling back to curriculum metadata.`);
         }
 
-        // Use curriculum fallback if RAG context is missing
         if (!ragResult || !ragResult.toolOutput || ragResult.toolOutput.trim() === '' || ragResult.toolOutput.includes('No context found') || ragResult.toolOutput === 'No course material context available.') {
             const structure = await getCurriculumStructure(topic);
             if (structure && structure.modules && structure.modules.length > 0) {
                 let fallbackParts = [];
-                // Find module or topic matching levelName
                 let foundMatch = false;
                 structure.modules.forEach(m => {
                     if (m.name.toLowerCase() === levelName.toLowerCase()) {
@@ -322,7 +395,6 @@ async function generateSkillTreeQuestions({ topic, levelId, levelName, difficult
             }
         }
 
-        // 2. Construct Curved MCQ Generation Prompt
         const prompt = `You are a strict technical interviewer creating a quiz for "${topic}".
 Level/Subtopic: "${levelName}" (Level ID: ${levelId})
 Course Context:
@@ -373,7 +445,6 @@ JSON Structure (Return ONLY the array of 6 objects):
             throw new Error('LLM did not return a valid array of questions.');
         }
 
-        // Normalize questions: ensure options array and a valid 0-based correctIndex
         return questions.map((q, qi) => {
             const out = {
                 question: typeof q.question === 'string' ? q.question : (q.prompt || q.text || `Question ${qi + 1}`),
@@ -381,7 +452,6 @@ JSON Structure (Return ONLY the array of 6 objects):
                 explanation: q.explanation || q.explain || q.explanations || ''
             };
 
-            // Normalize correctIndex
             let idx = undefined;
             if (typeof q.correctIndex === 'number' && Number.isFinite(q.correctIndex)) {
                 idx = parseInt(q.correctIndex);
@@ -415,118 +485,9 @@ JSON Structure (Return ONLY the array of 6 objects):
         });
 
     } catch (err) {
-        log.warn('QUESTION_GENERATOR', `Skill Tree questions generation failed: ${err.message}. Generating resilient offline fallback questions.`);
-        return generateOfflineFallbackQuestions({ topic, levelName, difficulty });
+        log.warn('QUESTION_GENERATOR', `Skill Tree questions generation failed: ${err.message}.`);
+        throw new Error(`Skill tree question generation failed: ${err.message}`);
     }
-}
-
-function generateOfflineFallbackQuestions({ topic, levelName, difficulty }) {
-    return [
-        {
-            question: `What is the primary definition or fundamental concept of ${levelName} in ${topic}?`,
-            options: [
-                `A foundational method for configuring and processing ${levelName} components.`,
-                `The core theoretical framework establishing how ${levelName} operates within ${topic}.`,
-                `An auxiliary system designed for optimizing database queries.`,
-                `A deprecated protocol replaced by modern cloud-native architectures.`
-            ],
-            correctIndex: 1,
-            explanation: `The core concept of ${levelName} represents the main theoretical and functional framework for its implementation within ${topic}.`
-        },
-        {
-            question: `Which of the following represents a key characteristic or component of ${levelName}?`,
-            options: [
-                `High latency and low throughput.`,
-                `Requirement for manual human intervention at every execution step.`,
-                `Dynamic scaling, structural abstraction, and modular integrity.`,
-                `Total isolation from other subsystems in ${topic}.`
-            ],
-            correctIndex: 2,
-            explanation: `${levelName} emphasizes modular integrity, proper abstraction, and the capability to scale components dynamically.`
-        },
-        {
-            question: `When deploying or using ${levelName}, what is a standard first step or prerequisite?`,
-            options: [
-                `Defining the input data schema, objectives, and configuration parameters.`,
-                `De-provisioning all compute resources to save energy.`,
-                `Bypassing safety protocols to speed up initialization.`,
-                `Migrating the entire infrastructure to a legacy database system.`
-            ],
-            correctIndex: 0,
-            explanation: `A successful start requires clearly defining the input schema, configuration parameters, and overall learning objectives.`
-        },
-        {
-            question: `Which trade-off is most commonly encountered when optimizing ${levelName} for performance?`,
-            options: [
-                `Balancing execution speed against accuracy and resource consumption.`,
-                `Sacrificing usability entirely to improve system security.`,
-                `Trading modularity for increased complexity without performance benefits.`,
-                `Increasing network overhead while decreasing parallel processing capability.`
-            ],
-            correctIndex: 0,
-            explanation: `Optimizing ${levelName} typically involves trade-offs between execution speed, computational resources, and accuracy.`
-        },
-        {
-            question: `How does ${levelName} contribute to the robustness of a system in ${topic}?`,
-            options: [
-                `By introducing random failures to test system resilience.`,
-                `Through error encapsulation, validation checking, and adaptive feedback loops.`,
-                `By strictly hardcoding all operational parameters to prevent change.`,
-                `Through excessive logging that consumes all disk space.`
-            ],
-            correctIndex: 1,
-            explanation: `Error encapsulation, robust validation checks, and adaptive feedback loops are key to the stability of ${levelName}.`
-        },
-        {
-            question: `At an advanced level, how should one address scalability constraints in ${levelName}?`,
-            options: [
-                `Avoid parallelization and run all processes sequentially on a single thread.`,
-                `Implement distributed partitioning, load balancing, and concurrent processing pipelines.`,
-                `Downgrade to a simpler model that does not support high concurrency.`,
-                `Increase system synchronization locks to force serialized database access.`
-            ],
-            correctIndex: 1,
-            explanation: `Advanced scaling for ${levelName} requires distributed partitioning, effective load balancing, and concurrent pipeline architectures.`
-        }
-    ];
-}
-
-function generateSocraticOfflineFallback({ courseName, moduleName }) {
-    const questions = [];
-    const targetModName = moduleName || 'this module';
-    
-    // 7 MCQs
-    for (let i = 1; i <= 7; i++) {
-        questions.push({
-            instruction: `Foundational multiple-choice question ${i} regarding the core principles of ${targetModName} in ${courseName}.`,
-            type: 'MCQ',
-            options: [
-                `Option A: An approach that focuses on baseline optimization of ${targetModName}.`,
-                `Option B: The primary methodology establishing structural behavior and workflow standard.`,
-                `Option C: A secondary option representing an alternative implementation technique.`,
-                `Option D: A legacy framework with limited compatibility.`
-            ],
-            correctIndex: 1,
-            output: `Option B is correct because it aligns with the standard best practices and theoretical foundations of ${targetModName}.`,
-            topic: targetModName,
-            difficulty: 'Beginner',
-            hint: `Focus on the primary methodology and core architecture.`
-        });
-    }
-
-    // 3 Descriptive
-    for (let i = 8; i <= 10; i++) {
-        questions.push({
-            instruction: `Explain the practical significance and architectural trade-offs of implementing ${targetModName} within the broader context of ${courseName}.`,
-            type: 'Descriptive',
-            output: `The ideal explanation should describe the core mechanisms of ${targetModName}, evaluate trade-offs like speed vs resource usage, and discuss integration with other subsystems in ${courseName}.`,
-            topic: targetModName,
-            difficulty: 'Beginner',
-            hint: `Consider trade-offs, scalability, and system integration.`
-        });
-    }
-
-    return questions;
 }
 
 module.exports = {

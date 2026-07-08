@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 class ProviderType(Enum):
     SGLANG = "sglang"
     GROK = "grok"
+    GROQ = "groq"
     GEMINI = "gemini"
     OLLAMA = "ollama"
 
@@ -313,6 +314,90 @@ class GrokProvider(BaseProvider):
         return None
 
 
+class GroqProvider(BaseProvider):
+    """GroqCloud provider using Groq SDK."""
+
+    def __init__(self, config: ProviderConfig):
+        super().__init__(config)
+        self.api_key = os.getenv("GROQ_API_KEY", "")
+        self.default_model = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
+
+    def _get_client(self):
+        if self._client is None:
+            if Groq is None:
+                raise ImportError("groq package not installed")
+            if not self.api_key:
+                raise ValueError("GROQ_API_KEY not configured")
+            self._client = Groq(api_key=self.api_key)
+        return self._client
+
+    def health_check(self) -> HealthCheckResult:
+        start = time.time()
+        try:
+            if not self.api_key:
+                return HealthCheckResult(ProviderType.GROQ, False, 0, "GROQ_API_KEY not configured")
+            client = self._get_client()
+            models = client.models.list()
+            latency = (time.time() - start) * 1000
+            return HealthCheckResult(ProviderType.GROQ, True, latency)
+        except Exception as e:
+            latency = (time.time() - start) * 1000
+            return HealthCheckResult(ProviderType.GROQ, False, latency, str(e))
+
+    def generate(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.3,
+        max_tokens: int = 4000,
+        response_format: Optional[Dict] = None,
+        **kwargs
+    ) -> Optional[str]:
+        if not self.api_key:
+            logger.warning("Groq API key not configured")
+            return None
+
+        model = model or self.default_model
+        for attempt in range(self.config.max_retries + 1):
+            try:
+                client = self._get_client()
+                params = {"model": model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+                if response_format:
+                    if response_format.get("type") == "json_schema":
+                        params["response_format"] = {"type": "json_object"}
+                resp = client.chat.completions.create(**params)
+                content = resp.choices[0].message.content
+                if content:
+                    return content
+            except Exception as e:
+                if attempt == self.config.max_retries:
+                    logger.error(f"Groq generation failed: {e}")
+                else:
+                    time.sleep(self.config.retry_delay)
+        return None
+
+    def generate_structured(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        schema: Dict,
+        model: Optional[str] = None,
+        temperature: float = 0.1,
+        max_tokens: int = 4000
+    ) -> Optional[Dict]:
+        content = self.generate(
+            [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            model, temperature, max_tokens,
+            {"type": "json_schema", "json_schema": {"name": schema.get("title", "response"), "schema": schema}}
+        )
+        if content:
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                pass
+        return None
+
+
 class GeminiProvider(BaseProvider):
     """Google Gemini provider."""
 
@@ -523,13 +608,14 @@ class LLMProviderManager:
         self._init_providers()
 
     def _get_priority_from_env(self) -> List[str]:
-        priority_str = os.getenv("LLM_PROVIDER_PRIORITY", "sglang,grok,gemini,ollama")
+        priority_str = os.getenv("LLM_PROVIDER_PRIORITY", "groq,gemini,grok,ollama,sglang")
         return [p.strip().lower() for p in priority_str.split(",") if p.strip()]
 
     def _init_providers(self):
         configs = {
             ProviderType.SGLANG: ProviderConfig("sglang", True, 30, 2, 1.0),
             ProviderType.GROK: ProviderConfig("grok", True, 30, 2, 1.0),
+            ProviderType.GROQ: ProviderConfig("groq", True, 30, 2, 1.0),
             ProviderType.GEMINI: ProviderConfig("gemini", True, 30, 2, 1.0),
             ProviderType.OLLAMA: ProviderConfig("ollama", True, 300, 1, 2.0),
         }
@@ -545,6 +631,8 @@ class LLMProviderManager:
                     self.providers[ptype] = SGLangProvider(configs[ptype])
                 elif ptype == ProviderType.GROK:
                     self.providers[ptype] = GrokProvider(configs[ptype])
+                elif ptype == ProviderType.GROQ:
+                    self.providers[ptype] = GroqProvider(configs[ptype])
                 elif ptype == ProviderType.GEMINI:
                     self.providers[ptype] = GeminiProvider(configs[ptype])
                 elif ptype == ProviderType.OLLAMA:

@@ -1370,8 +1370,10 @@ async def study_questions_generate_course(body: StudyQuestionsCourseRequest):
 
 @app.get("/skill-tree/{course}")
 async def skill_tree_get(course: str):
-    """Retrieve cached skill tree for a course."""
-    data = skill_tree_generator.load_skill_tree(course)
+    """Retrieve cached skill tree for a course.
+    Handles both mega-courses (EE) and individual courses (EE1011, etc.).
+    """
+    data = skill_tree_generator.load_course_skill_tree(course)
     if data:
         return {"success": True, "cached": True, "data": data}
     return {"success": False, "cached": False, "data": None}
@@ -1857,6 +1859,19 @@ async def list_courses_route():
     except Exception as e:
         logger.error(f"Error listing courses: {e}", exc_info=True)
         return _error(f"Failed to list courses: {e}", 500)
+
+
+@app.get("/curriculum/courses/meta")
+async def list_courses_meta_route():
+    """Return courses with metadata (code, name, semester, credits, category, department)."""
+    if not curriculum_graph_handler:
+        return _error("Curriculum graph handler not available", 503)
+    try:
+        courses = await run_sync(curriculum_graph_handler.list_courses_with_meta)
+        return {"success": True, "courses": courses}
+    except Exception as e:
+        logger.error(f"Error listing courses with meta: {e}", exc_info=True)
+        return _error(f"Failed to list course metadata: {e}", 500)
 
 
 @app.post("/curriculum/rebuild")

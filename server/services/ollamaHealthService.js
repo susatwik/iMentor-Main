@@ -1,12 +1,13 @@
-/**
- * DEPRECATED — Ollama health shim: delegates to SGLang health check.
- * Ollama has been fully removed. This shim exists for backward compatibility.
- */
+const axios = require('axios');
 
-const sglangService = require('./sglangService');
-
-async function checkOllamaHealth() {
-    return sglangService.checkHealth('chat');
+async function checkOllamaHealth(ollamaUrl) {
+    const baseUrl = ollamaUrl || process.env.OLLAMA_API_BASE_URL || `http://localhost:${process.env.OLLAMA_PORT || 11434}`;
+    try {
+        const resp = await axios.get(`${baseUrl}/api/tags`, { timeout: 3000 });
+        return resp.status === 200 && Array.isArray(resp.data?.models);
+    } catch {
+        return false;
+    }
 }
 
 module.exports = { checkOllamaHealth };

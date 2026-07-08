@@ -29,7 +29,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_FALLBACK = 8192
+_DEFAULT_FALLBACK = 32768
 _cached: Optional[int] = None
 _cached_model_id: Optional[str] = None
 

@@ -180,12 +180,12 @@ function SubtopicItem({ subtopic, topicName, isActive, onClick }) {
     return (
         <button
             onClick={onClick}
-            className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] transition-all group
+            className={`w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] transition-all group
                 ${isActive
-                    ? 'bg-indigo-500/20 text-indigo-300 font-medium border border-indigo-500/30'
-                    : 'text-gray-400 hover:text-gray-100 hover:bg-white/5 border border-transparent'}`}
+                    ? 'bg-white/8 text-gray-100 font-medium'
+                    : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'}`}
         >
-            <Hash size={11} className={`flex-shrink-0 mt-0.5 ${isActive ? 'text-indigo-400' : 'text-gray-600 group-hover:text-gray-400'}`} />
+            <Hash size={11} className={`flex-shrink-0 mt-0.5 ${isActive ? 'text-indigo-400' : 'text-gray-700 group-hover:text-gray-500'}`} />
             <span className="truncate leading-snug">{subtopic.name}</span>
         </button>
     );
@@ -205,20 +205,22 @@ function TopicItem({ topic, activeSubtopic, onSubtopicSelect, defaultOpen }) {
         <div>
             <button
                 onClick={() => setOpen(o => !o)}
-                className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all group"
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all group ${
+                    hasActive ? 'text-gray-100' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                }`}
             >
                 {open
-                    ? <ChevronDown size={13} className="flex-shrink-0 text-gray-500" />
-                    : <ChevronRight size={13} className="flex-shrink-0 text-gray-500" />}
-                <BookMarked size={13} className={`flex-shrink-0 ${hasActive ? 'text-indigo-400' : 'text-indigo-400/50'}`} />
+                    ? <ChevronDown size={13} className="flex-shrink-0 text-gray-600" />
+                    : <ChevronRight size={13} className="flex-shrink-0 text-gray-600" />}
+                <BookMarked size={13} className={`flex-shrink-0 ${hasActive ? 'text-indigo-400' : 'text-gray-600'}`} />
                 <span className="truncate text-left text-[13px]">{topic.name || topic.id}</span>
-                <span className="ml-auto text-[11px] text-gray-600 flex-shrink-0">
+                <span className="ml-auto text-[11px] text-gray-700 flex-shrink-0">
                     {topic.subtopics?.length || 0}
                 </span>
             </button>
 
             {open && (
-                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/8 pl-2">
+                <div className="ml-3 mt-0.5 space-y-0.5 border-l border-white/8 pl-2">
                     {(topic.subtopics || []).map(sub => (
                         <SubtopicItem
                             key={sub.id}
@@ -249,27 +251,27 @@ function ModuleItem({ module, activeSubtopic, onSubtopicSelect, defaultOpen, onT
     }, [hasActive]);
 
     return (
-        <div className={`rounded-xl overflow-hidden transition-all ${hasActive ? 'border border-indigo-500/30' : 'border border-white/8'}`}>
+        <div className={`rounded-lg overflow-hidden transition-all border ${hasActive ? 'border-white/10 bg-white/3' : 'border-white/5'}`}>
             <button
                 onClick={() => setOpen(o => !o)}
-                className="w-full flex items-center gap-2.5 px-3 py-3 text-left transition-all hover:bg-white/5 group"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-all hover:bg-white/5 group"
             >
-                <div className={`p-1.5 rounded-md flex-shrink-0 ${hasActive ? 'bg-indigo-500/30' : 'bg-indigo-500/15'}`}>
-                    <Layers size={13} className={hasActive ? 'text-indigo-300' : 'text-indigo-400/70'} />
+                <div className={`p-1 rounded-md flex-shrink-0 ${hasActive ? 'bg-indigo-500/20' : 'bg-white/5'}`}>
+                    <Layers size={12} className={hasActive ? 'text-indigo-400' : 'text-gray-500'} />
                 </div>
-                <span className="text-[13px] font-semibold text-gray-200 truncate flex-1 leading-snug">
+                <span className="text-[13px] font-medium text-gray-200 truncate flex-1 leading-snug group-hover:text-white">
                     {module.name || module.id}
                 </span>
                 <span className="text-[11px] text-gray-600 flex-shrink-0">
-                    {module.topics?.length || 0} topics
+                    {module.topics?.length || 0}
                 </span>
                 {open
-                    ? <ChevronDown size={13} className="text-gray-500 flex-shrink-0" />
-                    : <ChevronRight size={13} className="text-gray-500 flex-shrink-0" />}
+                    ? <ChevronDown size={12} className="text-gray-600 flex-shrink-0" />
+                    : <ChevronRight size={12} className="text-gray-600 flex-shrink-0" />}
             </button>
 
             {open && (
-                <div className="px-2 pb-2 space-y-0.5 border-t border-white/8 pt-1">
+                <div className="px-2 pb-2 space-y-0.5 border-t border-white/5 pt-1">
                     {(module.topics || []).map((topic, ti) => (
                         <TopicItem
                             key={topic.id || ti}
@@ -286,10 +288,10 @@ function ModuleItem({ module, activeSubtopic, onSubtopicSelect, defaultOpen, onT
                                 onTakeQuiz({ moduleId: module.id, moduleName: module.name });
                             }
                         }}
-                        className="w-full mt-2 flex items-center justify-center gap-1.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/45 text-indigo-300 rounded-lg text-xs font-semibold transition-all"
+                        className="w-full mt-2 flex items-center justify-center gap-1.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white rounded-md text-xs font-medium transition-all"
                     >
                         <Brain size={12} />
-                        Take Module Quiz
+                        Take Quiz
                     </button>
                 </div>
             )}
@@ -303,29 +305,23 @@ function CourseSidebar({ courseName, structure, activeSubtopic, onSubtopicSelect
     const displayName = stripExt(courseName);
 
     return (
-        <div
-            className="flex flex-col h-full"
-            style={{
-                background: 'linear-gradient(180deg, #0d0f14 0%, #0a0c10 100%)',
-                borderRight: '1px solid rgba(255,255,255,0.07)',
-            }}
-        >
+        <div className="flex flex-col h-full bg-[#0b0d10] border-r border-white/5">
             {/* Sidebar header */}
-            <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-white/7 flex-shrink-0">
+            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/5 flex-shrink-0">
                 <button
                     onClick={onBack}
-                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-all flex-shrink-0"
+                    className="p-1.5 rounded-md text-gray-500 hover:text-white hover:bg-white/8 transition-all flex-shrink-0"
                     title="Back to courses"
                 >
-                    <ArrowLeft size={15} />
+                    <ArrowLeft size={14} />
                 </button>
                 <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-bold">Course</p>
-                    <h2 className="text-sm font-bold text-white truncate leading-tight">{displayName}</h2>
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">Course</p>
+                    <h2 className="text-sm font-semibold text-white truncate leading-tight">{displayName}</h2>
                 </div>
                 {/* Mobile toggle */}
                 <button
-                    className="md:hidden p-1.5 text-gray-500 hover:text-white rounded-lg hover:bg-white/8 transition-all"
+                    className="md:hidden p-1.5 text-gray-500 hover:text-white rounded-md hover:bg-white/8 transition-all"
                     onClick={() => setSidebarOpen(false)}
                 >
                     <X size={14} />
@@ -333,27 +329,21 @@ function CourseSidebar({ courseName, structure, activeSubtopic, onSubtopicSelect
             </div>
 
             {/* Stats */}
-            <div className="px-4 py-2 border-b border-white/7 flex-shrink-0">
-                <div className="flex items-center gap-3 text-[11px] text-gray-600">
+            <div className="px-4 py-2 border-b border-white/5 flex-shrink-0">
+                <div className="flex items-center gap-3 text-[11px] text-gray-500">
                     <span className="flex items-center gap-1">
-                        <Layers size={10} className="text-indigo-500" />
+                        <Layers size={10} className="text-gray-500" />
                         {modules.length} modules
                     </span>
                     <span className="flex items-center gap-1">
-                        <BookOpen size={10} className="text-indigo-500" />
+                        <BookOpen size={10} className="text-gray-500" />
                         {modules.reduce((acc, m) => acc + (m.topics?.length || 0), 0)} topics
                     </span>
                 </div>
-                {activeSubtopic && (
-                    <div className="mt-1.5 flex items-center gap-1 text-[11px] text-indigo-400">
-                        <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse flex-shrink-0" />
-                        <span className="truncate">Viewing: {activeSubtopic.name}</span>
-                    </div>
-                )}
             </div>
 
             {/* Tree */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1">
                 {modules.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-600">
                         <BookOpen size={28} className="opacity-20" />
@@ -384,26 +374,26 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
     const [markdown, setMarkdown]   = useState('');
     const [matched, setMatched]     = useState(true);
     const [source, setSource]       = useState('');       // 'cache' | 'lecture_md' | 'generated'
-    const [generating, setGenerating] = useState(false);  // first-time LLM generation
+    const [generating, setGenerating] = useState(false);
     const [loading, setLoading]     = useState(false);
     const [error, setError]         = useState(null);
+    const [backendUnavailable, setBackendUnavailable] = useState(false);
     const scrollRef = useRef(null);
 
-    useEffect(() => {
-        if (!courseName || !activeSubtopic?.id) {
-            setMarkdown('');
-            return;
-        }
+    const isPlaceholder = markdown.includes('⚠️ Lecture notes for this subtopic are being generated');
+
+    const loadLecture = useCallback(() => {
+        if (!courseName || !activeSubtopic?.id) return;
         let mounted = true;
         setLoading(true);
         setGenerating(false);
         setError(null);
         setMarkdown('');
+        setBackendUnavailable(false);
 
-        // Show "generating" hint after 2 s if still loading (first-time LLM call)
         const hintTimer = setTimeout(() => {
             if (mounted && loading) setGenerating(true);
-        }, 2000);
+        }, 4000);
 
         api.getCourseLectureSection(
             courseName,
@@ -412,11 +402,19 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
             activeSubtopic.topicName || '',
         )
             .then(data => {
-                if (mounted) {
-                    setMarkdown(data.markdown || '');
+                if (!mounted) return;
+                const md = data.markdown || '';
+                const isGenPlaceholder = md.includes('⚠️ Lecture notes for this subtopic are being generated');
+                if (isGenPlaceholder) {
+                    setMarkdown(md);
+                    setSource(data.source || '');
+                    setBackendUnavailable(true);
+                } else if (md) {
+                    setMarkdown(md);
                     setMatched(data.matched !== false);
                     setSource(data.source || '');
-                    setGenerating(false);
+                } else {
+                    setMarkdown('');
                 }
             })
             .catch(e => {
@@ -425,9 +423,16 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
             .finally(() => { if (mounted) { setLoading(false); setGenerating(false); } });
 
         return () => { mounted = false; clearTimeout(hintTimer); };
-    }, [courseName, activeSubtopic?.id]);
+    }, [courseName, activeSubtopic?.id, activeSubtopic?.name, activeSubtopic?.topicName]);
 
-    // Scroll to top on subtopic change
+    useEffect(() => {
+        if (courseName && activeSubtopic?.id) {
+            loadLecture();
+        } else {
+            setMarkdown('');
+        }
+    }, [courseName, activeSubtopic?.id, loadLecture]);
+
     useEffect(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = 0;
     }, [activeSubtopic?.id]);
@@ -436,7 +441,6 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
     if (!activeSubtopic) {
         return (
             <div className="flex flex-col items-center justify-center h-full gap-6 px-8 text-center">
-                {/* Mobile sidebar toggle */}
                 <button
                     className="md:hidden absolute top-4 left-4 p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white"
                     onClick={() => setSidebarOpen(true)}
@@ -454,7 +458,7 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
                     </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 text-center mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center mt-4 max-w-lg">
                     {[
                         { label: 'Browse', desc: 'Expand modules & topics in the left pane' },
                         { label: 'Select', desc: 'Click any subtopic to load its notes' },
@@ -471,7 +475,7 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
     }
 
     return (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar relative">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
             {/* Mobile sidebar toggle */}
             <button
                 className="md:hidden sticky top-4 left-4 z-10 p-2 bg-[#111]/80 backdrop-blur border border-white/10 rounded-lg text-gray-400 hover:text-white ml-4 mt-4"
@@ -480,26 +484,26 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
                 <Menu size={16} />
             </button>
 
-            <div className="px-6 py-6 md:px-10 md:py-8 max-w-4xl mx-auto">
+            <div className="px-6 pt-4 md:px-10 md:pt-6 max-w-4xl mx-auto">
                 {/* Breadcrumb */}
-                <div className="flex items-center gap-2 text-[11px] text-gray-600 mb-6">
-                    <span className="text-indigo-400/80">{stripExt(courseName)}</span>
+                <nav className="flex items-center gap-2 text-[11px] text-gray-600 mb-4 flex-wrap">
+                    <span className="text-indigo-400/80 whitespace-nowrap">{stripExt(courseName)}</span>
                     {activeSubtopic.topicName && (
                         <>
-                            <ChevronRight size={10} />
-                            <span>{activeSubtopic.topicName}</span>
+                            <ChevronRight size={10} className="flex-shrink-0" />
+                            <span className="truncate max-w-[200px] md:max-w-[300px]">{activeSubtopic.topicName}</span>
                         </>
                     )}
-                    <ChevronRight size={10} />
-                    <span className="text-gray-400">{activeSubtopic.name}</span>
-                </div>
+                    <ChevronRight size={10} className="flex-shrink-0" />
+                    <span className="text-gray-400 truncate max-w-[180px] md:max-w-[280px]">{activeSubtopic.name}</span>
+                </nav>
 
-                {/* Title bar */}
-                <div className="flex items-start justify-between gap-4 mb-8">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white leading-tight">{activeSubtopic.name}</h1>
+                {/* Title row */}
+                <div className="flex items-start justify-between gap-4 mb-6">
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-2xl font-bold text-white leading-tight break-words">{activeSubtopic.name}</h1>
                         {activeSubtopic.topicName && (
-                            <p className="text-sm text-gray-500 mt-1">{activeSubtopic.topicName}</p>
+                            <p className="text-sm text-gray-500 mt-1.5">{activeSubtopic.topicName}</p>
                         )}
                     </div>
                     <button
@@ -526,27 +530,72 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
                     </div>
                 )}
 
-                {/* Error */}
+                {/* Error — no retry, just Ask AI */}
                 {!loading && error && (
                     <div className="flex flex-col items-center justify-center py-20 gap-3 text-red-400">
                         <AlertTriangle size={24} />
                         <p className="text-sm">{error}</p>
-                    </div>
-                )}
-
-                {/* No content */}
-                {!loading && !error && !markdown && (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-600">
-                        <FileText size={32} className="opacity-20" />
-                        <div className="text-center">
-                            <p className="text-sm font-medium text-gray-500">No lecture generated yet</p>
-                            <p className="text-[12px] text-gray-700 mt-1">Run the course bootstrap to generate lecture notes for this subtopic.</p>
+                        <div className="flex items-center gap-3 mt-2">
+                            <button
+                                onClick={onAskAI}
+                                className="flex items-center gap-1.5 text-xs bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/30 text-indigo-300 px-3 py-1.5 rounded-lg"
+                            >
+                                <MessageSquare size={12} /> Ask AI
+                            </button>
                         </div>
                     </div>
                 )}
 
-                {/* Lecture content */}
-                {!loading && !error && markdown && (
+                {/* No content — Ask AI instead */}
+                {!loading && !error && !markdown && !isPlaceholder && (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-600">
+                        <FileText size={32} className="opacity-20" />
+                        <div className="text-center">
+                            <p className="text-sm font-medium text-gray-500">No lecture notes found</p>
+                            <p className="text-[12px] text-gray-700 mt-1 max-w-sm">
+                                This subtopic does not have cached or pre-generated lecture content.
+                            </p>
+                        </div>
+                        <button
+                            onClick={onAskAI}
+                            className="flex items-center gap-1.5 text-xs bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/30 text-indigo-300 px-3 py-1.5 rounded-lg mt-2"
+                        >
+                            <MessageSquare size={12} /> Ask AI
+                        </button>
+                    </div>
+                )}
+
+                {/* Placeholder — AI backend unavailable */}
+                {!loading && !error && markdown && isPlaceholder && (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-600">
+                        <div className="inline-flex p-4 bg-amber-500/10 rounded-full mb-2">
+                            <AlertTriangle size={28} className="text-amber-400/70" />
+                        </div>
+                        <div className="text-center">
+                            <p className="text-sm font-medium text-gray-400">AI lecture generation is unavailable.</p>
+                            <p className="text-[12px] text-gray-700 mt-1 max-w-sm">
+                                No cached or pre-generated lecture exists for this subtopic, and the AI generation backend is not currently available.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3 mt-2">
+                            <button
+                                onClick={() => loadLecture()}
+                                className="flex items-center gap-1.5 text-xs bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 px-3 py-1.5 rounded-lg transition-all"
+                            >
+                                <RefreshCw size={12} /> Retry Generation
+                            </button>
+                            <button
+                                onClick={onAskAI}
+                                className="flex items-center gap-1.5 text-xs bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/30 text-indigo-300 px-3 py-1.5 rounded-lg"
+                            >
+                                <MessageSquare size={12} /> Ask AI
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Lecture content — real content, not placeholder */}
+                {!loading && !error && markdown && !isPlaceholder && (
                     <div>
                         <article className="rounded-2xl border border-white/8 bg-white/2 overflow-hidden">
                             <div className="px-5 py-3 border-b border-white/7 flex items-center gap-2.5 bg-white/2">
@@ -554,6 +603,11 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
                                 <span className="text-[11px] text-gray-500 uppercase tracking-wide font-semibold">
                                     Lecture · {activeSubtopic.name}
                                 </span>
+                                {source === 'cache' && (
+                                    <span className="ml-auto text-[10px] text-indigo-400/70 bg-indigo-400/10 border border-indigo-400/20 px-2 py-0.5 rounded-full">
+                                        Cached
+                                    </span>
+                                )}
                                 {source === 'generated' && (
                                     <span className="ml-auto text-[10px] text-emerald-400/70 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">
                                         AI-generated
@@ -590,23 +644,40 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
 // ─── Course Selection Grid ─────────────────────────────────────────────────────
 function CourseGrid({ onSelectCourse }) {
     const [courses, setCourses] = useState([]);
+    const [metaMap, setMetaMap] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
-        api.getSubjects()
-            .then(data => setCourses(Array.isArray(data.subjects) ? data.subjects : []))
+        Promise.all([
+            api.getSubjects().then(d => Array.isArray(d.subjects) ? d.subjects : []),
+            api.getCourseMeta().then(d => {
+                const map = {};
+                (d.courses || []).forEach(c => { map[c.code] = c; });
+                return map;
+            }).catch(() => ({})),
+        ])
+            .then(([subjects, meta]) => {
+                setCourses(subjects);
+                setMetaMap(meta);
+            })
             .catch(e => setError(e.response?.data?.message || e.message || 'Failed to load courses'))
             .finally(() => setLoading(false));
     }, []);
 
-    const filtered = courses.filter(c =>
-        stripExt(c).toLowerCase().includes(search.toLowerCase())
-    );
+    const MIN_SEARCH_LENGTH = 3;
+    const searchTooShort = search.length > 0 && search.length < MIN_SEARCH_LENGTH;
 
-    // Palette: cycle through accent colors for variety
+    const filtered = searchTooShort ? [] : courses.filter(c => {
+        const code = stripExt(c).toLowerCase();
+        const meta = metaMap[c];
+        const name = (meta?.name || '').toLowerCase();
+        const q = search.toLowerCase();
+        return code.includes(q) || name.includes(q);
+    });
+
     const ACCENTS = [
         { bg: 'from-indigo-500/20 to-indigo-500/5', border: 'border-indigo-500/30', icon: 'text-indigo-400', badge: 'bg-indigo-500/20 text-indigo-300' },
         { bg: 'from-cyan-500/20 to-cyan-500/5',     border: 'border-cyan-500/30',   icon: 'text-cyan-400',   badge: 'bg-cyan-500/20 text-cyan-300' },
@@ -617,19 +688,16 @@ function CourseGrid({ onSelectCourse }) {
     ];
 
     return (
-        <div className="min-h-screen bg-[#080a0e] text-white flex flex-col relative overflow-hidden">
-            {/* Background radial gradient */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.08)_0%,_transparent_60%)] pointer-events-none" />
+        <div className="h-full overflow-y-auto bg-[#080a0e] text-white relative">
+            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.08)_0%,_transparent_60%)] pointer-events-none" />
 
-            {/* Back button */}
             <button
                 onClick={() => navigate('/')}
-                className="absolute top-6 left-6 flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors z-10"
+                className="fixed top-6 left-6 flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors z-10"
             >
                 <ArrowLeft size={14} /> Dashboard
             </button>
 
-            {/* Hero */}
             <div className="flex flex-col items-center justify-center pt-20 pb-10 px-6 text-center">
                 <div className="inline-block px-3 py-1 mb-6 border border-[#1e2030] rounded-full text-[10px] uppercase tracking-widest text-gray-500 font-bold bg-[#0d0f18]">
                     Course Library
@@ -641,7 +709,6 @@ function CourseGrid({ onSelectCourse }) {
                     Browse admin-curated course content. Select a course to explore its complete lecture notes with AI-powered search.
                 </p>
 
-                {/* Search */}
                 <div className="relative w-full max-w-md">
                     <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                     <input
@@ -659,8 +726,7 @@ function CourseGrid({ onSelectCourse }) {
                 </div>
             </div>
 
-            {/* Course cards */}
-            <div className="flex-1 px-6 pb-16 max-w-5xl mx-auto w-full">
+            <div className="px-6 pb-16 max-w-5xl mx-auto w-full">
                 {loading && (
                     <div className="flex items-center justify-center py-20 gap-3 text-gray-500">
                         <Loader2 size={22} className="animate-spin text-indigo-400" />
@@ -684,7 +750,13 @@ function CourseGrid({ onSelectCourse }) {
                 {!loading && !error && filtered.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-600">
                         <BookOpen size={32} className="opacity-20" />
-                        <p className="text-sm">{courses.length === 0 ? 'No courses available yet.' : 'No courses match your search.'}</p>
+                        <p className="text-sm">
+                            {courses.length === 0
+                                ? 'No courses available yet.'
+                                : searchTooShort
+                                    ? 'Enter at least 3 characters to search.'
+                                    : 'No courses match your search.'}
+                        </p>
                     </div>
                 )}
 
@@ -692,6 +764,7 @@ function CourseGrid({ onSelectCourse }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         {filtered.map((course, i) => {
                             const accent = ACCENTS[i % ACCENTS.length];
+                            const meta = metaMap[course];
                             const name = stripExt(course);
                             return (
                                 <button
@@ -702,14 +775,39 @@ function CourseGrid({ onSelectCourse }) {
                                     <div className={`p-3 rounded-xl bg-white/5 mb-4 ${accent.icon}`}>
                                         <GraduationCap size={22} />
                                     </div>
-                                    <h3 className="text-base font-bold text-white mb-1 leading-tight">{name}</h3>
-                                    <p className="text-[12px] text-gray-500 leading-snug flex-1">
-                                        Browse lecture notes, explore topics and subtopics.
-                                    </p>
-                                    <div className={`mt-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${accent.badge}`}>
+                                    <div className="flex items-start justify-between w-full gap-2 mb-1">
+                                        <h3 className="text-base font-bold text-white leading-tight">{name}</h3>
+                                        {meta?.semester && (
+                                            <span className="text-[10px] text-gray-600 bg-white/5 px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5">
+                                                Sem {meta.semester.replace('-', ' ')}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {meta?.name && meta.name !== name && (
+                                        <p className="text-[12px] text-gray-400 leading-snug mb-2 text-left w-full line-clamp-1">
+                                            {meta.name}
+                                        </p>
+                                    )}
+                                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-600 mt-auto w-full">
+                                        {meta?.credits && (
+                                            <span className="px-2 py-0.5 bg-white/5 rounded-md font-medium">
+                                                {meta.credits} cr
+                                            </span>
+                                        )}
+                                        {meta?.topic_count > 0 && (
+                                            <span className="px-2 py-0.5 bg-white/5 rounded-md">
+                                                {meta.topic_count} topic{meta.topic_count !== 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                        {meta?.subtopic_count > 0 && (
+                                            <span className="px-2 py-0.5 bg-white/5 rounded-md">
+                                                {meta.subtopic_count} subtopic{meta.subtopic_count !== 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${accent.badge}`}>
                                         <BookOpen size={10} /> Open Course
                                     </div>
-                                    {/* Arrow on hover */}
                                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <ChevronRight size={16} className={accent.icon} />
                                     </div>
@@ -727,6 +825,10 @@ function CourseGrid({ onSelectCourse }) {
 function StructureLoading() {
     return (
         <div className="p-4 space-y-3 animate-pulse">
+            <div className="flex items-center justify-center gap-2 py-4">
+                <Loader2 size={16} className="animate-spin text-indigo-400" />
+                <span className="text-xs text-gray-500 font-medium">Loading curriculum…</span>
+            </div>
             {[1, 2, 3].map(i => (
                 <div key={i} className="rounded-xl border border-white/8 overflow-hidden">
                     <div className="flex items-center gap-2.5 px-3 py-3">
@@ -811,31 +913,25 @@ export default function CourseExplorerPage() {
 
     // ── Sidebar content (shared between desktop + mobile) ──
     const sidebarContent = loadingStruct ? (
-        <div
-            className="flex flex-col h-full"
-            style={{ background: 'linear-gradient(180deg, #0d0f14 0%, #0a0c10 100%)', borderRight: '1px solid rgba(255,255,255,0.07)' }}
-        >
-            <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-white/7">
-                <button onClick={handleBack} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8">
-                    <ArrowLeft size={15} />
+        <div className="flex flex-col h-full bg-[#0b0d10] border-r border-white/5">
+            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/5">
+                <button onClick={handleBack} className="p-1.5 rounded-md text-gray-500 hover:text-white hover:bg-white/8">
+                    <ArrowLeft size={14} />
                 </button>
                 <div className="flex-1">
-                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-bold">Course</p>
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">Course</p>
                     <div className="h-3 bg-white/10 rounded w-32 mt-1 animate-pulse" />
                 </div>
             </div>
             <StructureLoading />
         </div>
     ) : structError ? (
-        <div
-            className="flex flex-col h-full"
-            style={{ background: 'linear-gradient(180deg, #0d0f14 0%, #0a0c10 100%)', borderRight: '1px solid rgba(255,255,255,0.07)' }}
-        >
-            <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-white/7">
-                <button onClick={handleBack} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8">
-                    <ArrowLeft size={15} />
+        <div className="flex flex-col h-full bg-[#0b0d10] border-r border-white/5">
+            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/5">
+                <button onClick={handleBack} className="p-1.5 rounded-md text-gray-500 hover:text-white hover:bg-white/8">
+                    <ArrowLeft size={14} />
                 </button>
-                <p className="text-sm font-bold text-white">{stripExt(selectedCourse)}</p>
+                <p className="text-sm font-semibold text-white">{stripExt(selectedCourse)}</p>
             </div>
             <div className="flex flex-col items-center justify-center flex-1 gap-3 text-red-400 px-6 text-center">
                 <AlertTriangle size={22} />
@@ -861,11 +957,11 @@ export default function CourseExplorerPage() {
     // ── Phase 2: Course selected → split pane ──
     return (
         <div
-            className="flex h-screen w-full overflow-hidden text-white"
+            className="flex h-full w-full text-white"
             style={{ background: '#080a0e' }}
         >
-            {/* ── Desktop sidebar — always visible, never collapses ── */}
-            <div className="hidden md:flex flex-shrink-0 h-full overflow-hidden" style={{ width: '288px' }}>
+            {/* ── Desktop sidebar — fixed width, independent scroll ── */}
+            <div className="hidden md:block flex-shrink-0 h-full w-72">
                 {sidebarContent}
             </div>
 
@@ -886,10 +982,10 @@ export default function CourseExplorerPage() {
             )}
 
             {/* ── Right — content pane ── */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-                {/* Top bar */}
+            <div className="flex-1 flex flex-col min-w-0 h-full">
+                {/* Top bar — sticky, never scrolls away */}
                 <div
-                    className="flex items-center gap-3 px-4 py-3 border-b flex-shrink-0"
+                    className="flex items-center gap-3 px-4 py-3 border-b flex-shrink-0 sticky top-0 z-10"
                     style={{ borderColor: 'rgba(255,255,255,0.07)', background: '#0a0c10' }}
                 >
                     {/* Mobile only: hamburger to open sidebar overlay */}

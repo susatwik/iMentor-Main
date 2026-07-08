@@ -1,18 +1,25 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Animate from '../core/Animate.jsx';
 import {
     Lock, Unlock, CheckCircle2, Zap, TrendingUp, ChevronRight,
-    BarChart3, Eye, EyeOff, MapPin, AlertCircle, Sparkles, Target, Star
+    BarChart3, Eye, EyeOff, MapPin, AlertCircle, Sparkles, Target, Star,
+    MessageCircle, Brain
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import SkillAssessmentModal from './SkillAssessmentModal';
+import NodeTutorChat from './NodeTutorChat';
+import NodeAssessmentModal from './NodeAssessmentModal';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM SKILL TREE MAP - GAME-LIKE PROGRESSION UI
 // ═══════════════════════════════════════════════════════════════════════════
 
 const SkillTreeMap = () => {
+    const [searchParams] = useSearchParams();
+    const treeId = searchParams.get('treeId');
+
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const [skillTree, setSkillTree] = useState([]);
@@ -25,6 +32,8 @@ const SkillTreeMap = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [showAssessment, setShowAssessment] = useState(false);
+    const [showTutor, setShowTutor] = useState(false);
+    const [showNodeAssessment, setShowNodeAssessment] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     // Refs for animation loop
@@ -1067,18 +1076,36 @@ const SkillTreeMap = () => {
                                 </div>
                             </div>
 
-                            {/* Action Button */}
+                            {/* Action Buttons */}
                             {selectedSkill.status === 'unlocked' && (
-                                <div className="p-6 border-t border-white/5 bg-gradient-to-t from-zinc-950 to-transparent">
+                                <div className="p-6 border-t border-white/5 bg-gradient-to-t from-zinc-950 to-transparent space-y-3">
+                                    {treeId && (
+                                        <button
+                                            onClick={() => setShowTutor(true)}
+                                            className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-blue-500/30 transition-all"
+                                        >
+                                            <MessageCircle className="w-5 h-5" />
+                                            Discuss with AI Tutor
+                                        </button>
+                                    )}
                                     <button
-                                       
-                                       
+                                        
+                                        
                                         onClick={() => setShowAssessment(true)}
                                         className="w-full py-4 bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-300 text-zinc-900 font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-teal-500/30 transition-all"
                                     >
                                         <TrendingUp className="w-5 h-5" />
                                         Start Assessment
                                     </button>
+                                    {treeId && (
+                                        <button
+                                            onClick={() => setShowNodeAssessment(true)}
+                                            className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-purple-500/30 transition-all"
+                                        >
+                                            <Brain className="w-5 h-5" />
+                                            Quick Check
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1099,6 +1126,26 @@ const SkillTreeMap = () => {
                                     }
                                 }
                             }}
+                        />
+                    )}
+
+                {/* AI Tutor Modal */}
+                    {showTutor && selectedSkill && treeId && (
+                        <NodeTutorChat
+                            treeId={treeId}
+                            nodeId={selectedSkill.skillId || selectedSkill.name}
+                            nodeName={selectedSkill.name}
+                            onClose={() => setShowTutor(false)}
+                        />
+                    )}
+
+                {/* Node Quick Check Modal */}
+                    {showNodeAssessment && selectedSkill && treeId && (
+                        <NodeAssessmentModal
+                            treeId={treeId}
+                            nodeId={selectedSkill.skillId || selectedSkill.name}
+                            nodeName={selectedSkill.name}
+                            onClose={() => setShowNodeAssessment(false)}
                         />
                     )}
             </div>

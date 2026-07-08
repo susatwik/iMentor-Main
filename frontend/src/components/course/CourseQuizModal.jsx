@@ -209,6 +209,30 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
 
                                         {expandedFeedback[idx] && (
                                             <div className="px-4 pb-4 border-t border-white/5 pt-3 bg-black/20 space-y-3">
+                                                {/* Concept & Difficulty badges */}
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-medium">
+                                                        {questions[idx]?.topic || 'General'}
+                                                    </span>
+                                                    {questions[idx]?.difficulty && (
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${
+                                                            questions[idx].difficulty === 'Hard' 
+                                                                ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                                                                : questions[idx].difficulty === 'Medium'
+                                                                ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                                                                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                                        }`}>
+                                                            {questions[idx].difficulty}
+                                                        </span>
+                                                    )}
+                                                    {item.result === 'correct' ? (
+                                                        <span className="ml-auto text-[10px] font-bold text-emerald-400">✓ Correct</span>
+                                                    ) : (
+                                                        <span className="ml-auto text-[10px] font-bold text-red-400">✗ Incorrect</span>
+                                                    )}
+                                                </div>
+
+                                                {/* Your Answer */}
                                                 <div>
                                                     <span className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest">Your Answer:</span>
                                                     <p className="text-[12px] text-gray-300 mt-1 leading-relaxed whitespace-pre-wrap italic">
@@ -217,18 +241,32 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
                                                             : `"${studentAnswers[idx] || '(No answer provided)'}"`}
                                                     </p>
                                                 </div>
-                                                <div>
+
+                                                {/* AI Assessment */}
+                                                <div className="p-3 rounded-lg bg-teal-500/5 border border-teal-500/10">
                                                     <span className="text-[9px] text-teal-400 font-bold uppercase tracking-widest">AI Assessment & Analysis:</span>
                                                     <p className="text-[12px] text-gray-300 mt-1 leading-relaxed whitespace-pre-wrap">
                                                         {item.feedbackText}
                                                     </p>
                                                 </div>
+
+                                                {/* Correct Answer */}
                                                 <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10">
-                                                    <span className="text-[9px] text-orange-400 font-bold uppercase tracking-widest">Expected Document Fact:</span>
-                                                    <p className="text-[12px] text-orange-200/80 mt-1 leading-relaxed italic">
+                                                    <span className="text-[9px] text-orange-400 font-bold uppercase tracking-widest">Correct Answer:</span>
+                                                    <p className="text-[12px] text-teal-200/90 mt-1 leading-relaxed">
                                                         {questions[idx]?.options && typeof questions[idx].correctIndex === 'number'
-                                                            ? `Correct option: "${questions[idx].options[questions[idx].correctIndex]}"`
+                                                            ? `"${questions[idx].options[questions[idx].correctIndex]}"`
                                                             : `"${questions[idx]?.output}"`}
+                                                    </p>
+                                                </div>
+
+                                                {/* Learning Recommendation */}
+                                                <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10">
+                                                    <span className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest">Learning Recommendation:</span>
+                                                    <p className="text-[12px] text-indigo-200/80 mt-1 leading-relaxed">
+                                                        {item.result === 'correct'
+                                                            ? `Great job! You've demonstrated understanding of "${questions[idx]?.topic || 'this concept'}". To deepen mastery, try explaining this concept to a peer or apply it to a real-world problem.`
+                                                            : `Review the concept "${questions[idx]?.topic || 'this topic'}" in your lecture notes. Focus on understanding the underlying principles, then retry this question. Consider asking the AI tutor for a step-by-step explanation.`}
                                                     </p>
                                                 </div>
                                             </div>

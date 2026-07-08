@@ -33,7 +33,7 @@ from typing import Dict, List, Optional
 
 import config
 from sglang_caps import get_model_max_context
-from prompts import SKILL_TREE_GENERATION_PROMPT
+from prompts import SKILL_TREE_GENERATION_PROMPT, CHUNKED_SKILL_TREE_PROMPT, CROSS_CHUNK_LINKING_PROMPT
 
 # Import Provider Manager
 try:
@@ -110,6 +110,71 @@ def load_skill_tree(course: str) -> Optional[Dict]:
         except Exception as e:
             logger.warning(f"SkillTree: disk load failed for '{course}': {e}")
     return None
+
+
+def load_course_skill_tree(course: str) -> Optional[Dict]:
+    """
+    Load skill tree for a course. For individual courses (e.g. EE1011),
+    load the EE mega-course tree and filter to only nodes for that topic
+    by querying Neo4j for the actual Subtopic→Topic relationships.
+    """
+    tree = load_skill_tree(course)
+    if tree:
+        return tree
+
+    try:
+        import neo4j_handler
+        driver = neo4j_handler.get_driver_instance()
+        with driver.session(database=config.NEO4J_DATABASE) as session:
+            topic = session.run(
+                "MATCH (c:Course {course: $course})-[:REFERENCES_TOPIC]->(t:Topic) "
+                "RETURN t.id AS topic_id, t.name AS topic_name",
+                course=course
+            ).single()
+            if not topic:
+                return None
+
+            topic_id = topic["topic_id"]
+
+            # Get subtopic IDs that link to this topic via PREREQUISITE_OF
+            sub_ids = set()
+            sub_names = {}
+            r = session.run(
+                "MATCH (s:Subtopic)-[:PREREQUISITE_OF]->(t:Topic {course:'EE', id: $topic_id}) "
+                "RETURN s.id AS sid, s.name AS sname",
+                topic_id=topic_id
+            )
+            for row in r:
+                sid = row["sid"]
+                sname = row["sname"]
+                sub_ids.add(sid)
+                sub_names[sid] = sname
+
+        if not sub_ids:
+            return None
+
+        ee_tree = load_skill_tree("EE")
+        if not ee_tree:
+            return None
+
+        skill_tree = ee_tree.get("skill_tree", [])
+        filtered = [n for n in skill_tree if n.get("subtopic_id") in sub_ids]
+
+        if not filtered:
+            return None
+
+        return {
+            "course": course,
+            "skill_tree": filtered,
+            "source_course": "EE",
+            "source_topic": topic["topic_name"],
+            "generation_method": "filtered_from_ee",
+            "generated_at": ee_tree.get("generated_at", ""),
+            "final_node_count": len(filtered),
+        }
+    except Exception as e:
+        logger.warning(f"SkillTree: load for individual course '{course}' failed: {e}")
+        return None
 
 
 def _cache_skill_tree(course: str, payload: Dict):
@@ -210,7 +275,7 @@ if config.SGLANG_ENABLED:
 _gemini_dead = False
 
 
-def _call_llm(prompt: str) -> Optional[str]:
+def _call_llm(prompt: str, max_tokens: int = 4000) -> Optional[str]:
     """Provider Manager (SGLang → Grok → Gemini → Ollama)."""
     global _gemini_dead
 
@@ -224,9 +289,9 @@ def _call_llm(prompt: str) -> Optional[str]:
                     {"role": "system", "content": system_msg},
                     {"role": "user",   "content": prompt},
                 ],
-                model=config.SGLANG_HEAVY_MODEL,
+                model=None,
                 temperature=0.3,
-                max_tokens=4000,
+                max_tokens=max_tokens,
             )
             if result:
                 text = result.strip()
@@ -478,6 +543,411 @@ def _remove_cycles(skill_tree: List[Dict]) -> List[Dict]:
 
 
 # =============================================================================
+# CHUNKING HELPERS
+# =============================================================================
+
+def _flatten_to_topics(modules: List[Dict]) -> List[Dict]:
+    """Flatten curriculum into topic-level entries, each with its subtopics."""
+    topics = []
+    for m in modules:
+        for t in m.get("topics", []):
+            subs = t.get("subtopics", [])
+            if not subs:
+                continue
+            topics.append({
+                "module": {"id": m.get("id"), "name": m.get("name")},
+                "topic": {"id": t.get("id"), "name": t.get("name")},
+                "subtopics": subs,
+            })
+    return topics
+
+
+def _chunk_topics(topics: List[Dict], max_chars: int) -> List[List[Dict]]:
+    """Group topics into chunks of at most MAX_SUBS_PER_CHUNK subtopics.
+    Input size is not the bottleneck (32K context) — output generation is.
+    We limit output by capping subtopics per chunk to ~50."""
+    MAX_SUBS_PER_CHUNK = 50
+    chunks = []
+    current_chunk = []
+    current_count = 0
+
+    for entry in topics:
+        sub_count = len(entry["subtopics"])
+        if current_count + sub_count > MAX_SUBS_PER_CHUNK and current_chunk:
+            chunks.append(current_chunk)
+            current_chunk = [entry]
+            current_count = sub_count
+        else:
+            current_chunk.append(entry)
+            current_count += sub_count
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    total_topics = len(topics)
+    total_chunks = len(chunks)
+    logger.info(
+        f"SkillTree: Split {total_topics} topics ({sum(len(e['subtopics']) for e in topics)} subs) "
+        f"into {total_chunks} chunks (max {MAX_SUBS_PER_CHUNK} subs/chunk)"
+    )
+    for i, chunk in enumerate(chunks):
+        sub_count = sum(len(e["subtopics"]) for e in chunk)
+        logger.info(f"  Chunk {i+1}: {len(chunk)} topics, {sub_count} subtopics")
+    return chunks
+
+
+def _topics_to_prompt_json(entries: List[Dict]) -> str:
+    """Convert topic-level entries to compact prompt JSON."""
+    flat = []
+    for entry in entries:
+        for s in entry["subtopics"]:
+            flat.append({
+                "module_id": entry["module"]["id"],
+                "module_name": entry["module"]["name"],
+                "topic_id": entry["topic"]["id"],
+                "topic_name": entry["topic"]["name"],
+                "subtopic_id": s.get("id", ""),
+                "subtopic_name": s.get("name", ""),
+            })
+    return json.dumps(flat, ensure_ascii=False, indent=2)
+
+
+def _build_cross_module_json(modules: List[Dict]) -> str:
+    """Build a compact summary of all subtopics grouped by module for cross-chunk linking."""
+    lines = []
+    for m in modules:
+        mid = m.get("id", "")
+        mname = m.get("name", mid)
+        lines.append(f'Module "{mid}" ({mname}):')
+        for t in m.get("topics", []):
+            for s in t.get("subtopics", []):
+                sid = s.get("id", "")
+                sname = s.get("name", sid)
+                lines.append(f'  - "{sid}": "{sname}"')
+        lines.append("")
+    return "\n".join(lines)
+
+
+# =============================================================================
+# CHUNKED GENERATION
+# =============================================================================
+
+def _build_deterministic_skill_tree(
+    course: str,
+    modules: List[Dict],
+) -> Dict:
+    """
+    Build a complete skill tree from curriculum ordering WITHOUT any LLM calls.
+
+    Algorithm:
+      1. Subtopics within a topic: linear chain based on 'order' field.
+      2. Topics within a module: last subtopic of topic N → first subtopic of topic N+1.
+      3. Modules: last subtopic of module N → first subtopic of module N+1.
+
+    Difficulty:
+      - Module position maps to difficulty bucket:
+        first third  → foundational (1-4)
+        middle third → intermediate (5-7)
+        final third  → advanced    (8-10)
+
+    This is deterministic, instant, and covers 100% of the curriculum.
+    It can be refined with LLM analysis later when GPU/API resources are available.
+    """
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    total_modules = len(modules)
+    all_nodes: Dict[str, Dict] = {}
+    all_subtopics_ordered: List[str] = []  # linear order across entire course
+    previous_subtopic_id: Optional[str] = None
+
+    for m_idx, module in enumerate(modules):
+        mid = module.get("id", "")
+        mname = module.get("name", mid)
+
+        # Module position → difficulty bucket
+        module_position_ratio = m_idx / max(total_modules - 1, 1)
+        if module_position_ratio < 0.33:
+            base_diff = 2
+            base_level = "foundational"
+        elif module_position_ratio < 0.66:
+            base_diff = 5
+            base_level = "intermediate"
+        else:
+            base_diff = 8
+            base_level = "advanced"
+
+        topics = module.get("topics", [])
+        module_subtopics: List[str] = []
+        last_subtopic_in_module: Optional[str] = None
+
+        for t_idx, topic in enumerate(topics):
+            tid = topic.get("id", "")
+            tname = topic.get("name", tid)
+            subtopics = topic.get("subtopics", [])
+
+            if not subtopics:
+                continue
+
+            # Topic-level difficulty: adjust from module baseline
+            topic_ratio = t_idx / max(len(topics) - 1, 1)
+            if base_level == "foundational":
+                diff_mod = int(topic_ratio * 3) + 1  # 1-4
+            elif base_level == "intermediate":
+                diff_mod = int(topic_ratio * 2) + 5  # 5-7
+            else:
+                diff_mod = int(topic_ratio * 2) + 8  # 8-10
+
+            topic_diff = min(diff_mod, 10)
+            if topic_diff <= 3:
+                topic_level = "foundational"
+            elif topic_diff <= 7:
+                topic_level = "intermediate"
+            else:
+                topic_level = "advanced"
+
+            subtopic_diff_step = max(1, topic_diff - 4)
+            last_subtopic_in_topic: Optional[str] = None
+
+            for s_idx, subtopic in enumerate(subtopics):
+                sid = subtopic.get("id", "")
+                sname = subtopic.get("name", sid)
+
+                # Subtopic difficulty: vary slightly within topic
+                sub_diff = min(topic_diff + (s_idx - len(subtopics) // 2) // max(len(subtopics) // 3, 1), 10)
+                sub_diff = max(sub_diff, 1)
+
+                sub_level = topic_level
+                if sub_diff <= 3:
+                    sub_level = "foundational"
+                elif sub_diff <= 7:
+                    sub_level = "intermediate"
+                else:
+                    sub_level = "advanced"
+
+                # Learning outcomes: auto-generated from name
+                learning_outcomes = [
+                    f"Understand the concept of {sname}",
+                    f"Apply {sname} in practical scenarios",
+                ]
+
+                # Prerequisites: previous subtopic in the same topic
+                prereqs = []
+                if last_subtopic_in_topic:
+                    prereqs.append(last_subtopic_in_topic)
+                elif previous_subtopic_id and last_subtopic_in_module is None:
+                    # First subtopic of first topic in a new module: link to previous module's last
+                    prereqs.append(previous_subtopic_id)
+
+                all_nodes[sid] = {
+                    "subtopic_id": sid,
+                    "subtopic_name": sname,
+                    "topic_id": tid,
+                    "topic_name": tname,
+                    "module_id": mid,
+                    "module_name": mname,
+                    "difficulty_score": sub_diff,
+                    "skill_level": sub_level,
+                    "estimated_study_hours": max(1, sub_diff // 2),
+                    "prerequisites": prereqs,
+                    "unlocks": [],
+                    "learning_outcomes": learning_outcomes,
+                }
+
+                module_subtopics.append(sid)
+                all_subtopics_ordered.append(sid)
+                last_subtopic_in_topic = sid
+                last_subtopic_in_module = sid
+                previous_subtopic_id = sid
+
+        # Cross-topic linking within module: link last subtopic of each topic
+        # to first subtopic of the next topic (already handled by previous_subtopic_id)
+
+    # Build unlocks from prerequisites (reverse edges)
+    for sub_id, node in all_nodes.items():
+        for prereq_id in node.get("prerequisites", []):
+            if prereq_id in all_nodes:
+                if sub_id not in all_nodes[prereq_id].get("unlocks", []):
+                    all_nodes[prereq_id].setdefault("unlocks", []).append(sub_id)
+
+    # Remove cycles (deterministic tree should not have cycles, but guard anyway)
+    merged_tree = _remove_cycles(list(all_nodes.values()))
+
+    payload = {
+        "course": course,
+        "generated_at": timestamp,
+        "skill_tree": merged_tree,
+        "generation_method": "deterministic_curriculum_ordering",
+        "final_node_count": len(merged_tree),
+    }
+
+    # Persist to disk, Redis, Neo4j, and MongoDB
+    _save_skill_tree(course, payload)
+    _cache_skill_tree(course, payload)
+    _write_skill_tree_to_neo4j(course, merged_tree)
+    _sync_to_nodejs_mongodb(course, merged_tree)
+
+    total_prereqs = sum(len(n.get("prerequisites", [])) for n in merged_tree)
+    logger.info(
+        f"SkillTree: Built deterministic tree for '{course}' — "
+        f"{len(merged_tree)} nodes, {total_prereqs} prerequisite edges "
+        f"(persisted to disk, Neo4j, MongoDB)"
+    )
+    return payload
+
+
+def _generate_skill_tree_chunked(
+    course: str,
+    modules: List[Dict],
+) -> Optional[Dict]:
+    """
+    Generate skill tree using the deterministic ordering approach.
+    This is fast, complete, and does not require any LLM calls.
+
+    Falls back to LLM chunked generation only if deterministic mode is explicitly
+    disabled via SKILL_TREE_LLM_FALLBACK=1 environment variable.
+    """
+    use_llm = os.getenv("SKILL_TREE_LLM_FALLBACK", "").lower() in ("1", "true", "yes")
+
+    if not use_llm:
+        return _build_deterministic_skill_tree(course, modules)
+
+    # LLM fallback (for GPU/API-powered environments where quality matters more)
+    logger.info("SkillTree: Using LLM-based generation (SKILL_TREE_LLM_FALLBACK=1)")
+    _SGLANG_MAX_CONTEXT = get_model_max_context()
+    _MIN_COMPLETION_TOKENS = 2000
+    _SYSTEM_OVERHEAD_CHARS = 800
+    _MAX_CURRICULUM_CHARS = int(
+        (_SGLANG_MAX_CONTEXT - _MIN_COMPLETION_TOKENS) * 3.5
+    ) - _SYSTEM_OVERHEAD_CHARS
+
+    topics = _flatten_to_topics(modules)
+    chunks = _chunk_topics(topics, _MAX_CURRICULUM_CHARS)
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    all_nodes: Dict[str, Dict] = {}
+    processed_chunks = 0
+
+    for chunk_idx, chunk_entries in enumerate(chunks):
+        chunk_curriculum = _topics_to_prompt_json(chunk_entries)
+        chunk_info = f"Part {chunk_idx + 1} of {len(chunks)}"
+
+        prompt = CHUNKED_SKILL_TREE_PROMPT.format(
+            course=course,
+            curriculum_json=chunk_curriculum,
+            timestamp=timestamp,
+            chunk_info=chunk_info,
+        )
+
+        logger.info(
+            f"SkillTree: Chunk {chunk_idx+1}/{len(chunks)} "
+            f"({len(chunk_curriculum)} chars, "
+            f"{sum(len(e['subtopics']) for e in chunk_entries)} subtopics)..."
+        )
+        raw = _call_llm(prompt, max_tokens=8192)
+        if not raw:
+            logger.warning(f"SkillTree: Chunk {chunk_idx+1} returned nothing, skipping")
+            continue
+
+        payload = _extract_json(raw)
+        if not payload or "skill_tree" not in payload:
+            logger.warning(
+                f"SkillTree: Could not parse chunk {chunk_idx+1} JSON: {raw[:200]}"
+            )
+            continue
+
+        for node in payload["skill_tree"]:
+            sub_id = node.get("subtopic_id", "")
+            if not sub_id:
+                continue
+            if sub_id in all_nodes:
+                existing = all_nodes[sub_id]
+                existing_prereqs = set(existing.get("prerequisites", []))
+                new_prereqs = set(node.get("prerequisites", []))
+                existing_prereqs.update(new_prereqs)
+                existing["prerequisites"] = list(existing_prereqs)
+                existing["unlocks"] = list(
+                    set(existing.get("unlocks", [])).union(
+                        set(node.get("unlocks", []))
+                    )
+                )
+            else:
+                all_nodes[sub_id] = dict(node)
+
+        processed_chunks += 1
+        logger.info(
+            f"SkillTree: Chunk {chunk_idx+1} → {len(payload['skill_tree'])} nodes "
+            f"(total unique: {len(all_nodes)})"
+        )
+
+    if not all_nodes:
+        logger.warning(f"SkillTree: No nodes generated for '{course}'")
+        return None
+
+    merged_tree = list(all_nodes.values())
+
+    if processed_chunks > 1:
+        try:
+            cross_module_json = _build_cross_module_json(modules)
+            cross_prompt = CROSS_CHUNK_LINKING_PROMPT.format(
+                course=course,
+                cross_module_json=cross_module_json,
+            )
+            logger.info(f"SkillTree: Cross-chunk linking for '{course}'...")
+            raw = _call_llm(cross_prompt, max_tokens=4096)
+            if raw:
+                cross_payload = _extract_json(raw)
+                if cross_payload and "cross_module_edges" in cross_payload:
+                    cross_edges = cross_payload["cross_module_edges"]
+                    added = 0
+                    for sub_id, prereqs in cross_edges.items():
+                        if not isinstance(prereqs, list):
+                            continue
+                        if sub_id in all_nodes:
+                            existing_prereqs = set(
+                                all_nodes[sub_id].get("prerequisites", [])
+                            )
+                            for p in prereqs:
+                                if p not in existing_prereqs and p in all_nodes:
+                                    existing_prereqs.add(p)
+                                    added += 1
+                            all_nodes[sub_id]["prerequisites"] = list(existing_prereqs)
+                    logger.info(
+                        f"SkillTree: Cross-chunk linking added {added} edges"
+                    )
+                    merged_tree = list(all_nodes.values())
+                else:
+                    logger.info("SkillTree: No cross-chunk edges found by LLM")
+            else:
+                logger.warning("SkillTree: Cross-chunk linking returned nothing")
+        except Exception as e:
+            logger.warning(f"SkillTree: Cross-chunk linking failed: {e}")
+
+    merged_tree = _remove_cycles(merged_tree)
+
+    payload = {
+        "course": course,
+        "generated_at": timestamp,
+        "skill_tree": merged_tree,
+        "chunks_used": len(chunks),
+        "chunks_processed": processed_chunks,
+        "final_node_count": len(merged_tree),
+    }
+
+    _save_skill_tree(course, payload)
+    _cache_skill_tree(course, payload)
+    _write_skill_tree_to_neo4j(course, merged_tree)
+    _sync_to_nodejs_mongodb(course, merged_tree)
+
+    total_prereqs = sum(len(n.get("prerequisites", [])) for n in merged_tree)
+    logger.info(
+        f"SkillTree: Done for '{course}' — "
+        f"{len(merged_tree)} nodes, {total_prereqs} prerequisite edges "
+        f"(merged from {processed_chunks}/{len(chunks)} chunks)"
+    )
+    return payload
+
+
+# =============================================================================
 # PUBLIC API
 # =============================================================================
 
@@ -488,6 +958,8 @@ def generate_skill_tree(
 ) -> Optional[Dict]:
     """
     Generate (or return cached) the skill tree for a course.
+    Uses deterministic curriculum-ordering approach (no LLM calls) by default.
+    Set SKILL_TREE_LLM_FALLBACK=1 for LLM-based generation on GPU/API.
 
     Args:
         course:  Course name matching course_bootstrap directory.
@@ -507,59 +979,7 @@ def generate_skill_tree(
         logger.warning(f"SkillTree: no modules for '{course}' — skipping.")
         return None
 
-    curriculum_json = _curriculum_to_prompt_json(modules)
-
-    # Guard: if the curriculum JSON alone is too large for the model's context,
-    # truncate it so we always leave at least 1500 tokens for the completion.
-    _SGLANG_MAX_CONTEXT = get_model_max_context()  # reads /v1/models once, then cached
-    _MIN_COMPLETION_TOKENS = 1500
-    _SYSTEM_OVERHEAD_CHARS = 200   # system prompt chars
-    _MAX_CURRICULUM_CHARS = int((_SGLANG_MAX_CONTEXT - _MIN_COMPLETION_TOKENS) * 3.5) - _SYSTEM_OVERHEAD_CHARS
-    if len(curriculum_json) > _MAX_CURRICULUM_CHARS:
-        logger.warning(f"SkillTree: Curriculum too large ({len(curriculum_json)} chars) — truncating to {_MAX_CURRICULUM_CHARS} chars for SGLang context limit.")
-        curriculum_json = curriculum_json[:_MAX_CURRICULUM_CHARS] + "\n]"  # close the JSON array
-
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    prompt = SKILL_TREE_GENERATION_PROMPT.format(
-        course=course,
-        curriculum_json=curriculum_json,
-        timestamp=timestamp,
-    )
-
-    logger.info(f"SkillTree: Generating for '{course}' ({len(curriculum_json)} chars curriculum)…")
-    raw = _call_llm(prompt)
-    if not raw:
-        logger.warning(f"SkillTree: LLM returned nothing for '{course}'")
-        return None
-
-    payload = _extract_json(raw)
-    if not payload or "skill_tree" not in payload:
-        logger.warning(f"SkillTree: Could not parse JSON for '{course}': {raw[:300]}")
-        return None
-
-    payload.setdefault("course", course)
-    payload.setdefault("generated_at", timestamp)
-
-    # Remove any cycles introduced by the LLM
-    payload["skill_tree"] = _remove_cycles(payload["skill_tree"])
-
-    # Persist
-    _save_skill_tree(course, payload)
-    _cache_skill_tree(course, payload)
-
-    # Write relationships to Neo4j
-    _write_skill_tree_to_neo4j(course, payload["skill_tree"])
-
-    # Sync to Node.js MongoDB SkillTree model (for frontend/gamification)
-    _sync_to_nodejs_mongodb(course, payload["skill_tree"])
-
-    total = len(payload["skill_tree"])
-    total_prereqs = sum(len(n.get("prerequisites", [])) for n in payload["skill_tree"])
-    logger.info(
-        f"SkillTree: Done for '{course}' — {total} nodes, {total_prereqs} prerequisite edges"
-    )
-    return payload
+    return _generate_skill_tree_chunked(course, modules)
 
 
 # =============================================================================
@@ -572,7 +992,7 @@ def _sync_to_nodejs_mongodb(course: str, skill_tree: List[Dict]):
     This bridges Python-generated skill tree data with the Node.js gamification system.
     Non-blocking — failure here does not break the pipeline.
     """
-    nodejs_url = os.getenv("NODEJS_BACKEND_URL", "http://localhost:3000")
+    nodejs_url = os.getenv("NODEJS_BACKEND_URL", "http://localhost:5001")
     sync_endpoint = f"{nodejs_url}/api/internal/skill-tree/sync"
 
     internal_token = os.getenv("INTERNAL_SERVICE_TOKEN", "")

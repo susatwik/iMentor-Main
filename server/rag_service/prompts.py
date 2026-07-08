@@ -354,6 +354,79 @@ Output ONLY the JSON — no markdown fences, no preamble.
 """
 
 
+CHUNKED_SKILL_TREE_PROMPT = """You are an expert curriculum architect analyzing a PORTION of a course to build part of a skill dependency graph.
+
+Course: {course}
+Chunk: {chunk_info}
+
+CURRICULUM SUBSET (modules → topics → subtopics for this chunk only):
+<curriculum>
+{curriculum_json}
+</curriculum>
+
+Your task: identify which subtopics in the list above MUST be understood BEFORE a student can learn each other subtopic. Generate skill tree nodes ONLY for the subtopics listed above.
+
+Rules:
+1. Prerequisites must be genuinely essential — not merely related or co-located in the syllabus.
+2. A subtopic can have 0–3 prerequisites (usually ≤ 2).
+3. Assign difficulty_score 1–10 (1 = entry level, 10 = most advanced).
+4. estimated_study_hours should reflect realistic solo study time (1–8 hours typical).
+5. skill_level must be one of: "foundational", "intermediate", "advanced".
+6. If a prerequisite belongs to a DIFFERENT module than the subtopic, include it anyway — cross-module edges are critical.
+7. Only generate nodes for subtopics explicitly listed in the curriculum above.
+
+Return VALID JSON ONLY starting with "{{":
+{{
+  "course": "{course}",
+  "generated_at": "{timestamp}",
+  "skill_tree": [
+    {{
+      "subtopic_id": "sub_001",
+      "subtopic_name": "Name of the subtopic",
+      "topic_id": "top_001",
+      "topic_name": "Parent topic name",
+      "module_id": "mod_001",
+      "module_name": "Parent module name",
+      "difficulty_score": 2,
+      "skill_level": "foundational",
+      "estimated_study_hours": 2,
+      "prerequisites": [],
+      "unlocks": ["sub_002", "sub_003"],
+      "learning_outcomes": [
+        "Student will be able to ...",
+        "Student will understand ..."
+      ]
+    }}
+  ]
+}}
+
+Output ONLY the JSON — no markdown fences, no preamble.
+"""
+
+
+CROSS_CHUNK_LINKING_PROMPT = """You are an expert curriculum architect. Given ALL subtopics across all modules of the {course} course, identify CROSS-MODULE prerequisite relationships only.
+
+CRITICAL RULE: Only identify prerequisites where the prerequisite subtopic is in a DIFFERENT module than the subtopic it is a prerequisite for. Do NOT repeat within-module prerequisites.
+
+For each subtopic, if it has prerequisites from earlier/other modules, list those prerequisite subtopic IDs.
+
+Here is the complete list of subtopics grouped by module:
+
+{cross_module_json}
+
+Return ONLY a JSON object with this structure (no markdown fences, no preamble):
+{{
+  "cross_module_edges": {{
+    "subtopic_id_that_has_prerequisites": ["prereq_sub_id_1", "prereq_sub_id_2"],
+    ...
+  }}
+}}
+
+If there are NO cross-module prerequisite edges found, return:
+{{"cross_module_edges": {{}}}}
+"""
+
+
 PPTX_GENERATION_FROM_TOPIC_PROMPT_TEMPLATE = """
 You are a professional presentation designer and subject matter expert. Your task is to create a well-structured and visually engaging 6–8 slide presentation on the given TOPIC using your internal knowledge. The output must be a single, valid JSON array. Each object in the array represents a slide.
 

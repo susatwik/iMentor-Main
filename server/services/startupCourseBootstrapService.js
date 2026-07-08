@@ -50,7 +50,11 @@ async function readSeedCourseFolders(bootstrapDir) {
       const courseDir = path.join(bootstrapDir, entry.name);
       const files = await fs.promises.readdir(courseDir);
 
-      let syllabusCsvPath = path.join(courseDir, 'syllabus.csv');
+      // Prefer unified 5-column CSV format; fall back to 22-col then any CSV
+      let syllabusCsvPath = path.join(courseDir, 'syllabus_unified.csv');
+      if (!fs.existsSync(syllabusCsvPath)) {
+        syllabusCsvPath = path.join(courseDir, 'syllabus.csv');
+      }
       if (!fs.existsSync(syllabusCsvPath)) {
         const firstCsv = files.find(file => file.toLowerCase().endsWith('.csv'));
         if (firstCsv) {

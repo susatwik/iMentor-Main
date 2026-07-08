@@ -122,8 +122,8 @@ router.post('/submit', async (req, res) => {
                             String(studentAnswer).trim() === String(correctOptionText).trim();
                 score = isCorrect ? 100 : 0;
                 feedbackText = isCorrect
-                    ? `Correct! "${correctOptionText}" is the correct answer.`
-                    : `Incorrect. The correct answer was: "${correctOptionText}".`;
+                    ? `Correct! "${correctOptionText}" is the correct answer. This question tests the concept "${topic}". Understanding this helps build a strong conceptual foundation.`
+                    : `Incorrect. The correct answer is "${correctOptionText}". This question tests the concept "${topic}". Review the lecture material and focus on understanding why ${correctOptionText} is correct — this is key to mastering ${topic}.`;
             } else {
                 const evalPrompt = `Evaluate the student's answer strictly against the expected document answer.
             

@@ -67,6 +67,7 @@ const deepResearchRoutes = require('./routes/deepResearch'); // [Team1-6] Deep r
 const tutorRoutes = require('./routes/tutor'); // [Team1-6] Socratic tutor
 const socraticRoutes = require('./routes/socratic'); // [Team1-6] Socratic sessions
 const studyModeRoutes = require('./routes/studyMode'); // Study questions + skill tree
+const skillTreeGeneratorRoutes = require('./routes/skillTreeGenerator');
 const quizRoutes = require('./routes/quiz'); // [Team1] Quiz system with knowledge gap analysis
 const adaptiveProfileRoutes = require('./routes/adaptiveProfile'); // [Team8] Adaptive learning profiles
 const { setupAdmin } = require('./scripts/setupAdmin');
@@ -264,6 +265,7 @@ app.use("/api/learning/paths", authMiddleware, learningPathRoutes);
 app.use("/api/knowledge-sources", authMiddleware, knowledgeSourceRoutes);
 app.use('/api/feedback', authMiddleware, feedbackRoutes);
 app.use('/api/gamification', authMiddleware, gamificationRoutes);
+app.use('/api/skill-tree', authMiddleware, skillTreeGeneratorRoutes);
 
 // --- Internal Service Routes (Python → Node.js callbacks, no JWT required) ---
 const { syncSkillTreeToMongo } = require('./services/skillTreeSyncService');
@@ -328,9 +330,16 @@ async function startServer() {
     await checkRagService(pythonRagUrl);
     await connectRedis();
     
-    // Bootstrap and integrity checks moved to offline jobs for faster server startup
-    // Run scripts/maintenanceJobs.js for full course integrity verification
-    // Courses are expected to be pre-configured via offline jobs
+    // Bootstrap seed courses from course_bootstrap/ into Neo4j
+    // Skips courses that already exist in the curriculum graph
+    try {
+      await bootstrapCoursesOnStartup({
+        pythonServiceUrl: pythonRagUrl,
+        bootstrapDir: path.join(__dirname, 'course_bootstrap'),
+      });
+    } catch (err) {
+      log.warn('SYSTEM', `Startup bootstrap encountered non-fatal error: ${err.message}`);
+    }
     
     await auditRedisUsage();
 

@@ -320,6 +320,10 @@ const api = {
     const response = await apiClient.get("/subjects");
     return response.data;
   },
+  getCourseMeta: async () => {
+    const response = await apiClient.get("/courses/meta");
+    return response.data;
+  },
   getCourseStructure: async (courseName) => {
     const response = await apiClient.get(`/courses/${encodeURIComponent(courseName)}/structure`);
     return response.data;

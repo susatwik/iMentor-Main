@@ -324,7 +324,7 @@ def _call_llm(prompt: str) -> Optional[str]:
                     {"role": "system", "content": _SYSTEM_PROMPT},
                     {"role": "user",   "content": prompt},
                 ],
-                model=os.getenv("SGLANG_HEAVY_MODEL", "Qwen/Qwen2.5-7B-Instruct-AWQ"),
+                model=None,
                 temperature=0.35,
                 max_tokens=2400,
             )

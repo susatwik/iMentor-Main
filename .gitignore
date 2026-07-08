@@ -93,3 +93,6 @@ server/rag_service/.venv/
 
 # Generated lecture artifacts
 lectures/
+
+# Auto-generated semantic router cache
+server/data/semantic_router_cache.json

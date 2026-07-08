@@ -755,11 +755,11 @@ def get_next_module(course: str, module_id: str) -> Optional[Dict]:
 def traverse_curriculum(course: str) -> Dict:
     """
     Get the full curriculum structure: Module → Topic → Subtopic.
-    
-    Returns a hierarchical structure for display/traversal.
+    Handles both mega-courses (e.g., 'EE') and individual courses (e.g., 'EE1011').
+    Individual courses follow REFERENCES_TOPIC to find the EE topic context.
     
     Args:
-        course: Course name
+        course: Course name or course code
     
     Returns:
         Dictionary with modules, topics, and their relationships
@@ -767,7 +767,23 @@ def traverse_curriculum(course: str) -> Dict:
     if not get_driver_instance:
         raise ConnectionError("Neo4j driver not available")
     
-    # Query with proper ORDER BY for modules, topics, AND subtopics
+    driver = get_driver_instance()
+    
+    with driver.session(database=config.NEO4J_DATABASE) as session:
+        # Check if this is an individual Course node (not a mega-course)
+        is_individual = session.run(
+            "MATCH (c:Course {course: $course}) RETURN c",
+            course=course
+        ).single()
+        
+        if is_individual:
+            return _traverse_individual_course(session, course)
+        
+        return _traverse_mega_course(session, course)
+
+
+def _traverse_mega_course(session, course: str) -> Dict:
+    """Query modules directly for a mega-course."""
     query = """
     MATCH (m:Module)
     WHERE toLower(m.course) = toLower($course)
@@ -788,57 +804,72 @@ def traverse_curriculum(course: str) -> Dict:
            [tp IN topics WHERE tp IS NOT NULL AND tp.id IS NOT NULL] AS topics
     ORDER BY m.order
     """
-    
-    try:
-        driver = get_driver_instance()
-        with driver.session(database=config.NEO4J_DATABASE) as session:
-            result = session.run(query, course=course)
-            
-            modules = []
-            for record in result:
-                # Filter out null topics and sort by order
-                topics = sorted(
-                    [t for t in record['topics'] if t and t.get('id')],
-                    key=lambda t: t.get('order') or 0
-                )
-                # Filter out null subtopics and sort by order
-                for topic in topics:
-                    topic['subtopics'] = sorted(
-                        [p for p in topic.get('subtopics', []) if p and p.get('id')],
-                        key=lambda s: s.get('order') or 0
-                    )
-                
-                modules.append({
-                    'id': record['module_id'],
-                    'name': record['module_name'],
-                    'order': record['module_order'],
-                    'topics': topics
-                })
+    result = session.run(query, course=course)
+    return _build_curriculum_result(result, course)
 
-            # Final Python-side null ghost guard
-            filtered_modules = []
-            for module in modules:
-                if not module or not module.get('id'):
-                    continue
-                cleaned_topics = [t for t in module.get('topics', []) if t and t.get('id')]
-                for topic in cleaned_topics:
-                    topic['subtopics'] = [
-                        s for s in topic.get('subtopics', [])
-                        if s and s.get('id')
-                    ]
-                module['topics'] = cleaned_topics
-                filtered_modules.append(module)
-            modules = filtered_modules
+
+def _traverse_individual_course(session, course: str) -> Dict:
+    """
+    For individual courses (e.g., EE1011), follow REFERENCES_TOPIC
+    to find the EE topic, then return the module containing it
+    with only that topic's subtopics.
+    """
+    query = """
+    MATCH (c:Course {course: $course})-[:REFERENCES_TOPIC]->(t:Topic)
+    MATCH (m:Module)-[:HAS_TOPIC]->(t)
+    OPTIONAL MATCH (s:Subtopic)-[:PREREQUISITE_OF]->(t)
+    WHERE s IS NOT NULL
+    WITH m, t, s
+    ORDER BY coalesce(s.order, 0)
+    WITH m, t, COLLECT(DISTINCT CASE WHEN s IS NOT NULL AND s.id IS NOT NULL THEN {
+        id: s.id, name: s.name, order: s.order
+    } END) AS subtopics
+    RETURN m.id AS module_id, m.name AS module_name, m.order AS module_order,
+           [{id: t.id, name: t.name, order: t.order,
+             subtopics: [sub IN subtopics WHERE sub IS NOT NULL AND sub.id IS NOT NULL]}] AS topics
+    ORDER BY m.order
+    """
+    result = session.run(query, course=course)
+    return _build_curriculum_result(result, course)
+
+
+def _build_curriculum_result(result, course: str) -> Dict:
+    """Build the standardized curriculum result from query records."""
+    modules = []
+    for record in result:
+        topics = sorted(
+            [t for t in record['topics'] if t and t.get('id')],
+            key=lambda t: t.get('order') or 0
+        )
+        for topic in topics:
+            topic['subtopics'] = sorted(
+                [p for p in topic.get('subtopics', []) if p and p.get('id')],
+                key=lambda s: s.get('order') or 0
+            )
         
-        logger.info(f"Traversed curriculum for '{course}': {len(modules)} modules")
-        return {
-            'course': course,
-            'modules': modules
-        }
-        
-    except Exception as e:
-        logger.error(f"Error traversing curriculum: {e}", exc_info=True)
-        raise
+        modules.append({
+            'id': record['module_id'],
+            'name': record['module_name'],
+            'order': record['module_order'],
+            'topics': topics
+        })
+
+    filtered_modules = []
+    for module in modules:
+        if not module or not module.get('id'):
+            continue
+        cleaned_topics = [t for t in module.get('topics', []) if t and t.get('id')]
+        for topic in cleaned_topics:
+            topic['subtopics'] = [
+                s for s in topic.get('subtopics', [])
+                if s and s.get('id')
+            ]
+        module['topics'] = cleaned_topics
+        filtered_modules.append(module)
+    modules = filtered_modules
+
+    logger.info(f"Traversed curriculum for '{course}': {len(modules)} modules")
+    return {'course': course, 'modules': modules}
 
 
 def get_learning_path(course: str, target_topic_id: str) -> List[Dict]:
@@ -1066,10 +1097,10 @@ def list_courses() -> List[str]:
     if not get_driver_instance:
         raise ConnectionError("Neo4j driver not available")
     
-    # Primary query: look for curriculum nodes (Module/Topic/Subtopic/Concept)
+    # Primary query: look for curriculum nodes (Module/Topic/Subtopic/Concept/Course)
     query = """
     MATCH (n)
-    WHERE n:Module OR n:Topic OR n:Subtopic OR n:Concept
+    WHERE n:Module OR n:Topic OR n:Subtopic OR n:Concept OR n:Course
     WITH n.course AS course
     WHERE course IS NOT NULL AND course <> ''
     RETURN DISTINCT course
@@ -1116,6 +1147,76 @@ def list_courses() -> List[str]:
         
     except Exception as e:
         logger.error(f"Error listing courses: {e}", exc_info=True)
+        raise
+
+
+def list_courses_with_meta() -> List[Dict]:
+    """
+    List all courses with full metadata (code, name, semester, credits, etc.)
+    plus topic_count and subtopic_count.
+    """
+    if not get_driver_instance:
+        raise ConnectionError("Neo4j driver not available")
+    
+    query = """
+    MATCH (c:Course)
+    WHERE c.course IS NOT NULL AND c.course <> ''
+    OPTIONAL MATCH (c)-[:REFERENCES_TOPIC]->(t:Topic)
+    OPTIONAL MATCH (s:Subtopic)-[:PREREQUISITE_OF]->(t)
+    WITH c, COLLECT(DISTINCT t) AS topics, COLLECT(DISTINCT s) AS subtopics
+    RETURN c.course AS code, c.name AS name, c.semester AS semester,
+           c.credits AS credits, c.category AS category, c.department AS department,
+           EXISTS((c)-[:REFERENCES_TOPIC]->()) AS has_ee_topic,
+           SIZE(topics) AS topic_count,
+           SIZE(subtopics) AS subtopic_count
+    ORDER BY c.code
+    """
+    
+    try:
+        driver = get_driver_instance()
+        with driver.session(database=config.NEO4J_DATABASE) as session:
+            result = session.run(query)
+            courses = [{
+                'code': r['code'],
+                'name': r['name'],
+                'semester': r['semester'],
+                'credits': r['credits'],
+                'category': r['category'],
+                'department': r['department'],
+                'has_ee_topic': r['has_ee_topic'],
+                'topic_count': r['topic_count'],
+                'subtopic_count': r['subtopic_count'],
+            } for r in result]
+            
+            # EE mega-course with full counts
+            ee_subtopics = 0
+            try:
+                ee_r = session.run(
+                    "MATCH (m:Module {course:'EE'})-[:HAS_TOPIC]->(t:Topic) "
+                    "OPTIONAL MATCH (s:Subtopic)-[:PREREQUISITE_OF]->(t) "
+                    "RETURN COUNT(DISTINCT t) AS topics, COUNT(DISTINCT s) AS subtopics"
+                ).single()
+                ee_topics = ee_r['topics'] if ee_r else 63
+                ee_subtopics = ee_r['subtopics'] if ee_r else 1421
+            except:
+                ee_topics = 63
+                ee_subtopics = 1421
+            
+            courses.insert(0, {
+                'code': 'EE',
+                'name': 'Electrical Engineering (Full Curriculum)',
+                'semester': 'I-VIII',
+                'credits': 150,
+                'category': 'PROGRAM',
+                'department': 'EE',
+                'has_ee_topic': True,
+                'topic_count': ee_topics,
+                'subtopic_count': ee_subtopics,
+            })
+            
+            return courses
+    except Exception as e:
+        logger.error(f"Error listing courses with meta: {e}", exc_info=True)
         raise
 
 

@@ -37,8 +37,10 @@ const BadgesShowcase       = React.lazy(() => import('./components/gamification/
 const LearningProfile      = React.lazy(() => import('./components/learning/LearningProfile.jsx'));
 const SkillTreeMap         = React.lazy(() => import('./components/gamification/SkillTreeMap.jsx'));
 const SkillTreeLanding     = React.lazy(() => import('./components/gamification/SkillTreeLanding.jsx'));
+const SkillTreeGenerator  = React.lazy(() => import('./components/gamification/SkillTreeGenerator.jsx'));
 const SkillTreeGameMap     = React.lazy(() => import('./components/gamification/SkillTreeGameMap.jsx'));
 const SkillTreeGames       = React.lazy(() => import('./components/gamification/SkillTreeGames.jsx'));
+const LearningAnalyticsDashboard = React.lazy(() => import('./components/gamification/LearningAnalyticsDashboard.jsx'));
 const TutorModePage        = React.lazy(() => import('./components/tutor/TutorModePage.jsx'));
 const DeepResearchPage     = React.lazy(() => import('./components/research/DeepResearchPage.jsx'));
 const CourseExplorerPage   = React.lazy(() => import('./components/course/CourseExplorerPage.jsx'));
@@ -472,8 +474,10 @@ function App() {
                         <Route path="/learning-profile" element={<LearningProfile />} />
                         <Route path="/gamification/skill-tree" element={<SkillTreeGames />} />
                         <Route path="/gamification/skill-tree/new" element={<SkillTreeLanding />} />
+                        <Route path="/gamification/skill-tree/generate" element={<SkillTreeGenerator />} />
                         <Route path="/gamification/skill-tree/map" element={<SkillTreeGameMap />} />
                         <Route path="/gamification/skill-tree/classic" element={<SkillTreeMap />} />
+                        <Route path="/gamification/skill-tree/analytics/:treeId" element={<LearningAnalyticsDashboard />} />
                         <Route path="/admin/dashboard" element={<Navigate to="/" replace />} />
                         <Route path="/tutor" element={
                             <TutorModePage

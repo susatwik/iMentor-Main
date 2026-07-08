@@ -144,8 +144,8 @@ GROQ_MODEL_NAME = os.getenv('GROQ_MODEL_NAME', 'llama-3.3-70b-versatile')
 
 # ─── LLM Provider Fallback Configuration ────────────────────────────────────
 # Priority order for LLM providers. First healthy provider will be used.
-# Options: sglang, grok, gemini, ollama
-LLM_PROVIDER_PRIORITY = os.getenv('LLM_PROVIDER_PRIORITY', 'sglang,grok,gemini,ollama')
+# Options: sglang, groq, gemini, grok, ollama
+LLM_PROVIDER_PRIORITY = os.getenv('LLM_PROVIDER_PRIORITY', 'sglang,groq,gemini,grok,ollama')
 
 # Grok (xAI) — secondary provider
 GROK_MODEL = os.getenv('GROK_MODEL', 'grok-2-latest')
@@ -469,7 +469,7 @@ def get_embedding_model():
                 from sentence_transformers import SentenceTransformer
                 logger.info(f"Loading Sentence Transformer: {DOCUMENT_EMBEDDING_MODEL_NAME}...")
                 # Force CPU to avoid competing with SGLang/Ollama for VRAM
-                _document_embedding_model = SentenceTransformer(DOCUMENT_EMBEDDING_MODEL_NAME, device='cpu')
+                _document_embedding_model = SentenceTransformer(DOCUMENT_EMBEDDING_MODEL_NAME, device='cpu', local_files_only=True)
                 EMBEDDING_MODEL_LOADED = True
                 logger.info(f"Successfully loaded embedding model '{DOCUMENT_EMBEDDING_MODEL_NAME}'")
             except Exception as e:

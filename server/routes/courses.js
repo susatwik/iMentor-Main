@@ -7,6 +7,20 @@ const log = require('../utils/logger');
 
 const PYTHON_RAG_URL = process.env.PYTHON_RAG_SERVICE_URL || 'http://127.0.0.1:2005';
 
+// @route   GET /api/courses/meta
+// @desc    Get all courses with metadata (code, name, semester, credits, counts)
+// @access  Private
+router.get('/meta', async (req, res) => {
+    try {
+        const { data } = await axios.get(`${PYTHON_RAG_URL}/curriculum/courses/meta`, { timeout: 10000 });
+        return res.json(data);
+    } catch (err) {
+        const msg = err.response?.data?.message || err.message;
+        log.error('DB', `Course meta fetch failed: ${msg}`);
+        return res.status(500).json({ success: false, message: msg });
+    }
+});
+
 // @route   GET /api/courses/:courseName/structure
 // @desc    Get module/topic/subtopic tree for an admin course
 // @access  Private
