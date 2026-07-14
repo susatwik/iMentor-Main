@@ -93,6 +93,7 @@ const KnowledgeAssessmentPage = () => {
 
   const goNext = () => {
     const q = questions[currentIndex];
+    if (!q) return;
     if (q.type === 'descriptive') {
       const val = draftAnswers[q.question] || '';
       if (!val.trim()) {
@@ -124,7 +125,7 @@ const KnowledgeAssessmentPage = () => {
     setEvaluating(true);
     const q = questions[currentIndex];
     const allResponses = [...answers];
-    if (q.type === 'descriptive') {
+    if (q && q.type === 'descriptive') {
       const val = draftAnswers[q.question] || '';
       const existingIdx = allResponses.findIndex(a => a.question === q.question);
       if (existingIdx >= 0) {
@@ -154,6 +155,7 @@ const KnowledgeAssessmentPage = () => {
 
   const handleMcqAnswer = (opt) => {
     const q = questions[currentIndex];
+    if (!q) return;
     const answer = {
       question: q.question, type: q.type, options: q.options,
       correctAnswer: q.correctAnswer, modelAnswer: q.modelAnswer,

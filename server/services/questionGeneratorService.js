@@ -35,11 +35,47 @@ async function generateSocraticQuiz({ courseName, moduleId, moduleName, user }) 
                 if (cached) {
                     const parsed = JSON.parse(cached);
                     log.info('QUIZ', `Quiz cache HIT for ${cacheKey} (${Date.now() - t0}ms)`);
-                    return parsed;
+                    return { ...parsed, _source: 'redis_cache', source: 'redis_cache', generatedBy: 'redis', generatedAt: parsed.generatedAt || new Date().toISOString() };
                 }
             } catch (cacheErr) {
                 log.warn('QUIZ', `Redis cache read failed: ${cacheErr.message}`);
             }
+        }
+
+        // ── UNIFIED PIPELINE CHECK ─────────────────────────────────────────
+        // Try contentGenerationService (Redis → MongoDB → Provider → Template)
+        try {
+            const cg = require('./contentGenerationService');
+            const pipelineResult = await cg.generateOrRetrieveQuiz(courseName, moduleName || moduleId || 'all', user?._id);
+            if (pipelineResult && pipelineResult.questions && pipelineResult.questions.length > 0) {
+                const stage = learningStage;
+                const normalized = pipelineResult.questions.map((q, idx) => {
+                    const isMCQ = Array.isArray(q.options) && q.options.length > 0;
+                    return {
+                        instruction: q.question || `Question ${idx + 1}`,
+                        type: isMCQ ? 'MCQ' : 'Descriptive',
+                        options: isMCQ ? (q.options || []).map(o => String(o).replace(/^[A-Da-d][.):\-]\s*/, '')) : undefined,
+                        correctIndex: isMCQ ? (typeof q.correctIndex === 'number' ? q.correctIndex : 0) : undefined,
+                        output: q.explanation || '',
+                        topic: courseName || 'General',
+                        difficulty: q.difficulty || stage || 'Beginner',
+                        hint: '',
+                    };
+                });
+                const now = new Date().toISOString();
+                log.info('QUIZ', `Pipeline quiz HIT for ${courseName}/${moduleName || moduleId || 'all'} via ${pipelineResult._source} (${Date.now() - t0}ms)`);
+                return {
+                    questions: normalized,
+                    source: pipelineResult._source || 'mongodb',
+                    generatedBy: pipelineResult.generatedBy || 'pipeline',
+                    model: pipelineResult.model || 'unknown',
+                    pipelineVersion: pipelineResult.pipelineVersion || 'v2',
+                    generatedAt: pipelineResult.generatedAt || now,
+                    _source: pipelineResult._source || 'mongodb',
+                };
+            }
+        } catch (pipelineErr) {
+            log.warn('QUIZ', `Pipeline quiz miss, falling through to direct generation: ${pipelineErr.message}`);
         }
 
         // 1. Determine target difficulty and specific instructions based on history
@@ -278,10 +314,23 @@ JSON format:
             };
         });
 
+        const provider = fallbackResult.provider || 'unknown';
+        const model = fallbackResult.model || 'unknown';
+        const now = new Date().toISOString();
+        const resultPayload = {
+            questions: normalized,
+            source: provider,
+            generatedBy: provider,
+            model,
+            pipelineVersion: 'v2',
+            generatedAt: now,
+            _source: provider,
+        };
+
         // ── CACHE STORE ──────────────────────────────────────────────────
         if (redisClient && cacheKey) {
             try {
-                await redisClient.setEx(cacheKey, QUIZ_CACHE_TTL, JSON.stringify(normalized));
+                await redisClient.setEx(cacheKey, QUIZ_CACHE_TTL, JSON.stringify(resultPayload));
                 log.info('QUIZ', `Quiz cache saved for ${cacheKey} (TTL: ${QUIZ_CACHE_TTL}s)`);
             } catch (cacheErr) {
                 log.warn('QUIZ', `Redis cache write failed: ${cacheErr.message}`);
@@ -289,21 +338,30 @@ JSON format:
         }
 
         log.info('QUIZ', `[PROFILE] total=${Date.now()-t0}ms - returning ${normalized.length} questions`);
-        return normalized;
+        return resultPayload;
 
     } catch (err) {
         log.warn('QUESTION_GENERATOR', `Socratic quiz generation failed: ${err.message}. Generating resilient offline fallback questions.`);
         const fallbackQuestions = generateSocraticOfflineFallback({ courseName, moduleName: moduleName || moduleId });
-        // Cache fallback questions too so subsequent calls return immediately
+        const now = new Date().toISOString();
+        const fallbackPayload = {
+            questions: fallbackQuestions,
+            source: 'template',
+            generatedBy: 'template',
+            model: 'fallback',
+            pipelineVersion: 'v2',
+            generatedAt: now,
+            _source: 'template',
+        };
         if (redisClient && cacheKey) {
             try {
-                await redisClient.setEx(cacheKey, QUIZ_CACHE_TTL, JSON.stringify(fallbackQuestions));
+                await redisClient.setEx(cacheKey, QUIZ_CACHE_TTL, JSON.stringify(fallbackPayload));
                 log.info('QUIZ', `Fallback quiz cache saved for ${cacheKey} (TTL: ${QUIZ_CACHE_TTL}s)`);
             } catch (cacheErr) {
                 log.warn('QUIZ', `Redis cache write for fallback failed: ${cacheErr.message}`);
             }
         }
-        return fallbackQuestions;
+        return fallbackPayload;
     }
 }
 
@@ -312,6 +370,24 @@ JSON format:
  */
 async function generateSkillTreeQuestions({ topic, levelId, levelName, difficulty, user, seenQuestions = [] }) {
     try {
+        // 0. Try unified pipeline (Redis → MongoDB → Provider Chain → Template)
+        try {
+            const cg = require('./contentGenerationService');
+            const pipelineResult = await cg.generateOrRetrieveLevelQuestions(topic, levelId, levelName, difficulty, null, seenQuestions);
+            if (pipelineResult && pipelineResult.questions && pipelineResult.questions.length > 0) {
+                // Add MCQ-level session fields
+                const questions = pipelineResult.questions.map((q, qi) => ({
+                    ...q,
+                    difficulty: q.difficulty || difficulty || 'medium',
+                    _provider: pipelineResult._source || 'pipeline',
+                }));
+                log.info('QUESTION_GENERATOR', `Pipeline skill tree questions HIT for ${topic}/${levelName} via ${pipelineResult._source}`);
+                return questions;
+            }
+        } catch (pipelineErr) {
+            log.warn('QUESTION_GENERATOR', `Pipeline skill tree miss, falling through: ${pipelineErr.message}`);
+        }
+
         // 1. Fetch RAG Context
         const searchQuery = `Explain core concepts, definitions, design trade-offs, architecture, and practical code examples for: ${levelName} under the topic: ${topic}.`;
         let contextText = 'No course material context available.';

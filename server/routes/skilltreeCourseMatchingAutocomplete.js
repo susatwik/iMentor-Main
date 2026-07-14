@@ -38,7 +38,7 @@ function prefixMatchScore(query, text) {
   return 0;
 }
 
-router.get('/course-matching/autocomplete', softAuthMiddleware, async (req, res) => {
+router.get('/autocomplete', softAuthMiddleware, async (req, res) => {
   const q = req.query?.q;
   if (!q || String(q).trim().length < 3) {
     return res.json({ suggestions: [] });

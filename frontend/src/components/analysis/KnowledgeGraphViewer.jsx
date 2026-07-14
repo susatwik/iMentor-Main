@@ -101,7 +101,7 @@ const KnowledgeGraphViewer = ({ graphData }) => {
         const edges = graphData.edges.map(edge => ({
             from: edge.from,
             to: edge.to,
-            label: edge.relationship.replace(/_/g, ' '),
+            label: (edge.relationship || '').replace(/_/g, ' '),
         }));
         return { nodes, edges };
     }, [graphData, theme]);

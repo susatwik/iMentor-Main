@@ -1,0 +1,68 @@
+=== Provider Fallback Chain Evidence ===
+Date: 2026-07-14T09:47:50.840Z
+
+Connecting to MongoDB...
+MongoDB connected.
+
+
+╔════════════════════════════════════════╗
+║     PROVIDER AVAILABILITY REPORT        ║
+╚════════════════════════════════════════╝
+
+Provider    | Env Enabled | API Key Valid | Health
+───────────────────────────────────────────────────────
+sglang      | true         | N/A            | ❌ DOWN
+groq        | true         | true           | untested
+gemini      | true         | false          | untested
+openai      | true         | true           | untested
+ollama      | true         | N/A            | ✅ UP
+
+Chain order (preferred first): sglang → groq → gemini → openai → ollama
+Chain order (cloud-first): groq → gemini → openai → sglang → ollama
+
+▶ TEST: SGLang preferred → fall through chain
+  preferredProvider: sglang
+────────────────────────────────────────────────────────────────────────
+  provider attempted → groq (failover)
+  model → llama-3.3-70b-versatile
+  time → 1827ms
+  preview → "Hello."
+
+▶ TEST: Groq preferred (should try Groq first)
+  preferredProvider: groq
+────────────────────────────────────────────────────────────────────────
+  provider attempted → groq (direct hit)
+  model → llama-3.3-70b-versatile
+  time → 253ms
+  preview → "Hello."
+
+▶ TEST: Ollama preferred (should try Ollama first)
+  preferredProvider: ollama
+────────────────────────────────────────────────────────────────────────
+  provider attempted → ollama (direct hit)
+  model → qwen2.5-coder:7b
+  time → 345ms
+  preview → "Hello"
+
+▶ TEST: Force Template fallback (all providers fail)
+  preferredProvider: sglang
+────────────────────────────────────────────────────────────────────────
+  provider attempted → none (failover)
+  model → none
+  time → 10ms
+  preview → "I'm currently unable to process your request — all AI providers are unavailable. Please check your API keys or ensure your local Ollama server is running, then try again."
+────────────────────────────────────────────────────────────────────────
+
+╔════════════════════════════════════════╗
+║          RESULTS SUMMARY               ║
+╚════════════════════════════════════════╝
+
+Test                                     | Provider Served     | Time (ms)
+──────────────────────────────────────────────────────────────────────
+SGLang preferred → fall through chain    | groq                 |      1827
+Groq preferred (should try Groq first)   | groq                 |       253
+Ollama preferred (should try Ollama first) | ollama               |       345
+Force Template fallback (all providers fail) | none                 |        10
+
+Output saved to: /tmp/provider_evidence.txt
+Done.

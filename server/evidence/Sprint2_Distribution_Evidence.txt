@@ -1,0 +1,75 @@
+# Sprint 2 — Evidence: Answer Distribution Analysis
+
+Started: 2026-07-14T09:35:07.599Z
+Target:  http://localhost:5001
+Course:  Data Structures
+
+## Step 1: Auth
+Authenticated OK
+
+## Step 2: Generate Concept Banks via API
+
+| Concept | Questions |
+|---|---|
+| Binary Search Trees | 29 |
+| Arrays | 27 |
+| Linked Lists | 27 |
+| Hash Tables | 26 |
+| Stacks | 29 |
+| Queues | 28 |
+| Sorting Algorithms | 30 |
+| Graphs | 30 |
+| Trees | 30 |
+| **Total** | **256** |
+
+## Step 3: Fetch All Questions
+Total unique valid MCQs collected: **436**
+
+## Step 4: Answer Position Distribution
+
+| Option | Count | Percentage |
+|---|---|---|
+| A (index 0) | 104 | 23.9% |
+| B (index 1) | 123 | 28.2% |
+| C (index 2) | 106 | 24.3% |
+| D (index 3) | 103 | 23.6% |
+| **Total** | **436** | **100.0%** |
+
+## Step 5: Chi-Squared Test
+
+χ² = **2.4404** (df = 3, α = 0.05, threshold = 7.815)
+Result: **PASS — Balanced (p > 0.05)**
+
+## Step 6: Per-Difficulty Breakdown
+
+| Difficulty | Total | A | B | C | D | χ² |
+|---|---|---|---|---|---|---|
+| easy | 107 | 25.2% | 30.8% | 23.4% | 20.6% | 2.421 |
+| medium | 170 | 22.9% | 23.5% | 27.6% | 25.9% | 0.965 |
+| hard | 159 | 23.9% | 31.4% | 21.4% | 23.3% | 3.742 |
+
+## Step 7: Per-Bloom-Level Breakdown
+
+| Bloom Level | Total | A | B | C | D | χ² |
+|---|---|---|---|---|---|---|
+| remember | 47 | 27.7% | 31.9% | 21.3% | 19.1% | 1.936 |
+| understand | 70 | 21.4% | 28.6% | 27.1% | 22.9% | 0.971 |
+| apply | 100 | 26.0% | 24.0% | 25.0% | 25.0% | 0.080 |
+| analyze | 84 | 19.0% | 29.8% | 27.4% | 23.8% | 2.190 |
+| evaluate | 72 | 25.0% | 30.6% | 23.6% | 20.8% | 1.444 |
+| create | 63 | 25.4% | 27.0% | 19.0% | 28.6% | 1.317 |
+
+---
+## Summary
+
+- **Total unique MCQs analyzed:** 436
+- **Chi-squared (df=3):** 2.4404
+- **Threshold (α=0.05):** 7.815
+- **Distribution balanced?** YES
+
+| Option | Count | Percentage |
+|---|---|---|
+| A (index 0) | 104 | 23.9% |
+| B (index 1) | 123 | 28.2% |
+| C (index 2) | 106 | 24.3% |
+| D (index 3) | 103 | 23.6% |

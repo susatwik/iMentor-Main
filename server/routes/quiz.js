@@ -2,9 +2,6 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const User = require('../models/User');
-const { queryPythonRagService } = require('../services/ragQueryService');
-const { getCurriculumStructure } = require('../services/socraticTutorService');
-const geminiService = require('../services/geminiService');
 const { callWithFallback } = require('../services/llmFallbackService');
 const log = require('../utils/logger');
 
@@ -82,10 +79,11 @@ router.get('/generate', async (req, res) => {
         );
 
         const questions = await Promise.race([generationPromise, timeoutPromise]);
+        const payload = Array.isArray(questions) ? { questions } : questions;
 
         res.status(200).json({
             success: true,
-            questions
+            ...payload,
         });
 
     } catch (error) {

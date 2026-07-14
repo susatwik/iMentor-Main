@@ -1,0 +1,143 @@
+# Sprint 2 — Evidence: Replay Variability (Question Overlap)
+
+Started: 2026-07-14T09:50:37.272Z
+Target:  http://localhost:5001
+Topic:   Replay Topic 1784022637270
+Iterations: 10
+
+## Step 1: Create Test User
+User created: replay_1784022637270@test.com
+
+## Step 2: Setup Game
+Game created: 6a5606943dbb20c2ff4b8e02
+Level name: "Introduction to Replay Topic 1784022637270 Concepts"
+
+## Step 3: Replay Iterations
+
+| Iteration | Questions | Source | Unique Cumulative |
+|---|---|---|---|
+| **1** | | | |
+| | Which of the following problems is best solved using Introduction to Replay Topi | concept_question_bank | 5 |
+| | Which of the following best describes a key characteristic of Introduction to Re | concept_question_bank | 5 |
+| | What future developments or research directions are most promising for Introduct | concept_question_bank | 5 |
+| | How would you parallelize an implementation of Introduction to Replay Topic 1784 | concept_question_bank | 5 |
+| | Which of the following is NOT a valid use case for Introduction to Replay Topic  | concept_question_bank | 5 |
+| **1** | **Done** (5 q, concept_question_bank) | concept_question_bank | 5 |
+| **2** | | | |
+| | What debugging approach would you use to find a bug in a Introduction to Replay  | concept_question_bank | 10 |
+| | How does the choice of Introduction to Replay Topic 1784022637270 Concepts affec | concept_question_bank | 10 |
+| | Design an approach to solve a complex problem using Introduction to Replay Topic | concept_question_bank | 10 |
+| | What metric is most important when evaluating the quality of a Introduction to R | concept_question_bank | 10 |
+| | How does input size affect the behavior of Introduction to Replay Topic 17840226 | concept_question_bank | 10 |
+| **2** | **Done** (5 q, concept_question_bank) | concept_question_bank | 10 |
+| **3** | | | |
+| | What is the relationship between Introduction to Replay Topic 1784022637270 Conc | concept_question_bank | 15 |
+| | Which of the following is a real-world system that commonly uses Introduction to | concept_question_bank | 15 |
+| | What is the best data structure to use when implementing Introduction to Replay  | concept_question_bank | 15 |
+| | What are two variants of Introduction to Replay Topic 1784022637270 Concepts and | concept_question_bank | 15 |
+| | How would you modify Introduction to Replay Topic 1784022637270 Concepts to impr | concept_question_bank | 15 |
+| **3** | **Done** (5 q, concept_question_bank) | concept_question_bank | 15 |
+| **4** | | | |
+| | What is the key difference between Introduction to Replay Topic 1784022637270 Co | concept_question_bank | 20 |
+| | In the context of Replay Topic 1784022637270, which scenario best demonstrates t | concept_question_bank | 20 |
+| | How would you explain Introduction to Replay Topic 1784022637270 Concepts to som | concept_question_bank | 20 |
+| | What invariant must hold true throughout the execution of Introduction to Replay | concept_question_bank | 20 |
+| | What is a common optimization technique for Introduction to Replay Topic 1784022 | concept_question_bank | 20 |
+| **4** | **Done** (5 q, concept_question_bank) | concept_question_bank | 20 |
+| **5** | | | |
+| | How does Introduction to Replay Topic 1784022637270 Concepts handle edge cases s | concept_question_bank | 25 |
+| | Which academic paper or researcher is most associated with pioneering Introducti | concept_question_bank | 25 |
+| | What is the memory usage profile of a typical Introduction to Replay Topic 17840 | concept_question_bank | 25 |
+| | What is the primary purpose of Introduction to Replay Topic 1784022637270 Concep | concept_question_bank | 25 |
+| | Which programming language features are most relevant when implementing Introduc | concept_question_bank | 25 |
+| **5** | **Done** (5 q, concept_question_bank) | concept_question_bank | 25 |
+| **6** | | | |
+| | Which testing strategy is most effective for validating a Introduction to Replay | concept_question_bank | 30 |
+| | What is the time complexity of the most efficient implementation of Introduction | concept_question_bank | 30 |
+| | What prerequisite knowledge is most important before learning Introduction to Re | concept_question_bank | 30 |
+| | What is a common mistake when implementing Introduction to Replay Topic 17840226 | concept_question_bank | 30 |
+| | How does Introduction to Replay Topic 1784022637270 Concepts compare to alternat | concept_question_bank | 30 |
+| **6** | **Done** (5 q, concept_question_bank) | concept_question_bank | 30 |
+| **7** | | | |
+| | Which of the following is NOT a valid use case for Introduction to Replay Topic  | concept_question_bank | 30 |
+| | Which programming language features are most relevant when implementing Introduc | concept_question_bank | 30 |
+| | What is a common optimization technique for Introduction to Replay Topic 1784022 | concept_question_bank | 30 |
+| | What are two variants of Introduction to Replay Topic 1784022637270 Concepts and | concept_question_bank | 30 |
+| | What metric is most important when evaluating the quality of a Introduction to R | concept_question_bank | 30 |
+| **7** | **Done** (5 q, concept_question_bank) | concept_question_bank | 30 |
+| **8** | | | |
+| | What prerequisite knowledge is most important before learning Introduction to Re | concept_question_bank | 30 |
+| | What debugging approach would you use to find a bug in a Introduction to Replay  | concept_question_bank | 30 |
+| | Which testing strategy is most effective for validating a Introduction to Replay | concept_question_bank | 30 |
+| | How would you parallelize an implementation of Introduction to Replay Topic 1784 | concept_question_bank | 30 |
+| | What invariant must hold true throughout the execution of Introduction to Replay | concept_question_bank | 30 |
+| **8** | **Done** (5 q, concept_question_bank) | concept_question_bank | 30 |
+| **9** | | | |
+| | What is the time complexity of the most efficient implementation of Introduction | concept_question_bank | 30 |
+| | What future developments or research directions are most promising for Introduct | concept_question_bank | 30 |
+| | Which testing strategy is most effective for validating a Introduction to Replay | concept_question_bank | 30 |
+| | Which of the following is a real-world system that commonly uses Introduction to | concept_question_bank | 30 |
+| | Which of the following best describes a key characteristic of Introduction to Re | concept_question_bank | 30 |
+| **9** | **Done** (5 q, concept_question_bank) | concept_question_bank | 30 |
+| **10** | | | |
+| | Which testing strategy is most effective for validating a Introduction to Replay | concept_question_bank | 30 |
+| | What is the primary purpose of Introduction to Replay Topic 1784022637270 Concep | concept_question_bank | 30 |
+| | How does Introduction to Replay Topic 1784022637270 Concepts handle edge cases s | concept_question_bank | 30 |
+| | How does the choice of Introduction to Replay Topic 1784022637270 Concepts affec | concept_question_bank | 30 |
+| | What is the memory usage profile of a typical Introduction to Replay Topic 17840 | concept_question_bank | 30 |
+| **10** | **Done** (5 q, concept_question_bank) | concept_question_bank | 30 |
+
+## Step 4: Overlap Analysis
+
+### Overlap Matrix (row/col = iteration, value = % Jaccard similarity)
+
+| Iter | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|------|---|---|---|---|---|---|---|---|---|---|
+| 1 | - | 0 | 0 | 0 | 0 | 0 | 11 | 11 | 25 | 0 |
+| 2 | 0 | - | 0 | 0 | 0 | 0 | 11 | 11 | 0 | 11 |
+| 3 | 0 | 0 | - | 0 | 0 | 0 | 11 | 0 | 11 | 0 |
+| 4 | 0 | 0 | 0 | - | 0 | 0 | 11 | 11 | 0 | 0 |
+| 5 | 0 | 0 | 0 | 0 | - | 0 | 11 | 0 | 0 | 43 |
+| 6 | 0 | 0 | 0 | 0 | 0 | - | 0 | 25 | 25 | 11 |
+| 7 | 11 | 11 | 11 | 11 | 11 | 0 | - | 0 | 0 | 0 |
+| 8 | 11 | 11 | 0 | 11 | 0 | 25 | 0 | - | 11 | 11 |
+| 9 | 25 | 0 | 11 | 0 | 0 | 25 | 0 | 11 | - | 11 |
+| 10 | 0 | 11 | 0 | 0 | 43 | 11 | 0 | 11 | 11 | - |
+
+### Per-Iteration Unique Counts
+
+| Iteration | Questions | New Unique | Cumulative |
+|---|---|---|---|
+| 1 | 5 | 5 | 5 |
+| 2 | 5 | 5 | 10 |
+| 3 | 5 | 5 | 15 |
+| 4 | 5 | 5 | 20 |
+| 5 | 5 | 5 | 25 |
+| 6 | 5 | 5 | 30 |
+| 7 | 5 | 0 | 30 |
+| 8 | 5 | 0 | 30 |
+| 9 | 5 | 0 | 30 |
+| 10 | 5 | 0 | 30 |
+
+---
+## Summary
+
+- **Total iterations:** 10
+- **Total question slots:** 50
+- **Unique questions seen:** 30
+- **Unseen question ratio:** 0.600 (unique/total displayed)
+- **Overlap across all pairs (Jaccard):
+  - Average: 6%
+  - Min: 0%
+  - Max: 43%
+- **Identical sets:** NONE — No two iterations returned identical question sets
+
+## Verdict
+
+| Criterion | Expected | Actual | Result |
+|---|---|---|---|
+| No identical sets | true | true | PASS |
+| Average overlap < 50% | true | 6% | PASS |
+| Unseen ratio > 0.5 | true | 0.600 | PASS |
+
+**Overall: ALL PASS'**

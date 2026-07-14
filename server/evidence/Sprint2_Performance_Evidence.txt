@@ -1,0 +1,69 @@
+========================================================================
+SPRINT 2 — Cold vs Cached Performance Timing Evidence
+========================================================================
+Started at: 2026-07-14T09:54:18.935Z
+
+  Creating test user: perf_test_1784022858936@test.com
+  Received dev OTP: 123456
+  Got JWT token for user
+
+────────────────────────────────────────────────────────────────────────
+Operation 1: POST /api/assessment/generate
+────────────────────────────────────────────────────────────────────────
+  Cold run 1/3 for "Assessment Generate"...
+    Cold: 11ms (status=200)
+  Hot run 1/3 for "Assessment Generate"...
+    Hot: 3ms (status=200)
+  Cold run 2/3 for "Assessment Generate"...
+    Cold: 3ms (status=200)
+  Hot run 2/3 for "Assessment Generate"...
+    Hot: 4ms (status=200)
+  Cold run 3/3 for "Assessment Generate"...
+    Cold: 4ms (status=200)
+  Hot run 3/3 for "Assessment Generate"...
+    Hot: 3ms (status=200)
+────────────────────────────────────────────────────────────────────────
+Operation 2: POST /api/gamification/skill-tree/level-questions
+────────────────────────────────────────────────────────────────────────
+  Cold run 1/3 for "Level Questions"...
+    Cold: 6ms (status=200)
+  Hot run 1/3 for "Level Questions"...
+    Hot: 5ms (status=200)
+  Cold run 2/3 for "Level Questions"...
+    Cold: 4ms (status=200)
+  Hot run 2/3 for "Level Questions"...
+    Hot: 5ms (status=200)
+  Cold run 3/3 for "Level Questions"...
+    Cold: 7ms (status=200)
+  Hot run 3/3 for "Level Questions"...
+    Hot: 5ms (status=200)
+
+========================================================================
+SUMMARY TABLE
+========================================================================
+
+| Operation                    | Cold (ms) | Hot (ms) | Speedup |
+|------------------------------|-----------|----------|---------|
+| Assessment Generate          |         6 |        3 |    1.80 |
+| Level Questions              |         6 |        5 |    1.13 |
+
+========================================================================
+DETAILED PER-RUN DATA
+========================================================================
+
+Assessment Generate:
+  Cold runs (ms): 11, 3, 4
+  Hot runs  (ms): 3, 4, 3
+  Average cold:   6 ms
+  Average hot:    3 ms
+  Speedup:        1.80x
+
+Level Questions:
+  Cold runs (ms): 6, 4, 7
+  Hot runs  (ms): 5, 5, 5
+  Average cold:   6 ms
+  Average hot:    5 ms
+  Speedup:        1.13x
+
+Finished at: 2026-07-14T09:54:19.376Z
+Output written to: /tmp/performance_evidence.txt

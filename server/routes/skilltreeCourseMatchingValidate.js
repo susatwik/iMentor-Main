@@ -26,7 +26,7 @@ function safeReadJSON(p, fallback) {
   }
 }
 
-router.post('/course-matching/validate', authMiddleware, async (req, res) => {
+router.post('/validate', authMiddleware, async (req, res) => {
   const courseName = req.body?.courseName;
   if (!courseName || !String(courseName).trim()) {
     return res.status(400).json({ message: 'courseName is required' });

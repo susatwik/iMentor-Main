@@ -185,7 +185,7 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
                             {/* Detailed Feedbacks */}
                             <div className="space-y-3">
                                 <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Detailed Question Feedback</h5>
-                                {evaluationResult.feedback.map((item, idx) => (
+                                {(evaluationResult.feedback || []).map((item, idx) => (
                                     <div key={idx} className="border border-white/5 rounded-xl bg-white/2 overflow-hidden">
                                         <button 
                                             onClick={() => toggleFeedback(idx)}

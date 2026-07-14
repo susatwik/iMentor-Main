@@ -19,11 +19,12 @@ const log = require('../utils/logger');
 const { checkOllamaHealth } = require('./ollamaHealthService');
 
 // Lazy-load provider services to avoid circular deps
-let _gemini, _ollama, _streaming, _sglang, _groq; // [Team1] added sglang + groq
+let _gemini, _ollama, _streaming, _sglang, _groq, _openai;
 function geminiService()    { return _gemini    || (_gemini    = require('./geminiService'));    }
 function ollamaService()    { return _ollama    || (_ollama    = require('./ollamaService'));    }
-function sglangService()    { return _sglang    || (_sglang    = require('./sglangService'));    } // [Team1]
-function groqService()      { return _groq      || (_groq      = require('./groqService'));      } // [Team1]
+function sglangService()    { return _sglang    || (_sglang    = require('./sglangService'));    }
+function groqService()      { return _groq      || (_groq      = require('./groqService'));      }
+function openaiService()    { return _openai    || (_openai    = require('./openaiService'));    }
 function streamingService() { return _streaming || (_streaming = require('./llmStreamingService')); }
 
 // ─── THINKING MODEL DETECTION ──────────────────────────────────────────────
@@ -149,8 +150,9 @@ function hasApiKey(provider, userKeys = {}) {
     switch (provider) {
         case 'gemini': return isValidKey(userKeys.gemini || process.env.GEMINI_API_KEY);
         case 'groq':   return isValidKey(userKeys.groq || process.env.GROQ_API_KEY);
-        case 'ollama': return true; // no key needed
-        case 'sglang': return true; // no key needed
+        case 'openai': return isValidKey(userKeys.openai || process.env.OPENAI_API_KEY);
+        case 'ollama': return true;
+        case 'sglang': return true;
         default:       return false;
     }
 }
@@ -159,6 +161,7 @@ function getApiKey(provider, userKeys = {}) {
     switch (provider) {
         case 'gemini': return userKeys.gemini || process.env.GEMINI_API_KEY;
         case 'groq':   return userKeys.groq || process.env.GROQ_API_KEY;
+        case 'openai': return userKeys.openai || process.env.OPENAI_API_KEY;
         default:       return null;
     }
 }
@@ -168,18 +171,19 @@ const PROVIDER_TIMEOUTS = {
     sglang: 5_000,
     groq:   15_000,
     gemini: 15_000,
+    openai: 15_000,
     ollama: 20_000,
 };
 
 // ─── FALLBACK CHAIN BUILDER ────────────────────────────────────────────────
-// SGLang is handled via local / API calls. Groq and Gemini are fallback targets.
-const LOCAL_FIRST_CHAIN  = ['sglang', 'groq', 'gemini'];
-const CLOUD_FIRST_CHAIN  = ['groq', 'gemini', 'sglang'];
+// SGLang (local GPU) → Groq → Gemini → OpenAI → Ollama (last resort)
+const LOCAL_FIRST_CHAIN  = ['sglang', 'groq', 'gemini', 'openai', 'ollama'];
+const CLOUD_FIRST_CHAIN  = ['groq', 'gemini', 'openai', 'sglang', 'ollama'];
 
 /**
  * Build an ordered provider chain with user preference first.
  */
-function buildFallbackChain(preferredProvider = 'sglang', preferLocalFirst = true) {
+function buildFallbackChain(preferredProvider = 'groq', preferLocalFirst = true) {
     const base = preferLocalFirst ? [...LOCAL_FIRST_CHAIN] : [...CLOUD_FIRST_CHAIN];
     const norm = (preferredProvider || 'sglang').toLowerCase().trim();
     // Put preferred first, then the rest in default order
@@ -192,6 +196,7 @@ function getServiceForProvider(provider) {
     switch (provider) {
         case 'gemini': return geminiService();
         case 'groq':   return groqService();
+        case 'openai': return openaiService();
         case 'ollama': return ollamaService();
         case 'sglang': return sglangService();
         default:       return null;
@@ -199,7 +204,7 @@ function getServiceForProvider(provider) {
 }
 
 // Providers that support streaming in llmStreamingService
-const UNIFIED_STREAM_PROVIDERS = new Set(['gemini', 'groq']);
+const UNIFIED_STREAM_PROVIDERS = new Set(['gemini', 'groq', 'openai']);
 
 // ─── CORE: CALL WITH FALLBACK ──────────────────────────────────────────────
 /**
@@ -222,8 +227,8 @@ async function callWithFallback({
     userQuery,
     systemPrompt = null,
     options = {},
-    preferredProvider = 'ollama',
-    preferLocalFirst = true,
+    preferredProvider = 'groq',
+    preferLocalFirst = false,
     userApiKeys = {},
     ollamaUrl = null,
     onToken = null,
@@ -393,6 +398,10 @@ function resolveModelForProvider(provider, options = {}) {
         if (optModel && optModel.includes('/')) return optModel;
         return process.env.SGLANG_CHAT_MODEL || 'Qwen/Qwen2.5-7B-Instruct-AWQ';
     }
+    if (provider === 'openai') {
+        if (optModel && optModel.toLowerCase().startsWith('gpt')) return optModel;
+        return process.env.OPENAI_MODEL || 'gpt-4o';
+    }
     if (provider === 'ollama') {
         const isNotOllama = optModel && (optModel.toLowerCase().startsWith('gemini') || optModel.includes('/'));
         if (optModel && !isNotOllama) return optModel;
@@ -440,6 +449,15 @@ async function getFastModel(userApiKeys = {}, ollamaUrlHint = null) {
             provider: 'gemini',
             model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
             apiKey: getApiKey('gemini', userApiKeys),
+        };
+    }
+
+    // 4) OpenAI — cloud fallback
+    if (hasApiKey('openai', userApiKeys)) {
+        return {
+            provider: 'openai',
+            model: process.env.OPENAI_MODEL || 'gpt-4o',
+            apiKey: getApiKey('openai', userApiKeys),
         };
     }
 

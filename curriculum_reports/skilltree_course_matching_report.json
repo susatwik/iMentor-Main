@@ -1,18 +1,36 @@
 {
-  "uploadedFileName": null,
-  "extractedTopics": [],
-  "matchedConcepts": [],
-  "matchPercentage": 0,
-  "reusedSkillTreeDecision": "generate_new",
+  "uploadedFileName": "TechnologyEntrepreneurship.csv",
+  "extractedTopics": [
+    "Entrepreneurial Mindset",
+    "Startup Ecosystem",
+    "Problem Identification",
+    "Idea Validation",
+    "Business Model Canvas",
+    "Value Proposition Design",
+    "Startup Funding",
+    "Scaling Startups"
+  ],
+  "matchedConcepts": [
+    "Entrepreneurial Mindset",
+    "Startup Ecosystem",
+    "Problem Identification",
+    "Idea Validation",
+    "Business Model Canvas",
+    "Value Proposition Design",
+    "Startup Funding",
+    "Scaling Startups"
+  ],
+  "matchPercentage": 100,
+  "reusedSkillTreeDecision": "reuse_existing",
   "uploadReport": {
-    "validRows": 1,
+    "validRows": 8,
     "invalidRows": 0,
     "duplicates": [],
     "warnings": []
   },
   "meta": {
-    "userId": "6a16979cfc0759c4d833fa45",
-    "generatedAt": "2026-07-11T06:18:32.074Z",
+    "userId": "6a4d01dcd69ed7f2797783df",
+    "generatedAt": "2026-07-14T13:10:21.031Z",
     "threshold": 80
   }
 }

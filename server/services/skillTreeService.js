@@ -99,10 +99,12 @@ async function getUserSkillTree(userId) {
 
         // Sort by tier and category
         skillTreeState.sort((a, b) => {
-            if (a.position.tier !== b.position.tier) {
-                return a.position.tier - b.position.tier;
+            const tierA = a.position?.tier ?? 1;
+            const tierB = b.position?.tier ?? 1;
+            if (tierA !== tierB) {
+                return tierA - tierB;
             }
-            return a.category.localeCompare(b.category);
+            return (a.category || '').localeCompare(b.category || '');
         });
 
         return skillTreeState;

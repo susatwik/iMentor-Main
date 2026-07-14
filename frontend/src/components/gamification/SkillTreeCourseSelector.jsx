@@ -67,7 +67,7 @@ const SkillTreeCourseSelector = ({
     try {
       setLoadingSuggestions(true);
       const res = await axios.get(
-        `${base}/gamification/skill-tree/course-matching/autocomplete`,
+        `${base}/course-matching/autocomplete`,
         {
           params: { q: query },
           headers: authHeaders
@@ -117,7 +117,7 @@ const SkillTreeCourseSelector = ({
     try {
       setIsValidating(true);
       const res = await axios.post(
-        `${base}/gamification/skill-tree/course-matching/validate`,
+        `${base}/course-matching/validate`,
         { courseName },
         { headers: authHeaders }
       );
@@ -184,7 +184,7 @@ const SkillTreeCourseSelector = ({
 
       console.log('[FRONTEND CSV] sending request');
       const res = await axios.post(
-        `${base}/gamification/skill-tree/course-matching/upload`,
+        `${base}/course-matching/upload`,
         payload,
         { headers: { ...authHeaders, 'Content-Type': 'application/json' } }
       );

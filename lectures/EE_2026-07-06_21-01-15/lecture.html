@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EE3011 - Power Electronics | Introduction — Lecture Notes</title>
+
+  <!-- KaTeX: math renders client-side from the KaTeX library only.
+       Your LaTeX content NEVER leaves this machine. -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer
+        src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer
+        src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+          delimiters: [
+            {left:'$$', right:'$$', display:true},
+            {left:'$', right:'$', display:false},
+            {left:'\\[', right:'\\]', display:true},
+            {left:'\\(', right:'\\)', display:false}
+          ],
+          throwOnError: false
+        });">
+  </script>
+
+  <!-- Mermaid: diagrams render client-side only. Your diagram code stays local. -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        background: '#0D0D1A',
+        primaryColor: '#1565C0',
+        primaryTextColor: '#ECEFF1',
+        lineColor: '#546E7A',
+        edgeLabelBackground: '#1A1A2E',
+        fontFamily: 'monospace'
+      }
+    });
+  </script>
+
+  <style>
+    :root {
+      --bg:       #0D0D1A;
+      --surface:  #1A1A2E;
+      --border:   #2A2A3E;
+      --text:     #ECEFF1;
+      --muted:    #78909C;
+      --accent1:  #90CAF9;
+      --accent2:  #A5D6A7;
+      --warn:     #FFCC80;
+      --core:     #1565C0;
+      --support:  #E65100;
+      --detail:   #1B5E20;
+      --sidebar-w: 280px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      display: flex;
+    }
+
+    /* ── Sidebar ─────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 14px;
+      flex-shrink: 0;
+    }
+    #sidebar h2 {
+      color: var(--accent1);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    #sidebar .toc-item {
+      display: block;
+      padding: 5px 8px;
+      border-radius: 5px;
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 13px;
+      transition: all .15s;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #sidebar .toc-item:hover { background: rgba(144,202,249,.1); color: var(--accent1); }
+    #sidebar .toc-item.core {
+      color: #90CAF9; font-weight: 600;
+    }
+    #sidebar .toc-item.supporting { color: #FFAB91; }
+    #sidebar .toc-item.detail { color: #A5D6A7; }
+    .toc-badge {
+      display: inline-block;
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .badge-core    { background: #0D47A1; color: #90CAF9; }
+    .badge-support { background: #BF360C; color: #FFAB91; }
+    .badge-detail  { background: #1B5E20; color: #A5D6A7; }
+
+    .concept-map-thumb {
+      display: block;
+      width: 100%;
+      height: 120px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      margin: 14px 0;
+      overflow: hidden;
+    }
+    .concept-map-link {
+      display: block;
+      text-align: center;
+      font-size: 11px;
+      color: var(--accent1);
+      text-decoration: none;
+      padding: 6px;
+      background: rgba(21,101,192,.15);
+      border-radius: 5px;
+      margin-bottom: 16px;
+    }
+    .concept-map-link:hover { background: rgba(21,101,192,.3); }
+
+    /* ── Main content ────────────────────────── */
+    #content {
+      flex: 1;
+      max-width: 880px;
+      padding: 48px 52px;
+      overflow-x: hidden;
+    }
+
+    .lecture-header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 24px;
+      margin-bottom: 36px;
+    }
+    .lecture-header h1 {
+      font-size: 32px;
+      color: var(--accent1);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .lecture-meta {
+      color: var(--muted);
+      font-size: 12px;
+      font-family: monospace;
+      margin-bottom: 16px;
+    }
+    .lecture-summary {
+      font-size: 16px;
+      color: #B0BEC5;
+      line-height: 1.8;
+      margin-bottom: 20px;
+    }
+
+    .objectives {
+      background: var(--surface);
+      border-left: 3px solid var(--accent2);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 32px;
+    }
+    .objectives h3 {
+      color: var(--accent2);
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .objectives li {
+      color: #B0BEC5;
+      margin-left: 18px;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    /* ── Concept sections ─────────────────────── */
+    .concept-section {
+      margin-bottom: 64px;
+      border-top: 1px solid var(--border);
+      padding-top: 36px;
+    }
+    .concept-title {
+      font-size: 26px;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+    .concept-title .num { color: var(--muted); font-size: 20px; margin-right: 8px; }
+    .importance-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 10px;
+      border-radius: 12px;
+      margin-left: 10px;
+      vertical-align: middle;
+      font-family: monospace;
+    }
+    .imp-core    { background: #0D47A1; color: #90CAF9; }
+    .imp-supporting { background: #BF360C; color: #FFAB91; }
+    .imp-detail  { background: #1B5E20; color: #A5D6A7; }
+
+    .section-heading {
+      font-size: 14px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 28px 0 12px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .definition-box {
+      background: var(--surface);
+      border-left: 3px solid var(--accent1);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      font-size: 15px;
+      color: #CFD8DC;
+      margin-bottom: 24px;
+    }
+
+    .intuition-text {
+      color: #B0BEC5;
+      line-height: 1.85;
+      white-space: pre-wrap;
+    }
+
+    /* ── Math ─────────────────────────────────── */
+    .math-block {
+      background: #0A0A18;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .math-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .math-meaning {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* ── Mermaid diagrams ─────────────────────── */
+    .diagram-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 16px 0;
+      overflow-x: auto;
+      text-align: center;
+    }
+    .diagram-caption {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .mermaid {
+      font-family: monospace !important;
+    }
+
+    /* ── Examples ─────────────────────────────── */
+    .example-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 12px 0;
+    }
+    .example-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--warn);
+      margin-bottom: 10px;
+    }
+    .example-content {
+      color: #B0BEC5;
+      font-size: 14px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    /* ── Takeaways & misconceptions ───────────── */
+    .takeaway-list li {
+      padding: 5px 0;
+      color: #CFD8DC;
+      margin-left: 20px;
+    }
+    .takeaway-list li::marker { color: var(--accent2); }
+
+    .misconception-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      color: #EF9A9A;
+      font-size: 14px;
+    }
+    .misconception-item::before {
+      content: '⚠';
+      flex-shrink: 0;
+    }
+
+    /* ── Inline code ──────────────────────────── */
+    code {
+      background: #0A0A18;
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    pre code {
+      display: block;
+      padding: 14px;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+
+    /* ── Print styles ─────────────────────────── */
+    @media print {
+      #sidebar { display: none; }
+      #content { max-width: 100%; padding: 20px; }
+      .concept-section { page-break-before: always; }
+      a { color: inherit; text-decoration: none; }
+    }
+
+    /* ── Search highlight ─────────────────────── */
+    mark { background: #FFF176; color: #000; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ────────────────────────────────────────────────────────── -->
+<nav id="sidebar">
+  <h2>Table of Contents</h2>
+  <iframe src="concept_map.html" class="concept-map-thumb" scrolling="no" frameborder="0"></iframe>
+<a href="concept_map.html" target="_blank" class="concept-map-link">🗺 Open Full Concept Map</a>
+  <a href="#power-electronics-fundamentals" class="toc-item Core">1. Power Electronics Fundamentals<span class="toc-badge "></span></a>
+<a href="#semiconductor-switches-operation" class="toc-item Core">2. Semiconductor Switches Operation<span class="toc-badge "></span></a>
+<a href="#v-i-characteristics-of-power-semiconductor-devices" class="toc-item Supporting">3. V-I Characteristics of Power Semiconductor Devices<span class="toc-badge "></span></a>
+<a href="#scr-commutation-methods" class="toc-item Detail">4. SCR Commutation Methods<span class="toc-badge "></span></a>
+<a href="#gate-drive-circuit-design-for-power-semiconductor-devices" class="toc-item Detail">5. Gate Drive Circuit Design for Power Semiconductor Devices<span class="toc-badge "></span></a>
+<a href="#protection-and-conduction-losses-in-power-semiconductor-devices" class="toc-item Detail">6. Protection and Conduction Losses in Power Semiconductor Devices<span class="toc-badge "></span></a>
+</nav>
+
+<!-- ── Main content ───────────────────────────────────────────────────── -->
+<main id="content">
+  <div class="lecture-header">
+    <h1>EE3011 - Power Electronics | Introduction</h1>
+    <div class="lecture-meta">Generated 2026-07-06 21:21 &nbsp;·&nbsp; iMentor Lecture Generator &nbsp;·&nbsp; SGLang (local)</div>
+    <p class="lecture-summary">Introduction to power electronics and semiconductor switches operation.</p>
+    <div class="objectives">
+      <h3>Learning Objectives</h3>
+      <ul><li>Understand the concept of power electronics.</li></ul>
+    </div>
+  </div>
+
+  <div class="concept-section" style="border:none;padding-top:0;margin-bottom:48px;"><h2 style="color:var(--accent1);font-size:22px;margin-bottom:16px;">Concept Map</h2><iframe src="concept_map.html" style="width:100%;height:520px;border:1px solid var(--border);border-radius:10px;" frameborder="0"></iframe></div>
+
+  
+<div class="concept-section" style="margin-bottom:40px;">
+  <h2 style="color:var(--accent1);font-size:22px;margin-bottom:16px;">
+    📋 Concept Coverage by Lecture
+  </h2>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
+    ● = covered in that lecture &nbsp;·&nbsp;
+    <span style="color:#90CAF9;font-weight:bold;">Blue = spans multiple lectures</span>
+  </p>
+  <div style="overflow-x:auto;">
+  <table style="border-collapse:collapse;font-family:monospace;font-size:12px;width:100%;">
+    <thead>
+      <tr style="border-bottom:1px solid #334;">
+        <th style="text-align:left;padding:6px 12px;color:#607D8B;">Concept</th>
+        <th>L1</th>
+      </tr>
+    </thead>
+    <tbody style="color:#B0BEC5;">
+      <tr style="border-bottom:1px solid #1A1A2A;"><td>Gate Drive Circuit Design for Power Semiconductor Devices</td><td style="text-align:center;color:#A5D6A7;">●</td></tr><tr style="border-bottom:1px solid #1A1A2A;"><td>Power Electronics Fundamentals</td><td style="text-align:center;color:#A5D6A7;">●</td></tr><tr style="border-bottom:1px solid #1A1A2A;"><td>Protection and Conduction Losses in Power Semiconductor Devices</td><td style="text-align:center;color:#A5D6A7;">●</td></tr><tr style="border-bottom:1px solid #1A1A2A;"><td>SCR Commutation Methods</td><td style="text-align:center;color:#A5D6A7;">●</td></tr><tr style="border-bottom:1px solid #1A1A2A;"><td>Semiconductor Switches Operation</td><td style="text-align:center;color:#A5D6A7;">●</td></tr><tr style="border-bottom:1px solid #1A1A2A;"><td>V-I Characteristics of Power Semiconductor Devices</td><td style="text-align:center;color:#A5D6A7;">●</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+  <div class="concept-section"><h2 class="concept-title" id="power-electronics-fundamentals"><span class="num">1.</span> Power Electronics Fundamentals<span class="importance-badge ">Core</span></h2><div class="section-heading">Definition</div><div class="definition-box">The study and application of electronic devices to control and convert electrical energy efficiently, focusing on the design, analysis, and operation of circuits that interface between electricity supplied at one voltage level with equipment that operates at another. It involves understanding semiconductor switches like diodes, transistors, thyristors (SCRs), MOSFETs, IGBTs etc., their V-I characteristics and how they can be used in various power electronic circuits.</div><div class="section-heading">Intuition</div><p class="intuition-text">Imagine a city where electricity is the lifeblood. Power electronics are like traffic controllers that manage this flow of energy to ensure it reaches its destination efficiently, safely, and on time - whether we're talking about converting AC from your wall outlet into DC for charging an electric car or controlling motors in industrial machines.</p><div class="section-heading">Mathematical Formulation</div><div class="math-block"><div class="math-label">$P = VI$</div><div>$$
+$\text{Power (P)} = \text{Voltage (V)} \times \text{Current (I)}$
+$$</div><div class="math-meaning">This is the basic power calculation formula, where P denotes Power in Watts, V Voltage and I Current.</div></div><div class="math-block"><div class="math-label">$f_c = \frac{1}{2\pi RC}$</div><div>$$
+$f_c = \frac{1}{2\pi RC}$
+$$</div><div class="math-meaning">This formula gives the cut-off frequency of a simple RLC circuit, where f_c is in Hertz. It's essential for designers to understand how changing component values affects system performance.</div></div><div class="section-heading">Diagram</div><div class="diagram-wrapper"><pre class="mermaid">&lt;div&gt;&lt;img src='https://www.lucidchart.com/invitations/sites/default/files/styles/original/public/image/power-conversion%20processes.png?itok=1QJZYkKm' style='width:50%;height:auto;display:block;margin-left:auto;margin-right:auto;'&gt;&lt;/div&gt;</pre><div class="diagram-caption">This diagram illustrates a basic power conversion process, showing how AC input is converted to DC output using rectification and filtering stages.</div></div><div class="section-heading">Examples</div><div class="example-card"><div class="example-title">AC to DC Conversion</div><div class="example-content">Consider an AC supply of 120V RMS at 60Hz. Using a bridge rectifier composed of four diodes, we can convert this into pulsating DC which is then smoothed by a capacitor and resistor network.</div></div><div class="example-card"><div class="example-title">DC Motor Speed Control</div><div class="example-content">By varying the duty cycle in an H-bridge circuit with PWM (Pulse Width Modulation), we can control the speed of a DC motor. This is commonly used in electric vehicles and robotics.</div></div><div class="section-heading">Key Takeaways</div><ul class="takeaway-list"><li>Power electronics involves converting electrical energy efficiently using electronic devices.</li><li>Understanding semiconductor switches, their operation modes (like SCRs), V-I characteristics is crucial for designing power converters and controlling systems.</li></ul><div class="section-heading">Common Misconceptions</div><div class="misconception-item">Power electronics only deals with DC circuits. In reality, it encompasses both AC/DC conversion processes.</div><div class="misconception-item">All semiconductor devices operate in the same manner within a power electronic circuit; however, each has unique characteristics and applications.</div></div>
+<div class="concept-section"><h2 class="concept-title" id="semiconductor-switches-operation"><span class="num">2.</span> Semiconductor Switches Operation<span class="importance-badge ">Core</span></h2><div class="section-heading">Definition</div><div class="definition-box">A semiconductor switch, such as an SCR (Silicon Controlled Rectifier) or MOSFET (Metal Oxide Semiconductor Field-Effect Transistor), is a device used in power electronics to control the flow of electrical current. These devices are essential for converting and controlling electricity within various applications, from small consumer products to large industrial systems.</div><div class="section-heading">Intuition</div><p class="intuition-text">Imagine you're driving on an expressway (the circuit) with multiple lanes (paths). A semiconductor switch acts like a traffic controller that can open or close specific lanes for vehicles (current flow), allowing the smooth and efficient movement of cars along their desired route. Just as controlling lane access is vital to prevent accidents and ensure safety on an expressway, managing current with these devices ensures reliable operation in power systems.</p><div class="section-heading">Mathematical Formulation</div><div class="math-block"><div class="math-label">SCR On-State Voltage Drop</div><div>$$
+$V_{DS(on)} = V_{GE} - V_{TH}$
+$$</div><div class="math-meaning">The voltage drop across the SCR in its on state is equal to the gate-emitter voltage minus the threshold voltage.</div></div><div class="math-block"><div class="math-label">MOSFET Drain Current</div><div>$$
+$I_D = rac{2}{3}K(V_{GS} - V_{TH})^2$
+$$</div><div class="math-meaning">The drain current in a MOSFET is proportional to two-thirds of the transconductance parameter times the square of the difference between gate-source voltage and threshold voltage.</div></div><div class="math-block"><div class="math-label">SCR Commutation Method</div><div>$$
+$V_{CE} = V_T + I_C R_C$
+$$</div><div class="math-meaning">The collector-emitter voltage in an SCR during commutation is equal to the sum of its forward junction potential and current times resistance.</div></div><div class="math-block"><div class="math-label">MOSFET Gate Drive Voltage</div><div>$$
+$V_{GS} = V_{DD} - R_G I_D$
+$$</div><div class="math-meaning">The gate-source voltage for a MOSFET is determined by the supply voltage minus drain current times gate resistance.</div></div><div class="math-block"><div class="math-label">Power Loss in Semiconductor Devices</div><div>$$
+$P = V_{DS}I_D + KV_{TH}^2$
+$$</div><div class="math-meaning">The power loss for a semiconductor device is the sum of its on-state voltage drop times drain current plus two-thirds of junction potential squared.</div></div><div class="math-block"><div class="math-label">Efficiency Calculation</div><div>$$
+$	ext{Efficiency} = rac{	ext{Pout}}{	ext{PI + Ploss}}$
+$$</div><div class="math-meaning">The efficiency is the output power divided by input power plus losses, including conduction and switching losses in semiconductor devices.</div></div><div class="math-block"><div class="math-label">Protection Mechanism</div><div>$$
+$I_{D(max)} = rac{	ext{V}_	ext{DD}}{R_	ext{DS}}$
+$$</div><div class="math-meaning">The maximum drain current is the supply voltage divided by on-state resistance, which helps prevent overheating and damage.</div></div><div class="section-heading">Diagram</div><div class="diagram-wrapper"><pre class="mermaid">&lt;p&gt;&lt;img src='https://www.lifescied.org/sites/default/files/styles/large/public/field/dsc154/2019-07/semiconductor_switch_operation_flowchart.png?itok=QcCX6Zs' alt='Semiconductor Switch Operation Flowchart' /&gt;&lt;/p&gt;</pre><div class="diagram-caption">This flowchart illustrates the operation of a semiconductor switch in controlling current within an electrical circuit.</div></div><div class="section-heading">Examples</div><div class="example-card"><div class="example-title">SCR Commutation Example</div><div class="example-content">Considering an SCR with V_GE = 5V, I_C = 2A and R_C = 10Ω. The collector-emitter voltage during commutation can be calculated as follows: $V_{CE} = V_T + I_C R_C$, where the forward junction potential (V_T) is typically around 0.7V for silicon devices, leading to a value of approximately 2.9 volts.</div></div><div class="example-card"><div class="example-title">MOSFET Gate Drive Example</div><div class="example-content">For a MOSFET with K = 50mA/V^2, V_DD = 12V and R_G = 1kΩ. The gate-source voltage required to maintain I_D at its maximum is calculated by rearranging the formula $I_D = rac{2}{3}K(V_{GS} - V_{TH})^2$.</div></div><div class="section-heading">Key Takeaways</div><ul class="takeaway-list"><li>Semiconductor switches are vital for controlling current in power electronics.</li><li>Understanding the operation and characteristics of semiconductor devices like SCRs and MOSFETs is crucial to designing efficient systems.</li></ul><div class="section-heading">Common Misconceptions</div><div class="misconception-item">A common misconception is that all diodes are rectifiers, but only specific types such as silicon-based ones exhibit this property. Rectifying action refers specifically to the ability of a device like an SCR or Schottky diode to convert alternating current (AC) into direct current (DC).</div><div class="misconception-item">Another misconception is that semiconductor switches do not have losses; however, all devices inherently experience conduction and switching losses which must be accounted for in system design.</div></div>
+<div class="concept-section"><h2 class="concept-title" id="v-i-characteristics-of-power-semiconductor-devices"><span class="num">3.</span> V-I Characteristics of Power Semiconductor Devices<span class="importance-badge ">Supporting</span></h2><div class="section-heading">Definition</div><div class="definition-box">The voltage-current relationship for power semiconductor devices, such as Silicon Controlled Rectifiers (SCRs) and Metal Oxide Semiconductor Field Effect Transistors (MOSFETs), is fundamental in understanding their operation within a circuit. This characteristic defines how the device behaves under various electrical conditions.</div><div class="section-heading">Intuition</div><p class="intuition-text">To understand V-I characteristics, one can think of these devices as gatekeepers that regulate current flow based on applied voltage and inherent properties like threshold voltage (V_th). For instance, an SCR will remain off until the gate receives a sufficient positive pulse to surpass its 'turning point' or trigger level. Once triggered, it conducts heavily but requires additional forward-bias voltage above V_TH for sustained conduction.</p><div class="section-heading">Mathematical Formulation</div><div class="math-block"><div class="math-label">SCR Turn ON Condition</div><div>$$
+$V_{gate} > V_{th}$ to turn on the SCR.
+$$</div><div class="math-meaning">The gate voltage must exceed the threshold voltage for an SCR to start conducting.</div></div><div class="math-block"><div class="math-label">MOSFET On-State Voltage Drop</div><div>$$
+$R_{on} = \frac{V_{GS(th)}}{I_D}$ at $I_D$ operating point.
+$$</div><div class="math-meaning">The on-state resistance, R_on, is the gate-source voltage minus threshold (V_GS - V_GS(th)) divided by drain current.</div></div><div class="section-heading">Diagram</div><div class="diagram-wrapper"><pre class="mermaid">&lt;div class="mermaid"&gt;graph LR;start_voltage--&gt;|Applied Voltage|SCR[Start];GateVoltage&gt;|Trigger Gate|SCR[Triggers SCR];Vgt&gt;&gt;|Turn ON Point|SCR[Conducts Heavily];&lt;/div&gt;</pre><div class="diagram-caption">The V-I characteristic of an SCR, showing the triggering and conductive states.</div></div><div class="section-heading">Examples</div><div class="example-card"><div class="example-title">Understanding SCR Turn On</div><div class="example-content">Consider a simple circuit with an SCR controlling current to a load. When we apply 5V at Gate (GateVoltage) which is greater than the threshold voltage of 3V, it triggers the SCR into conduction state allowing significant current flow through the Load.</div></div><div class="example-card"><div class="example-title">MOSFET On-State Behavior</div><div class="example-content">For a MOSFET with V_GS(th) = 2V and operating at I_D = 5A, we find R_on by subtracting the threshold voltage from Gate to Source Voltage (assumed here as 10V), then dividing it by current. This results in an on-state resistance of $R_{on} = \frac{8}{5}$ Ohms.</div></div><div class="section-heading">Key Takeaways</div><ul class="takeaway-list"><li>The V-I characteristic is crucial for predicting device behavior under different electrical conditions.</li><li>Understanding the turn-on and conduction states of semiconductor devices helps in designing efficient power electronics systems.</li></ul><div class="section-heading">Common Misconceptions</div><div class="misconception-item">One common misconception is that once an SCR turns on, it will remain conductive regardless of voltage. In reality, a continuous forward bias above the V_TH plus any holding current must be applied to keep the device in conduction.</div><div class="misconception-item">Another mistake often made by students is underestimating gate drive requirements for MOSFETs; insufficient Gate-to-Source Voltage can prevent an SCR from turning on.</div></div>
+<div class="concept-section"><h2 class="concept-title" id="scr-commutation-methods"><span class="num">4.</span> SCR Commutation Methods<span class="importance-badge ">Detail</span></h2><div class="section-heading">Definition</div><div class="definition-box">Techniques to turn off an SCR in power electronic circuits, allowing controlled current flow.</div><div class="section-heading">Intuition</div><p class="intuition-text">&lt;p&gt;Imagine the Silicon Controlled Rectifier (SCR) as a one-way gate that only allows electricity through when it's 'open'. To shut this gate and stop conducting, we need to employ specific methods known as commutation techniques. These are essential in applications where an SCR must be turned off periodically or under certain conditions.&lt;/p&gt;&lt;p&gt;There are two primary types of commutation: natural commutation (also called self-commutation) which relies on the circuit's inherent characteristics, and forced commutation that uses external circuits to control the turn-off process. Understanding these methods is crucial for designing efficient power electronic systems.&lt;/p&gt;</p><div class="section-heading">Diagram</div><div class="diagram-wrapper"><pre class="mermaid">&lt;flowchart LR name='SCR Commutation Process' start='Start'&gt;
++-&gt;[Trigger Turn-Off]--+-"Apply commutation technique"--&gt;
+|                         |
+| [Natural Commutation]   |--&gt;[Forced Commutation]
+|                          |
+|                          |
++&lt;flow right to=End&gt;---------------------+</pre><div class="diagram-caption">&lt;p&gt;This flowchart illustrates the basic process of SCR commutation, highlighting natural and forced methods as pathways for turning off an SCR.&lt;/p&gt;</div></div><div class="section-heading">Examples</div><div class="example-card"><div class="example-title">Natural Commutation Example</div><div class="example-content">In a simple RC circuit with an inductor (L), when the gate signal is removed after closing, L stores energy and delays turn-off. Once V_DS exceeds V_GT + V_RD during this time, the SCR turns off naturally.</div></div><div class="example-card"><div class="example-title">Forced Commutation Example</div><div class="example-content">Using a snubber circuit with resistors and capacitors to absorb energy from an inductive load can force turn-off of an SCR without relying on the natural commutation process.</div></div><div class="section-heading">Key Takeaways</div><ul class="takeaway-list"><li>SCRs are turned off using specific techniques called commutation methods.</li><li>Natural and forced commutations exist as primary strategies for turning off an SCR in power electronic circuits.</li><li>Understanding these concepts is vital to designing efficient systems that use silicon controlled rectifiers.</li></ul><div class="section-heading">Common Misconceptions</div><div class="misconception-item">&lt;p&gt;Misconception: 'SCRs can be turned off by simply removing the gate signal.' Correction: While it's true that turning an SCR off involves stopping its conduction, this process is not as straightforward due to stored energy in inductive loads. Proper commutation techniques are required.&lt;/p&gt;</div></div>
+<div class="concept-section"><h2 class="concept-title" id="gate-drive-circuit-design-for-power-semiconductor-devices"><span class="num">5.</span> Gate Drive Circuit Design for Power Semiconductor Devices<span class="importance-badge ">Detail</span></h2><div class="section-heading">Definition</div><div class="definition-box">The design of gate drive circuits is essential in controlling the operation and efficiency of power semiconductor devices. It involves creating a circuit that can provide appropriate voltage levels to the gates, ensuring proper turn-on and turn-off times while minimizing losses.</div><div class="section-heading">Intuition</div><p class="intuition-text">Imagine driving an electric car; just as you need precise control over your vehicle's acceleration and braking for efficiency and safety, power semiconductor devices require accurate gate drive signals to operate optimally. The design of these circuits is akin to programming the 'brake-to-accelerate ratio,' ensuring that each switch in an electrical circuit operates at its best performance.</p><div class="section-heading">Mathematical Formulation</div><div class="math-block"><div class="math-label">$I_{GD} = rac{V_{DD}}{R_{DS(on)}}$</div><div>$$
+$I_{GD} = \frac{V_{DD}}{\rho_{ds}}
+$$</div><div class="math-meaning">The gate current ($I_{GD}$) is the ratio of the drive voltage to the on-state resistance.</div></div><div class="math-block"><div class="math-label">$t_{fall}=R_{DS(on)}C_{iss}(1+e^{\frac{V_{DD}-IR_F}{V_{GSJ}}})\times f$</div><div>$$
+$t_{fall} = R_{\rho_{ds}}(C_{iss}) \left( 1+ e^{\frac{V_{DD}-I_{RF}}{V_{G S J}}} \right) \times f$,
+$$</div><div class="math-meaning">The fall time ($t_{fall}$) is calculated using the on-state resistance, input capacitance, and gate drive voltage.</div></div><div class="math-block"><div class="math-label">$f = \frac{1}{2\pi(R_G+R_S)(C_{iss}+C_O)}$</div><div>$$
+$f = \frac{1}{2\pi (R_{G}+R_{S})(C_{iss}+C_{O})}$
+$$</div><div class="math-meaning">The frequency ($f$) of the gate drive signal is determined by resistances and capacitances in the circuit.</div></div><div class="section-heading">Diagram</div><div class="diagram-wrapper"><pre class="mermaid">&lt;sequenceDiagram&gt;
+    actor-&gt;&gt;Gate Driver
+    note right of Gate Driver: Provides appropriate voltage levels to gates.
+    &lt;&lt;decider&gt;&gt; if (gate signal) then
+        step: Apply gate drive voltage; 
+        next_state: Control the power semiconductor device operation.
+    else
+        exceptionHandler: Handle errors or malfunctions in gate control.  
+    end
+&lt;/sequenceDiagram&gt;</pre><div class="diagram-caption">&lt;div align="center" style="background-color:#f0f0f0;padding:15px;"&gt;Gate Drive Circuit Design for Power Semiconductor Devices Diagram (Sequence)&lt;/div&gt;</div></div><div class="section-heading">Key Takeaways</div><ul class="takeaway-list"><li>Understanding the importance of precise gate drive signals in power electronics.</li><li>The ability to design and analyze efficient gate driver circuits is crucial for minimizing conduction losses.</li></ul><div class="section-heading">Common Misconceptions</div><div class="misconception-item">A common misconception is that all semiconductor devices operate similarly under different gate voltages. In reality, each device has specific voltage requirements for optimal performance.
+Correction: It's essential to refer to the datasheet of a particular power semiconductor device and design the gate drive circuit according to its specified parameters.</div></div>
+<div class="concept-section"><h2 class="concept-title" id="protection-and-conduction-losses-in-power-semiconductor-devices"><span class="num">6.</span> Protection and Conduction Losses in Power Semiconductor Devices<span class="importance-badge ">Detail</span></h2><div class="section-heading">Definition</div><div class="definition-box">Losses due to switching (turning the device on/off) and conduction when a semiconductor is conducting current are critical factors affecting efficiency. These losses occur within power electronic devices such as MOSFETs, IGBTs, SCRs, etc., during their operation in various applications.</div><div class="section-heading">Intuition</div><p class="intuition-text">Imagine driving through the city; your car encounters traffic lights and stop signs—similarly, a semiconductor device faces 'traffic' as it switches states. Just like stopping at red signals can lead to fuel loss (energy), so does switching in power devices generate heat due to energy dissipation.</p><div class="section-heading">Mathematical Formulation</div><div class="math-block"><div class="math-label">$P_{conduction} = I^2 	imes R$</div><div>$$
+$P_{conduction} = I^2 \times R$
+$$</div><div class="math-meaning">Power loss due to the current flow through a resistance.</div></div><div class="math-block"><div class="math-label">$P_{switching} = (E_{on} + E_{off}) / f_{sw}$</div><div>$$
+$P_{switching} = \frac{E_{on} + E_{off}}{f_{sw}}$
+$$</div><div class="math-meaning">Average power loss during the switching process, where $E_{on}$ and $E_{off}$ are energies associated with turning on/off states of a device.</div></div><div class="math-block"><div class="math-label">$P_{total} = P_{conduction} + P_{switching}$</div><div>$$
+$P_{total} = P_{conduction} + P_{switching}$
+$$</div><div class="math-meaning">Total power loss in the semiconductor is the sum of conduction and switching losses.</div></div><div class="math-block"><div class="math-label">$f_{sw}$</div><div>$$
+$f_{sw}$
+$$</div><div class="math-meaning">Switching frequency, which influences both $P_{switching}$ and overall efficiency.</div></div><div class="section-heading">Diagram</div><div class="diagram-wrapper"><pre class="mermaid">&lt;div&gt;&lt;img src='https://www.lucidchart.com/invitations/try-a-free-Lucidchart-designer' style='width:100%; height:500px;'&gt; &lt;p&gt;Unfortunately, I cannot generate mermaid diagrams directly within this text response.&lt;/p&gt;&lt;/div&gt;</pre><div class="diagram-caption">A conceptual diagram illustrating the flow of current through a semiconductor device and resulting in conduction and switching losses.</div></div><div class="section-heading">Examples</div><div class="example-card"><div class="example-title">MOSFET Conduction Loss Example</div><div class="example-content">Considering an on-state resistance (R_DS(on)) of 10 mΩ for a MOSFET carrying a current of 20 A, the conduction loss is $P_{conduction} = I^2 	imes R = 20^2 \times 0.01 = 4 W$.</div></div><div class="example-card"><div class="example-title">IGBT Switching Loss Example</div><div class="example-content">For an IGBT with turn-on energy of 3 mJ and a switching frequency (f_sw) of 2 kHz, the average power loss is $P_{switching} = \frac{E_{on}}{1/8 f_{sw}} + E_{off}/(1 - D)$, where duty cycle ($D$) might be assumed to be negligible for this example.</div></div><div class="section-heading">Key Takeaways</div><ul class="takeaway-list"><li>Switching losses increase with frequency, while conduction losses are constant but depend on the current.</li><li>Efficiency of power semiconductor devices is highly dependent on minimizing these losses through proper device selection and circuit design.</li></ul><div class="section-heading">Common Misconceptions</div><div class="misconception-item">Higher switching frequencies always lead to better performance. (Correction: Higher frequencies can increase efficiency but also result in higher conduction and switching losses.)</div><div class="misconception-item">All semiconductor devices have similar loss characteristics regardless of their type or application.</div></div>
+
+  <div style="border-top:1px solid #2A2A3E;padding-top:24px;margin-top:48px;
+              color:#37474F;font-size:12px;font-family:monospace;">
+    End of lecture notes · EE3011 - Power Electronics | Introduction · 2026-07-06 21:21
+  </div>
+</main>
+
+<!-- ── In-page search ─────────────────────────────────────────────────── -->
+<div id="page-search" style="position:fixed;bottom:20px;right:20px;z-index:9999;
+     background:rgba(13,13,26,.95);padding:10px 14px;border-radius:8px;
+     border:1px solid #334;font-family:monospace;display:flex;gap:8px;align-items:center;">
+  <span style="color:#607D8B;font-size:12px;">🔍</span>
+  <input id="pg-search" type="text" placeholder="Search notes… (Ctrl+F)"
+    style="background:#1E1E2E;border:1px solid #445;color:#ECE;padding:5px 8px;
+           border-radius:4px;font-size:12px;width:180px;outline:none;"
+    oninput="pgSearch(this.value)">
+  <span id="pg-count" style="color:#546E7A;font-size:11px;min-width:40px;"></span>
+</div>
+
+<script>
+// Simple in-page text search with highlight
+var _marks = [];
+function pgSearch(q) {
+  // Clear previous highlights
+  _marks.forEach(function(el) {
+    var parent = el.parentNode;
+    if (parent) { parent.replaceChild(document.createTextNode(el.textContent), el); parent.normalize(); }
+  });
+  _marks = [];
+  if (!q || q.length < 2) { document.getElementById('pg-count').textContent = ''; return; }
+  var content = document.getElementById('content');
+  var count = _highlightText(content, q);
+  document.getElementById('pg-count').textContent = count + ' match' + (count !== 1 ? 'es' : '');
+  if (_marks.length > 0) _marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function _highlightText(node, q) {
+  var count = 0;
+  if (node.nodeType === 3) {  // Text node
+    var idx = node.textContent.toLowerCase().indexOf(q.toLowerCase());
+    if (idx >= 0) {
+      var mark = document.createElement('mark');
+      mark.textContent = node.textContent.substring(idx, idx + q.length);
+      var after = node.splitText(idx);
+      after.textContent = after.textContent.substring(q.length);
+      node.parentNode.insertBefore(mark, after);
+      _marks.push(mark);
+      count = 1;
+    }
+  } else if (node.nodeType === 1 && !['SCRIPT','STYLE','mark'].includes(node.tagName)) {
+    Array.from(node.childNodes).forEach(function(child) { count += _highlightText(child, q); });
+  }
+  return count;
+}
+
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    document.getElementById('pg-search').focus();
+  }
+  if (e.key === 'Escape') {
+    document.getElementById('pg-search').value = '';
+    pgSearch('');
+  }
+});
+</script>
+
+</body>
+</html>

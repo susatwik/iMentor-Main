@@ -22,9 +22,9 @@ function writeReport(report) {
   }
 }
 
-// @route   POST /api/gamification/skill-tree/course-matching/upload
+// @route   POST /api/course-matching/upload
 // @desc    Accept CSV upload (multipart) OR CSV text payload and return match decision.
-router.post('/course-matching/upload', authMiddleware, async (req, res) => {
+router.post('/upload', authMiddleware, async (req, res) => {
   try {
     const userId = req.user?._id;
     const requestId = `REQ-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
@@ -109,8 +109,45 @@ router.post('/course-matching/upload', authMiddleware, async (req, res) => {
     const matchedConcepts = Array.isArray(match.matchedConcepts) && match.matchedConcepts.length > 0
       ? match.matchedConcepts
       : (match.matchedCandidate ? [match.matchedCandidate] : []);
-    const matchPercentage = match.matchPercentage;
-    const reusedSkillTreeDecision = match.reusedSkillTreeDecision;
+    let matchPercentage = match.matchPercentage;
+    let reusedSkillTreeDecision = match.reusedSkillTreeDecision;
+
+    // Override: if the user specified a courseName that doesn't match any known
+    // course/subject in the system, force generate_new (topic-level matches
+    // on generic terms like "Intro" should not trigger reuse).
+    const providedCourseName = (req.body?.courseName || '').trim();
+    if (providedCourseName && reusedSkillTreeDecision === 'reuse_existing') {
+      let knownNames = (req.body?.existingCourseNames || []).map(s => s.toLowerCase());
+      if (knownNames.length === 0) {
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const inventoryPath = path.join(__dirname, '..', '..', 'curriculum_reports', 'curriculum_inventory.json');
+          if (fs.existsSync(inventoryPath)) {
+            const raw = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+            const inventoryCourses = Array.isArray(raw.courses) ? raw.courses : [];
+            knownNames = inventoryCourses.map(c => (c.name || c.courseName || c.courseCode || '').toLowerCase()).filter(Boolean);
+          }
+          if (knownNames.length === 0) {
+            const bootstrapDir = path.join(__dirname, '..', '..', 'server', 'course_bootstrap');
+            if (fs.existsSync(bootstrapDir)) {
+              knownNames = fs.readdirSync(bootstrapDir).filter(e => {
+                const fp = path.join(bootstrapDir, e);
+                return fs.statSync(fp).isDirectory() && !e.startsWith('.');
+              }).map(s => s.toLowerCase());
+            }
+          }
+        } catch (fsErr) {
+          log.warn('CSV_MATCHING', `Could not load known course names: ${fsErr.message}`);
+        }
+      }
+      const isKnownCourse = knownNames.includes(providedCourseName.toLowerCase());
+      if (!isKnownCourse) {
+        reusedSkillTreeDecision = 'generate_new';
+        matchPercentage = 0;
+        log.info('CSV_MATCHING', `Course "${providedCourseName}" not in known subjects; overriding to generate_new`);
+      }
+    }
 
     console.log(`[${requestId}] [CSV PARSER VERIFY]`, {
       lectureTopicCount: extractedTopics.length,
@@ -130,8 +167,8 @@ router.post('/course-matching/upload', authMiddleware, async (req, res) => {
       uploadedFileName: req.body?.uploadedFileName || null,
       extractedTopics,
       matchedConcepts,
-      matchPercentage: match.matchPercentage,
-      reusedSkillTreeDecision: match.reusedSkillTreeDecision,
+      matchPercentage: matchPercentage,
+      reusedSkillTreeDecision: reusedSkillTreeDecision,
       uploadReport: {
         validRows: uploadValidation.validRows,
         invalidRows: uploadValidation.invalidRows,

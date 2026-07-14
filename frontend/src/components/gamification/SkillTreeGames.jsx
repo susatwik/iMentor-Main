@@ -17,10 +17,13 @@ const SkillTreeGames = () => {
     const [profileCredits, setProfileCredits] = useState(0);
     const [creditsHistory, setCreditsHistory] = useState([]);
     const [historyOpen, setHistoryOpen] = useState(false);
+    const [csvLoading, setCsvLoading] = useState(false);
 
     // Check if we just created a new game from assessment
     const newGameData = location.state?.newGame;
     const resumedGameId = location.state?.resumedGameId;
+    const fromCsvUpload = location.state?.fromCsvUpload;
+    const csvTopic = location.state?.topic;
 
     useEffect(() => {
         fetchGames();
@@ -47,12 +50,33 @@ const SkillTreeGames = () => {
         }
     }, [resumedGameId, loading, games]);
 
+    // CSV upload flow: auto-detect existing game or redirect to new game
+    useEffect(() => {
+        if (!loading && fromCsvUpload && csvTopic) {
+            window.history.replaceState({}, document.title);
+            setCsvLoading(true);
+            const existingGame = games.find(g =>
+                g.topic?.toLowerCase().trim() === csvTopic.toLowerCase().trim()
+            );
+            if (existingGame) {
+                // Brief pause so user sees the loading state before navigation
+                setTimeout(() => handlePlayGame(existingGame), 400);
+            } else {
+                setTimeout(() => {
+                    navigate('/gamification/skill-tree/new', {
+                        state: { fromCsvUpload: true, topic: csvTopic }
+                    });
+                }, 400);
+            }
+        }
+    }, [loading, fromCsvUpload, csvTopic, games]);
+
     // Redirect to new game page if no games exist (and not coming with new game data)
     useEffect(() => {
-        if (!loading && games.length === 0 && !newGameData && !resumedGameId) {
+        if (!loading && games.length === 0 && !newGameData && !resumedGameId && !fromCsvUpload) {
             navigate('/gamification/skill-tree/new', { state: { hasGames: false } });
         }
-    }, [loading, games, newGameData, resumedGameId, navigate]);
+    }, [loading, games, newGameData, resumedGameId, fromCsvUpload, navigate]);
 
     const fetchGames = async () => {
         try {
@@ -162,6 +186,18 @@ const SkillTreeGames = () => {
             .filter(e => e.reason === 'skill_tree_completion')
             .reduce((sum, e) => sum + (e.amount || 0), 0);
     };
+
+    if (csvLoading) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
+                    <p className="text-white text-lg font-bold">Loading existing skill tree...</p>
+                    <p className="text-zinc-500 text-sm mt-1">Restoring your progress and game data</p>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (

@@ -39,6 +39,7 @@ const SkillTreeMap         = React.lazy(() => import('./components/gamification/
 const SkillTreeLanding     = React.lazy(() => import('./components/gamification/SkillTreeLanding.jsx'));
 const SkillTreeGameMap     = React.lazy(() => import('./components/gamification/SkillTreeGameMap.jsx'));
 const SkillTreeGames       = React.lazy(() => import('./components/gamification/SkillTreeGames.jsx'));
+const SkillTreeCsvUpload   = React.lazy(() => import('./components/gamification/SkillTreeCourseSelectorWrapper.jsx'));
 const TutorModePage        = React.lazy(() => import('./components/tutor/TutorModePage.jsx'));
 const DeepResearchPage     = React.lazy(() => import('./components/research/DeepResearchPage.jsx'));
 const CourseExplorerPage   = React.lazy(() => import('./components/course/CourseExplorerPage.jsx'));
@@ -474,6 +475,7 @@ function App() {
                         <Route path="/learning-profile" element={<LearningProfile />} />
                         <Route path="/gamification/skill-tree" element={<SkillTreeGames />} />
                         <Route path="/gamification/skill-tree/new" element={<SkillTreeLanding />} />
+                        <Route path="/gamification/skill-tree/upload" element={<SkillTreeCsvUpload />} />
                         <Route path="/gamification/skill-tree/map" element={<SkillTreeGameMap />} />
                         <Route path="/gamification/skill-tree/classic" element={<SkillTreeMap />} />
                         <Route path="/admin/dashboard" element={<Navigate to="/" replace />} />

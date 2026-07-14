@@ -11,10 +11,8 @@ const BossBattle = require('../models/BossBattle');
 const ConceptContribution = require('../models/ConceptContribution');
 const SkillTreeGame = require('../models/SkillTreeGame');
 const SkillTree = require('../models/SkillTree');
-const { selectLLM, LLMRouter } = require('../services/llmRouterService');
+const { selectLLM } = require('../services/llmRouterService');
 const geminiService = require('../services/geminiService');
-const ollamaService = require('../services/ollamaService');
-const groqService = require('../services/groqService');
 const { getCurriculumStructure } = require('../services/socraticTutorService');
 const log = require('../utils/logger');
 
@@ -333,14 +331,102 @@ router.post('/skill-tree/diagnostic', async (req, res) => {
     }
 });
 
-// Helper for legacy LLM fallback
+// Helper for legacy LLM fallback — generates diagnostic questions dynamically
+// for any course/topic that doesn't have pre-computed SkillTree questions.
 async function generateDiagnosticWithLLM(topic, req, res) {
-    // [Implementation from original route...]
-    // (For brevity in this diff, I'll move the original logic here)
-    let previousQuestionsBlock = '';
-    // ... (rest of original logic)
-    // For now, I'll just return a simplified fallback OR keep it if possible
-    return res.status(501).json({ message: 'Dynamic generation currently disabled. Please select a pre-configured course like "Machine Learning".' });
+    try {
+        // 1. Attempt generation via unified pipeline (Redis → MongoDB → Provider Chain → Template)
+        const contentGen = require('../services/contentGenerationService');
+        const assessment = await contentGen.generateOrRetrieveAssessment(topic, topic, req.user?._id);
+
+        if (assessment && assessment.questions && assessment.questions.length >= 3) {
+            const formatted = assessment.questions.map((q, i) => ({
+                question: q.question,
+                options: q.options || [],
+                level: q.difficulty || 'beginner',
+                skillId: `auto_diag_${topic}_${i}`,
+                type: 'mcq',
+            }));
+            log.success('GAMIFICATION', `Pipeline generated ${formatted.length} diagnostic questions for "${topic}" via ${assessment._source}`);
+            return res.json({
+                questions: formatted,
+                source: assessment._source || 'generated',
+                generatedBy: assessment.generatedBy || '',
+                model: assessment.model || '',
+                pipelineVersion: assessment.pipelineVersion || '',
+                generatedAt: assessment.generatedAt || '',
+            });
+        }
+
+        // 2. Fallback: Try Question Bank
+        log.info('GAMIFICATION', `No pipeline result, trying Question Bank for "${topic}"`);
+        try {
+            const QuestionBank = require('../models/QuestionBank');
+            const existing = await QuestionBank.find({
+                course: { $regex: new RegExp(topic.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+            }).sort({ difficulty: 1, bloomLevel: 1 }).lean();
+
+            if (existing.length >= 5) {
+                const shuffled = existing.sort(() => Math.random() - 0.5).slice(0, 5);
+                const questions = shuffled.map(q => ({
+                    question: q.question,
+                    options: q.options || [],
+                    level: q.difficulty || 'beginner',
+                    skillId: q.skillNodeId || `qb_${q._id}`,
+                    type: q.type || 'mcq',
+                }));
+                log.success('GAMIFICATION', `Reused ${questions.length} questions from Question Bank for "${topic}"`);
+                return res.json({ questions });
+            }
+        } catch (qbErr) {
+            log.warn('GAMIFICATION', `Question Bank query failed: ${qbErr.message}`);
+        }
+
+        // 3. Concept-based fallback: questions about subject matter, not course codes
+        const conceptQuestions = [
+            {
+                question: 'What is the most important foundational concept that underpins this subject?',
+                options: ['A: A core theoretical framework', 'B: A set of practical techniques', 'C: An empirical observation', 'D: A mathematical model'],
+                level: 'beginner',
+                skillId: `diag_generic_1`,
+                type: 'mcq',
+            },
+            {
+                question: 'How do the fundamental principles in this field guide practical problem-solving?',
+                options: ['A: They provide direct step-by-step instructions', 'B: They establish boundaries and constraints for solutions', 'C: They are only useful for theoretical analysis', 'D: They replace the need for practical experience'],
+                level: 'beginner',
+                skillId: `diag_generic_2`,
+                type: 'mcq',
+            },
+            {
+                question: 'When applying concepts from this subject to a new problem, what is the most important first step?',
+                options: ['A: Identify which principles are relevant', 'B: Immediately implement a known solution', 'C: Search for existing code or templates', 'D: Guess and check different approaches'],
+                level: 'intermediate',
+                skillId: `diag_generic_3`,
+                type: 'mcq',
+            },
+            {
+                question: 'In evaluating different approaches to a problem in this domain, what factor is most critical to consider?',
+                options: ['A: The specific constraints and requirements of the problem', 'B: Which approach is most popular', 'C: Which approach is easiest to implement', 'D: Which approach uses the latest technology'],
+                level: 'intermediate',
+                skillId: `diag_generic_4`,
+                type: 'mcq',
+            },
+            {
+                question: 'What distinguishes a well-designed solution from a poorly-designed one in this field?',
+                options: ['A: It appropriately balances trade-offs between competing concerns', 'B: It uses the most advanced techniques available', 'C: It is the fastest possible implementation', 'D: It follows the most common pattern'],
+                level: 'advanced',
+                skillId: `diag_generic_5`,
+                type: 'mcq',
+            },
+        ];
+
+        log.info('GAMIFICATION', `Generated ${conceptQuestions.length} concept-based diagnostic questions`);
+        return res.json({ questions: conceptQuestions });
+    } catch (err) {
+        log.error('GAMIFICATION', `LLM diagnostic generation failed for "${topic}": ${err.message}`);
+        return res.status(500).json({ message: `AI generation failed for "${topic}". Please try a different topic.` });
+    }
 }
 
 // @route   POST /api/gamification/skill-tree/diagnostic/submit
@@ -473,121 +559,31 @@ router.post('/skill-tree/generate-levels', async (req, res) => {
             log.success('AI', `[SkillTree] Built ${levels.length}-level map from Neo4j for "${topic}"`);
         }
 
-        // ── BRANCH 2: Custom Topic → dynamically generate map via LLM ─────────────
+        // ── BRANCH 2: Custom Topic → use content generation service ──────────
+        let genResult = null;
         if (!isAdminCourse) {
-            log.info('AI', `[SkillTree] Topic "${topic}" is custom — generating levels via LLM`);
-            const totalLevels = knowledgeLevel === 'Expert' ? 20 :
-                knowledgeLevel === 'Advanced' ? 25 :
-                    knowledgeLevel === 'Intermediate' ? 30 : 35;
-
-            try {
-                const prompt = `You are a curriculum expert creating a highly personalized, gamified skill tree for learning "${topic}".
-Current Student Knowledge Level: "${knowledgeLevel}"
-
-Generate a structured learning path with ${totalLevels} levels that feels like a professional educational course.
-CRITICAL: Do NOT use generic placeholders like "Introduction to ${topic}". Be specific to the sub-topics of "${topic}".
-Each level must have a unique, descriptive name and a clear learning objective in the description.
-
-Progression:
-1. Levels 1-10: Basic building blocks and foundational concepts of ${topic}.
-2. Levels 11-20: Intermediate techniques, common patterns, and practical implementation.
-3. Levels 21-${totalLevels}: Advanced optimization, complex architectures, and expert-level problem solving.
-
-JSON Structure (Return ONLY the array):
-[
-  {
-    "id": 1,
-    "name": "Specific Sub-topic Name",
-    "description": "Clear learning objective for this specific sub-topic",
-    "difficulty": "easy",
-    "status": "unlocked",
-    "stars": 0
-  },
-  ...
-]
-
-Generate exactly ${totalLevels} UNIQUE levels for: ${topic}`;
-
-                const response = await LLMRouter.generate({
-                    query: prompt,
-                    systemPrompt: null,
-                    chatHistory: [],
-                    userId: req.user._id,
-                    deepResearchContext: false
-                });
-
-                // Try to parse JSON from response
-                const jsonMatch = response.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    let jsonString = jsonMatch[0];
-                    try {
-                        levels = JSON.parse(jsonString);
-                    } catch (parseErr) {
-                        log.warn('AI', `First JSON parse attempt for levels failed: ${parseErr.message}. Attempting repair...`);
-                        try {
-                            const repaired = jsonString.replace(/[\n\r\t]/g, (m) => {
-                                if (m === '\n') return '\\n';
-                                if (m === '\r') return '\\r';
-                                if (m === '\t') return '\\t';
-                                return m;
-                            });
-                            levels = JSON.parse(repaired);
-                        } catch (secondErr) {
-                            log.error('AI', `Repaired JSON for levels still unparseable: ${secondErr.message}`);
-                        }
-                    }
-
-                    if (Array.isArray(levels) && levels.length > 0) {
-                        levels = levels.map((level, idx) => ({
-                            id: level.id || idx + 1,
-                            name: level.name || `${topic} - Level ${idx + 1}`,
-                            description: level.description || `Master ${topic} concepts`,
-                            difficulty: level.difficulty || (idx < 10 ? 'easy' : idx < 20 ? 'medium' : 'hard'),
-                            status: idx === 0 ? 'unlocked' : 'locked',
-                            stars: 0,
-                            credits: (idx + 1) * 10
-                        }));
-                    }
-                }
-            } catch (aiError) {
-                log.error('AI', 'Level generation failed', aiError);
-            }
+            log.info('AI', `[SkillTree] Topic "${topic}" is custom — using content generation service`);
+            const contentGen = require('../services/contentGenerationService');
+            genResult = await contentGen.generateOrRetrieveSkillTreeLevels(topic, assessmentResult);
+            levels = genResult.levels || [];
+            log.info('AI', `[SkillTree] Got ${levels.length} levels from ${genResult._source}`);
         }
 
-        // If AI fails or parsing fails, return error instead of fallback
-        if (levels.length === 0) {
-            log.warn('AI', `AI returned no levels for ${topic}`);
-            return res.status(503).json({ message: 'Unable to connect to AI service. Please try again later.' });
-        }
-
-        res.json({ levels, isAdminCourse });
+        // Persist to Redis + MongoDB was already done by contentGenerationService
+        res.json({
+          levels,
+          isAdminCourse,
+          _source: genResult?._source || (isAdminCourse ? 'neo4j' : 'generated'),
+          generatedBy: genResult?.generatedBy || '',
+          model: genResult?.model || '',
+          pipelineVersion: genResult?.pipelineVersion || '',
+        });
 
     } catch (error) {
         log.error('SYSTEM', 'Error generating levels', error);
         res.status(500).json({ message: 'Error generating skill tree levels' });
     }
 });
-
-// Helper function to generate meaningful fallback level names
-function generateFallbackLevelNames(topic, totalLevels) {
-    const stages = [
-        'Introduction to', 'Basics of', 'Understanding', 'Exploring', 'Learning',
-        'Fundamentals of', 'Core Concepts', 'Key Principles', 'Essential', 'Building Blocks',
-        'Intermediate', 'Developing', 'Practicing', 'Applying', 'Working with',
-        'Advanced', 'Deep Dive into', 'Mastering', 'Expert Level', 'Professional'
-    ];
-
-    const suffixes = [
-        'Concepts', 'Techniques', 'Methods', 'Approaches', 'Skills',
-        'Strategies', 'Applications', 'Patterns', 'Practices', 'Principles'
-    ];
-
-    return Array.from({ length: totalLevels }, (_, i) => {
-        const stageIdx = Math.floor(i / 5) % stages.length;
-        const suffixIdx = i % suffixes.length;
-        return `${stages[stageIdx]} ${topic} ${suffixes[suffixIdx]}`;
-    });
-}
 
 // @route   POST /api/gamification/skill-tree/level-questions
 // @desc    Generate quiz questions for a specific level
@@ -670,7 +666,15 @@ router.post('/skill-tree/level-questions', async (req, res) => {
                 }
             }
 
-            return res.json({ questions, cached: true });
+            return res.json({
+                questions,
+                cached: true,
+                source: 'skill_tree_node',
+                generatedBy: 'precomputed',
+                model: 'stored',
+                pipelineVersion: 'v2',
+                generatedAt: new Date().toISOString(),
+            });
         }
 
         let seenQuestionsForLevel = [];   // tracks question texts already shown, for dedup on retry
@@ -695,7 +699,15 @@ router.post('/skill-tree/level-questions', async (req, res) => {
                         // On retry, fall through to generate a fresh set via LLM.
                         if (!isRetry && lvl.questions && lvl.questions.length > 0) {
                             log.info('SYSTEM', `Returning cached questions for "${levelName || levelId}"`);
-                            return res.json({ questions: lvl.questions, cached: true });
+                            return res.json({
+                                questions: lvl.questions,
+                                cached: true,
+                                source: 'game_cache',
+                                generatedBy: 'stored',
+                                model: 'stored',
+                                pipelineVersion: 'v2',
+                                generatedAt: lvl.updatedAt || new Date().toISOString(),
+                            });
                         }
                     }
                 }
@@ -705,153 +717,14 @@ router.post('/skill-tree/level-questions', async (req, res) => {
             }
         }
 
-        const prompt = `You are a strict technical interviewer creating a quiz for "${topic}".
-Level: "${levelName}" (Level ${levelId})
-Difficulty: "${difficulty || 'medium'}"
+        // Use content generation service (Redis → MongoDB → QuestionBank → Generate → Cache)
+        const contentGen = require('../services/contentGenerationService');
+        const genResult = await contentGen.generateOrRetrieveLevelQuestions(
+          topic, levelId, levelName, difficulty, gameId, seenQuestionsForLevel
+        );
 
-Generate 5 UNIQUE, TOUGH, and DISTINCT multiple-choice questions specifically for this level: "${levelName}".
-Do NOT generate generic questions. Do NOT repeat questions from other levels.
-${seenQuestionsForLevel.length > 0 ? `\nIMPORTANT — PREVIOUSLY SHOWN QUESTIONS (DO NOT REPEAT OR PARAPHRASE ANY OF THESE):\n${seenQuestionsForLevel.slice(-15).map((q, i) => `${i + 1}. ${q}`).join('\n')}\nGenerate completely DIFFERENT questions that test other aspects of "${levelName}".\n` : ''}
-CRITICAL INSTRUCTIONS:
-1. Questions must be directly related to "${levelName}".
-2. Ensure ONE correct answer.
-3. Provide a detailed technical explanation.
-4. Do NOT prefix options with letters like "A.", "B.", "C.", "D.". Just provide the plain option text.
-
-JSON Structure (Return ONLY the array):
-[
-  {
-    "question": "Specific question text...",
-    "options": ["First option text", "Second option text", "Third option text", "Fourth option text"],
-    "correctIndex": 0,
-    "explanation": "Why this is correct..."
-  }
-]`;
-
-
-        let responseText = '';
-        let questions = [];
-        let generationSuccess = false;
-
-        try {
-            const LLM_TIMEOUT_MS = 30000;
-            const llmTimeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
-            );
-            responseText = await Promise.race([
-                LLMRouter.generate({
-                    query: prompt,
-                    systemPrompt: null,
-                    chatHistory: [],
-                    userId: req.user._id,
-                    deepResearchContext: false
-                }),
-                llmTimeoutPromise
-            ]);
-            generationSuccess = true;
-            log.success('AI', 'Level questions generation successful');
-        } catch (llmErr) {
-            if (llmErr.message === 'LLM_TIMEOUT') {
-                log.warn('AI', `Level questions generation timed out after 30s for "${levelName}"`);
-                return res.status(503).json({
-                    message: 'Question generation is taking too long. Please try again in a moment.',
-                    aiGenerationFailed: true
-                });
-            }
-            log.error('AI', `Level questions generation failed: ${llmErr.message}`);
-        }
-
-        if (generationSuccess && responseText) {
-            try {
-                const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    const jsonString = jsonMatch[0];
-                    try {
-                        questions = JSON.parse(jsonString);
-                    } catch (parseErr) {
-                        log.warn('AI', `First JSON parse attempt for questions failed: ${parseErr.message}. Attempting repair...`);
-                        try {
-                            // Replace unescaped control characters like newlines within strings
-                            const repaired = jsonString.replace(/[\n\r\t]/g, (m) => {
-                                if (m === '\n') return '\\n';
-                                if (m === '\r') return '\\r';
-                                if (m === '\t') return '\\t';
-                                return m;
-                            });
-                            questions = JSON.parse(repaired);
-                        } catch (secondErr) {
-                            log.error('AI', `Repaired JSON for questions still unparseable: ${secondErr.message}`);
-                        }
-                    }
-                }
-            } catch (outerError) {
-                log.error('AI', 'Error in level questions processing logic', outerError);
-            }
-        }
-
-        // Normalize questions: ensure options array and a valid 0-based correctIndex
-        const normalize = (qs) => {
-            if (!Array.isArray(qs)) return [];
-            return qs.map((q, qi) => {
-                const out = {
-                    question: typeof q.question === 'string' ? q.question : (q.prompt || q.text || `Question ${qi + 1}`),
-                    options: Array.isArray(q.options) ? q.options.map(o => String(o).replace(/^[A-Da-d][.):\-]\s*/, '')) : (q.options ? [String(q.options)] : []),
-                    explanation: q.explanation || q.explain || q.explanations || ''
-                };
-
-                // Determine correctIndex from multiple possible formats
-                let idx = undefined;
-                if (typeof q.correctIndex === 'number' && Number.isFinite(q.correctIndex)) {
-                    idx = parseInt(q.correctIndex);
-                } else if (typeof q.correctIndex === 'string' && /^\d+$/.test(q.correctIndex.trim())) {
-                    idx = parseInt(q.correctIndex.trim());
-                } else if (typeof q.correctIndex === 'string' && /^[A-Da-d]$/.test(q.correctIndex.trim())) {
-                    idx = q.correctIndex.trim().toUpperCase().charCodeAt(0) - 65;
-                } else if (typeof q.answer === 'string' && /^[A-Da-d]$/.test(q.answer.trim())) {
-                    idx = q.answer.trim().toUpperCase().charCodeAt(0) - 65;
-                } else if (typeof q.correct === 'string' && /^[A-Da-d]$/.test(q.correct.trim())) {
-                    idx = q.correct.trim().toUpperCase().charCodeAt(0) - 65;
-                } else if (typeof q.correct === 'string' && q.correct.trim().length > 0) {
-                    // try match by option text
-                    const matchIdx = out.options.findIndex(opt => opt.trim().toLowerCase() === q.correct.trim().toLowerCase());
-                    if (matchIdx !== -1) idx = matchIdx;
-                } else if (typeof q.answer === 'string' && q.answer.trim().length > 0) {
-                    const matchIdx = out.options.findIndex(opt => opt.trim().toLowerCase() === q.answer.trim().toLowerCase());
-                    if (matchIdx !== -1) idx = matchIdx;
-                }
-
-                // If still undefined but options exist and there is a 'correctOption' field
-                if (typeof idx === 'undefined' && typeof q.correctOption === 'string') {
-                    const letter = q.correctOption.trim().charAt(0);
-                    if (/^[A-Da-d]$/.test(letter)) idx = letter.toUpperCase().charCodeAt(0) - 65;
-                }
-
-                // Ensure idx is within range
-                if (typeof idx === 'number' && (idx < 0 || idx >= out.options.length)) {
-                    idx = undefined;
-                }
-
-                out.correctIndex = idx;
-                return out;
-            });
-        };
-
-        questions = normalize(questions);
-
-        // If any question lacks a valid numeric correctIndex, treat as generation failure
-        const invalid = questions.some(q => typeof q.correctIndex !== 'number' || Number.isNaN(q.correctIndex));
-        if (invalid && questions.length > 0) {
-            log.warn('AI', `Missing correctIndex for ${topic} - ${levelName}`);
-            // We'll treat this as failed so we can send an error
-            questions = [];
-        }
-
-        // If AI generation produced no questions, return an explicit error so
-        // the frontend can show a clear message instead of placeholder/fallback MCQs.
-        if (!questions || questions.length === 0) {
-            log.warn('AI', `No questions generated for ${topic} - ${levelName}`);
-            return res.status(503).json({ message: 'AI Service Unavailable: Could not generate questions. Please try again.', aiGenerationFailed: true });
-        }
+        let questions = genResult.questions || [];
+        log.info('AI', `Level questions: ${questions.length} from ${genResult._source}`);
 
         // If we successfully generated questions and a gameId was provided,
         // persist them to the game's level into the database.
@@ -882,11 +755,75 @@ JSON Structure (Return ONLY the array):
             }
         }
 
-        res.json({ questions });
+        log.info('AI', `Level questions response: _source=${genResult._source}, cached=${genResult.cached}, questions=${questions.length}`);
+
+        // Ensure questions include _conceptQuestionId for analytics tracking
+        const responseQuestions = questions.map(q => {
+          if (q._conceptQuestionId) return q;
+          return {
+            ...q,
+            _conceptQuestionId: q._id || null,
+          };
+        });
+
+        res.json({
+          questions: responseQuestions,
+          source: genResult._source || 'generated',
+          generatedBy: genResult.generatedBy || '',
+          model: genResult.model || '',
+          pipelineVersion: genResult.pipelineVersion || '',
+          generatedAt: genResult.generatedAt || '',
+          cached: genResult.cached || false,
+        });
 
     } catch (error) {
         log.error('SYSTEM', 'Error generating level questions', error);
         res.status(500).json({ message: 'Error generating level questions' });
+    }
+});
+
+// @route   POST /api/gamification/skill-tree/record-answers
+// @desc    Record individual question results for analytics tracking
+router.post('/skill-tree/record-answers', async (req, res) => {
+    try {
+        const { topic, levelName, answers } = req.body;
+        if (!answers || !Array.isArray(answers) || answers.length === 0) {
+            return res.status(400).json({ message: 'answers array is required' });
+        }
+
+        const conceptQbService = require('../services/conceptQuestionBankService');
+        let recorded = 0;
+
+        for (const ans of answers) {
+            if (ans._conceptQuestionId) {
+                await conceptQbService.recordQuestionAttempt(
+                    ans._conceptQuestionId,
+                    req.user._id,
+                    ans.correct === true
+                );
+                recorded++;
+            }
+        }
+
+        log.info('GAMIFICATION', `Recorded ${recorded} question attempts for ${topic}/${levelName}`);
+        res.json({ success: true, recorded });
+    } catch (error) {
+        log.warn('GAMIFICATION', `Record answers error: ${error.message}`);
+        res.json({ success: true, recorded: 0 });
+    }
+});
+
+// @route   GET /api/gamification/skill-tree/analytics
+// @desc    Get question analytics for a concept/course
+router.get('/skill-tree/analytics', async (req, res) => {
+    try {
+        const { concept, course } = req.query;
+        const conceptQbService = require('../services/conceptQuestionBankService');
+        const analytics = await conceptQbService.getQuestionAnalytics(concept, course);
+        res.json({ success: true, analytics });
+    } catch (error) {
+        log.error('GAMIFICATION', `Analytics error: ${error.message}`);
+        res.status(500).json({ message: error.message });
     }
 });
 
@@ -1033,8 +970,6 @@ router.put('/skill-tree/games/:gameId/level/:levelId', async (req, res) => {
         const { gameId, levelId } = req.params;
         const update = req.body; // { status, stars, score, attempts, completedAt }
 
-        // log.info('SYSTEM', `Level update: gameId=${gameId}, levelId=${levelId}`);
-
         const game = await SkillTreeGame.findOne({ _id: gameId, userId });
         if (!game) return res.status(404).json({ message: 'Game not found' });
 
@@ -1042,7 +977,6 @@ router.put('/skill-tree/games/:gameId/level/:levelId', async (req, res) => {
         if (levelIndex === -1) return res.status(404).json({ message: 'Level not found in game' });
 
         const level = game.levels[levelIndex];
-        // log.info('SYSTEM', `Before update: stars=${level.stars}, status=${level.status}`);
 
         // Apply safe updates: preserve higher stars/score and don't downgrade status
         if (typeof update.stars !== 'undefined') {
@@ -1244,10 +1178,6 @@ router.get('/skill-tree/games/:gameId', async (req, res) => {
         res.status(500).json({ message: 'Error fetching game' });
     }
 });
-
-// (Duplicate PUT /skill-tree/games/:gameId/level/:levelId removed — merged into the handler above)
-
-// (Duplicate DELETE route removed — handled above)
 
 // ===== Leaderboards =====
 
@@ -1464,8 +1394,6 @@ router.post('/bounty/:bountyId/submit', async (req, res) => {
             return res.status(400).json({ message: 'Answer is required' });
         }
 
-        // log.info('SYSTEM', `User ${req.user._id} submitting bounty ${req.params.bountyId}`);
-
         const result = await bountyService.submitBountyAnswer(
             req.params.bountyId,
             req.user._id,
@@ -1621,8 +1549,6 @@ router.post('/boss-battle/create', async (req, res) => {
 router.post('/boss-battle/:battleId/submit', async (req, res) => {
     try {
         const { answers } = req.body;
-
-        // log.info('SYSTEM', `Boss battle submission received for ${req.params.battleId}`);
 
         if (!answers) {
             log.warn('SYSTEM', 'No answers provided for boss battle');

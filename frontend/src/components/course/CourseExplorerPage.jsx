@@ -526,9 +526,15 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
                     <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-500">
                         <Loader2 size={24} className="animate-spin text-indigo-400" />
                         {generating ? (
-                            <div className="text-center space-y-1">
+                            <div className="text-center space-y-2">
                                 <p className="text-sm text-gray-300 font-medium">Generating lecture notes…</p>
-                                <p className="text-xs text-gray-600">First time for this subtopic — using AI to create<br/>definitions, diagrams and examples. ~15 seconds.</p>
+                                <div className="space-y-1 text-xs text-gray-600">
+                                    <p>⏳ Checking cache…</p>
+                                    <p>🔍 Searching database…</p>
+                                    <p>🤖 Generating via AI…</p>
+                                    <p className="text-indigo-400/60 animate-pulse">✨ Almost done…</p>
+                                </div>
+                                <p className="text-[11px] text-gray-700 mt-2">First time for this subtopic — creating definitions, diagrams and examples.</p>
                             </div>
                         ) : (
                             <span className="text-sm">Loading lecture…</span>
@@ -544,13 +550,18 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
                     </div>
                 )}
 
-                {/* No content */}
+                {/* No content — auto-generating */}
                 {!loading && !error && !markdown && (
                     <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-600">
-                        <FileText size={32} className="opacity-20" />
-                        <div className="text-center">
-                            <p className="text-sm font-medium text-gray-500">No lecture generated yet</p>
-                            <p className="text-[12px] text-gray-700 mt-1">Run the course bootstrap to generate lecture notes for this subtopic.</p>
+                        <Loader2 size={32} className="animate-spin text-indigo-400 opacity-40" />
+                        <div className="text-center space-y-2">
+                            <p className="text-sm font-medium text-gray-300">Generating lecture notes…</p>
+                            <div className="space-y-1 text-xs text-gray-600">
+                                <p>⏳ Checking cache…</p>
+                                <p>🔍 Searching database…</p>
+                                <p className="text-indigo-400/60">🤖 Generating via AI…</p>
+                            </div>
+                            <p className="text-[11px] text-gray-700">Content will appear automatically once ready.</p>
                         </div>
                     </div>
                 )}
@@ -564,16 +575,25 @@ function ContentPane({ courseName, activeSubtopic, onAskAI, sidebarOpen, setSide
                                 <span className="text-[11px] text-gray-500 uppercase tracking-wide font-semibold">
                                     Lecture · {activeSubtopic.name}
                                 </span>
-                                {source === 'generated' && (
-                                    <span className="ml-auto text-[10px] text-emerald-400/70 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">
-                                        AI-generated
-                                    </span>
-                                )}
-                                {source === 'lecture_md' && (
-                                    <span className="ml-auto text-[10px] text-indigo-400/70 bg-indigo-400/10 border border-indigo-400/20 px-2 py-0.5 rounded-full">
-                                        Lecture notes
-                                    </span>
-                                )}
+                                {source === 'redis_cache' ? (
+                                    <span className="ml-auto text-[10px] text-sky-400/70 bg-sky-400/10 border border-sky-400/20 px-2 py-0.5 rounded-full">Cached</span>
+                                ) : source === 'mongodb' ? (
+                                    <span className="ml-auto text-[10px] text-indigo-400/70 bg-indigo-400/10 border border-indigo-400/20 px-2 py-0.5 rounded-full">From Database</span>
+                                ) : source === 'sglang' ? (
+                                    <span className="ml-auto text-[10px] text-purple-400/70 bg-purple-400/10 border border-purple-400/20 px-2 py-0.5 rounded-full">Generated (SGLang)</span>
+                                ) : source === 'groq' || source === 'generated' ? (
+                                    <span className="ml-auto text-[10px] text-emerald-400/70 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">AI Generated</span>
+                                ) : source === 'gemini' ? (
+                                    <span className="ml-auto text-[10px] text-blue-400/70 bg-blue-400/10 border border-blue-400/20 px-2 py-0.5 rounded-full">Generated by Gemini</span>
+                                ) : source === 'openai' ? (
+                                    <span className="ml-auto text-[10px] text-teal-400/70 bg-teal-400/10 border border-teal-400/20 px-2 py-0.5 rounded-full">Generated by OpenAI</span>
+                                ) : source === 'ollama' ? (
+                                    <span className="ml-auto text-[10px] text-orange-400/70 bg-orange-400/10 border border-orange-400/20 px-2 py-0.5 rounded-full">Generated Locally</span>
+                                ) : source === 'template' || source === 'template_fallback' ? (
+                                    <span className="ml-auto text-[10px] text-amber-400/70 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">Template Content</span>
+                                ) : source === 'lecture_md' || source === 'lecture_directory' || source === 'subtopic_cache' || source === 'file_repository' ? (
+                                    <span className="ml-auto text-[10px] text-indigo-400/70 bg-indigo-400/10 border border-indigo-400/20 px-2 py-0.5 rounded-full">Lecture notes</span>
+                                ) : null}
                             </div>
                             <div className="px-5 py-5">
                                 <LectureMermaidMarkdown content={markdown} />

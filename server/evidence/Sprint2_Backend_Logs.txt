@@ -1,0 +1,1353 @@
+15:03:57 | [33mSENTRY    [0m | SENTRY_DSN is missing or invalid. Error tracking is disabled.
+15:03:58 | [31mERROR     [0m | Crypto Config Error: ENCRYPTION_SECRET must be a 64-character hexadecimal string.
+15:03:58 | [36mSEMANTIC_R[0m | Initializing semantic router...
+15:03:58 | [36mSEMANTIC_R[0m | No valid cache found — embedding all examples (one-time setup)...
+15:03:59 | [32mAI        [0m | [SemanticRouter] Loaded 55 pre-embedded prototypes from JSON.
+15:03:59 | [32mELASTIC   [0m | Elasticsearch client configured.
+15:03:59 | [36mSYSTEM    [0m | Starting Server Initialization...
+15:03:59 | [32mAI        [0m | Semantic router model ready: qwen3.5:2b
+15:03:59 | [33mAI        [0m | [SGLang Caps] fetch attempt 1/3 failed: fetch failed
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent DEEP_RESEARCH: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent ACADEMIC_SEARCH: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent WEB_SEARCH: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent TECHNICAL_CODING: Embedding service unavailable
+15:03:59 | [32mDB        [0m | MongoDB Connected Successfully
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent MATHEMATICAL_REASONING: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [32mDB        [0m | Neo4j connection established
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent CONCEPTUAL_EXPLANATION: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent SOCRATIC_TUTORING: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent DOCUMENT_RAG: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent ENTERTAINMENT: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent LIFESTYLE_PERSONAL: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent INAPPROPRIATE: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent MEMORY_RECALL: Embedding service unavailable
+15:03:59 | [33mSEMANTIC_R[0m | Batch embed failed, falling back to serial: 
+15:03:59 | [31mERROR     [0m | FastEmbed /embed failed: 
+15:03:59 | [31mERROR     [0m | Failed to embed intent GREETING: Embedding service unavailable
+15:03:59 | [36mSEMANTIC_R[0m | Semantic router ready. Cache saved to disk.
+15:04:01 | [33mAI        [0m | [SGLang Caps] fetch attempt 2/3 failed: fetch failed
+15:04:01 | [31mERROR     [0m | Email verification failed: Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-3119d5cf176sm53246127eec.12 - gsmtp
+15:04:01 | [32mSYSTEM    [0m | Assets backed up for ultra_boy7
+15:04:01 | [33mSYSTEM    [0m | Python RAG service is not reachable at http://localhost:2001.
+15:04:01 | [36mREDIS     [0m | Attempting to connect to Redis...
+15:04:01 | [32mREDIS     [0m | Redis client connected successfully.
+15:04:01 | [36mSYSTEM    [0m | Redis usage audit:
+15:04:01 | [36mSYSTEM    [0m | Course file watchers started on: /Users/susatwikmanuri/Downloads/iMentor-Main/server/Cpurses, /Users/susatwikmanuri/Downloads/iMentor-Main/server/course_bootstrap
+15:04:01 | [36mSYSTEM    [0m | Starting gamification cron jobs...
+15:04:01 | [36mSYSTEM    [0m | Bounty generator scheduled: Daily at 9:00 AM IST
+15:04:01 | [36mSYSTEM    [0m | Bounty cleanup scheduled: Every 2 hours
+15:04:01 | [36mSYSTEM    [0m | Boss battle generator started (every 4 hours)
+15:04:01 | [36mSYSTEM    [0m | Boss battle cleanup scheduled: Every 2 hours
+15:04:01 | [36mSYSTEM    [0m | 📖 Spaced repetition scheduler started: Every 2 hours
+15:04:01 | [32mSYSTEM    [0m | All gamification cron jobs started successfully
+15:04:01 | [36mSYSTEM    [0m | [MAINTENANCE] For offline jobs, run: node scripts/maintenanceJobs.js
+15:04:01 | [36mSYSTEM    [0m | Initializing semantic router...
+15:04:01 | [32mSYSTEM    [0m | Socket.io initialized successfully
+15:04:01 | [32mSYSTEM    [0m | Semantic router initialized successfully
+15:04:01 | [32mSYSTEM    [0m | Server listening on port 5001
+15:04:05 | [33mSYSTEM    [0m | Auth failed: No token for /api/assessment/generate
+15:04:05 | [33mAI        [0m | [SGLang Caps] fetch attempt 3/3 failed: fetch failed
+15:04:05 | [33mAI        [0m | [SGLang Caps] Could not reach SGLang; using fallback context=8192
+15:05:07 | [36mAUTH      [0m | DEV_MODE: Skipping OTP for dist_test_1784021707597@test.com
+15:05:07 | [36mAUTH      [0m | USER_SIGNUP_INITIATED_DEV: dist_test_1784021707597@test.com (dev mode - email verification skipped)
+15:05:08 | [36mAUTH      [0m | USER_SIGNUP_SUCCESS: dist_test_1784021707597@test.com, userId: 6a5602cb3dbb20c2ff4b8cce
+15:05:08 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Binary Search Trees
+15:05:09 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:05:09 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:05:09 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:05:15 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (11293 chars)
+15:05:15 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:05:15 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:05:54 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (12234 chars)
+15:05:54 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:05:54 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:06:43 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (10363 chars)
+15:06:43 | [36mCONCEPT_QB[0m | Distribution: {"0":11,"1":6,"2":5,"3":8}, χ²=2.80, balanced=true
+15:06:43 | [36mCONCEPT_QB[0m | Generated 30 questions for Binary Search Trees. Distribution balanced: true
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary advantage of using a Binary Search Tree ..." (sim: 1.000)
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [31mERROR     [0m | Failed to get embedding: 
+15:06:43 | [31mERROR     [0m | Duplicate check failed: 
+15:06:43 | [36mCONCEPT_QB[0m | Saved 29/30 questions to bank for Data Structures/Binary Search Trees
+15:06:43 | [36mCONCEPT_QB[0m | Generated 29 questions for Data Structures/Binary Search Trees
+15:06:43 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Arrays
+15:06:45 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:06:45 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:06:45 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:06:50 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (10460 chars)
+15:06:50 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:06:50 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:06:54 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (8316 chars)
+15:06:54 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:06:54 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:07:00 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (9786 chars)
+15:07:00 | [36mCONCEPT_QB[0m | Distribution: {"0":9,"1":8,"2":6,"3":7}, χ²=0.67, balanced=true
+15:07:00 | [36mCONCEPT_QB[0m | Generated 30 questions for Arrays. Distribution balanced: true
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary purpose of using arrays in programming?..." (sim: 1.000)
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the time complexity of accessing an element in an ar..." (sim: 1.000)
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary purpose of using arrays in programming?..." (sim: 1.000)
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [31mERROR     [0m | Failed to get embedding: 
+15:07:00 | [31mERROR     [0m | Duplicate check failed: 
+15:07:00 | [36mCONCEPT_QB[0m | Saved 27/30 questions to bank for Data Structures/Arrays
+15:07:00 | [36mCONCEPT_QB[0m | Generated 27 questions for Data Structures/Arrays
+15:07:00 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Linked Lists
+15:07:00 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:07:00 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:07:03 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:07:10 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (10289 chars)
+15:07:10 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:07:10 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:07:49 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (9025 chars)
+15:07:50 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:07:50 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:07:50 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:08:00 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (8407 chars)
+15:08:00 | [36mCONCEPT_QB[0m | Distribution: {"0":6,"1":7,"2":10,"3":7}, χ²=1.20, balanced=true
+15:08:00 | [36mCONCEPT_QB[0m | Generated 30 questions for Linked Lists. Distribution balanced: true
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary advantage of using a linked list over an..." (sim: 1.000)
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the purpose of the 'head' pointer in a linked list?..." (sim: 1.000)
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary advantage of using a linked list over an..." (sim: 1.000)
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [31mERROR     [0m | Failed to get embedding: 
+15:08:00 | [31mERROR     [0m | Duplicate check failed: 
+15:08:00 | [36mCONCEPT_QB[0m | Saved 27/30 questions to bank for Data Structures/Linked Lists
+15:08:00 | [36mCONCEPT_QB[0m | Generated 27 questions for Data Structures/Linked Lists
+15:08:00 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Hash Tables
+15:08:00 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:08:00 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:08:14 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (10964 chars)
+15:08:14 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:08:14 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:08:35 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (9750 chars)
+15:08:35 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:08:35 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:08:50 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (12744 chars)
+15:08:50 | [36mCONCEPT_QB[0m | Distribution: {"0":5,"1":13,"2":7,"3":5}, χ²=5.73, balanced=true
+15:08:50 | [36mCONCEPT_QB[0m | Generated 30 questions for Hash Tables. Distribution balanced: true
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary purpose of a hash function in a hash tab..." (sim: 1.000)
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does the choice of hash function affect the performance ..." (sim: 1.000)
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary purpose of a hash function in a hash tab..." (sim: 1.000)
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [36mCONCEPT_QB[0m | Skipping duplicate: "How do hash tables handle collisions, where two keys hash to..." (sim: 1.000)
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [31mERROR     [0m | Failed to get embedding: 
+15:08:50 | [31mERROR     [0m | Duplicate check failed: 
+15:08:50 | [36mCONCEPT_QB[0m | Saved 26/30 questions to bank for Data Structures/Hash Tables
+15:08:50 | [36mCONCEPT_QB[0m | Generated 26 questions for Data Structures/Hash Tables
+15:08:50 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Stacks
+15:08:51 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:08:51 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:08:51 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:09:03 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (7456 chars)
+15:09:03 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:09:03 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:09:16 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (8813 chars)
+15:09:16 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:09:16 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:09:28 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (7869 chars)
+15:09:28 | [36mCONCEPT_QB[0m | Distribution: {"0":6,"1":6,"2":10,"3":8}, χ²=1.47, balanced=true
+15:09:28 | [36mCONCEPT_QB[0m | Generated 30 questions for Stacks. Distribution balanced: true
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary operation used to add an element to a st..." (sim: 1.000)
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [31mERROR     [0m | Failed to get embedding: 
+15:09:28 | [31mERROR     [0m | Duplicate check failed: 
+15:09:28 | [36mCONCEPT_QB[0m | Saved 29/30 questions to bank for Data Structures/Stacks
+15:09:28 | [36mCONCEPT_QB[0m | Generated 29 questions for Data Structures/Stacks
+15:09:28 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Queues
+15:09:28 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:09:28 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:09:41 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (10776 chars)
+15:09:41 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:09:41 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:09:54 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (9149 chars)
+15:09:55 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:09:55 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:09:55 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:10:05 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (8457 chars)
+15:10:05 | [36mCONCEPT_QB[0m | Distribution: {"0":6,"1":11,"2":7,"3":6}, χ²=2.27, balanced=true
+15:10:05 | [36mCONCEPT_QB[0m | Generated 30 questions for Queues. Distribution balanced: true
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary characteristic of a queue data structure..." (sim: 1.000)
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary characteristic of a queue data structure..." (sim: 1.000)
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [31mERROR     [0m | Failed to get embedding: 
+15:10:05 | [31mERROR     [0m | Duplicate check failed: 
+15:10:05 | [36mCONCEPT_QB[0m | Saved 28/30 questions to bank for Data Structures/Queues
+15:10:05 | [36mCONCEPT_QB[0m | Generated 28 questions for Data Structures/Queues
+15:10:05 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Sorting Algorithms
+15:10:05 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:10:05 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:10:05 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:10:08 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:10:12 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:10:12 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99262, Requested 2803. Please try again in 29m44.16s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:10:12 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:10:12 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:10:12 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:10:12 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:10:12 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:10:12 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:10:32 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:10:32 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99262, Requested 2803. Please try again in 29m44.16s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:10:32 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:10:32 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:10:33 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:10:35 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:10:39 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:10:39 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99231, Requested 2803. Please try again in 29m17.376s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:10:39 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:10:39 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:10:39 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:10:39 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:10:39 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:10:39 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:10:59 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:10:59 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99231, Requested 2803. Please try again in 29m17.376s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:11:01 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:11:01 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:11:01 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:11:01 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:11:03 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:11:07 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:11:07 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99198, Requested 3071. Please try again in 32m40.416s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:11:07 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:11:07 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:11:07 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:11:07 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:11:07 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:11:07 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:11:27 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:11:27 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99198, Requested 3071. Please try again in 32m40.416s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:11:27 | [36mCONCEPT_QB[0m | LLM providers exhausted — using template fallback for Sorting Algorithms
+15:11:27 | [36mCONCEPT_QB[0m | Distribution: {"0":11,"1":7,"2":5,"3":7}, χ²=2.53, balanced=true
+15:11:27 | [36mCONCEPT_QB[0m | Generated 30 questions for Sorting Algorithms. Distribution balanced: true
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary purpose of Sorting Algorithms?..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which of the following best describes a key characteristic o..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "In the context of Data Structures, which scenario best demon..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is a common mistake when implementing Sorting Algorithm..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does Sorting Algorithms compare to alternative approache..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the time complexity of the most efficient implementa..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which of the following is NOT a valid use case for Sorting A..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What prerequisite knowledge is most important before learnin..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "Design an approach to solve a complex problem using Sorting ..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the relationship between Sorting Algorithms and othe..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the best data structure to use when implementing Sor..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does Sorting Algorithms handle edge cases such as empty ..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which testing strategy is most effective for validating a So..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the memory usage profile of a typical Sorting Algori..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which of the following problems is best solved using Sorting..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the key difference between Sorting Algorithms and a ..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "How would you modify Sorting Algorithms to improve its perfo..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What invariant must hold true throughout the execution of So..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which of the following is a real-world system that commonly ..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does input size affect the behavior of Sorting Algorithm..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is a common optimization technique for Sorting Algorith..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "How would you explain Sorting Algorithms to someone with no ..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What debugging approach would you use to find a bug in a Sor..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which academic paper or researcher is most associated with p..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What are two variants of Sorting Algorithms and how do they ..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "How would you parallelize an implementation of Sorting Algor..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What metric is most important when evaluating the quality of..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which programming language features are most relevant when i..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does the choice of Sorting Algorithms affect overall sys..." (sim: 1.000)
+15:11:27 | [31mERROR     [0m | Failed to get embedding: 
+15:11:27 | [31mERROR     [0m | Duplicate check failed: 
+15:11:27 | [36mCONCEPT_QB[0m | Skipping duplicate: "What future developments or research directions are most pro..." (sim: 1.000)
+15:11:27 | [36mCONCEPT_QB[0m | Saved 0/30 questions to bank for Data Structures/Sorting Algorithms
+15:11:27 | [36mCONCEPT_QB[0m | Generated 30 questions for Data Structures/Sorting Algorithms
+15:11:27 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Graphs
+15:11:27 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:11:27 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:11:28 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:11:30 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:11:34 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:11:34 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99167, Requested 2803. Please try again in 28m22.08s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:11:34 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:11:34 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:11:34 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:11:34 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:11:34 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:11:34 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:11:54 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:11:54 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99167, Requested 2803. Please try again in 28m22.08s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:11:54 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:11:54 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:11:54 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:11:56 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:12:01 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:12:01 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99136, Requested 2803. Please try again in 27m55.296s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:12:01 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:12:01 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:12:01 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:12:01 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:12:01 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:12:01 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:12:21 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:12:21 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99136, Requested 2803. Please try again in 27m55.296s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:12:22 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:12:22 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:12:22 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:12:22 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:12:24 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:12:29 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:12:29 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99104, Requested 3136. Please try again in 32m15.36s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:12:29 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:12:29 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:12:29 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:12:29 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:12:29 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:12:29 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:12:49 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:12:49 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99104, Requested 3136. Please try again in 32m15.36s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:12:49 | [36mCONCEPT_QB[0m | LLM providers exhausted — using template fallback for Graphs
+15:12:49 | [36mCONCEPT_QB[0m | Distribution: {"0":12,"1":5,"2":6,"3":7}, χ²=3.87, balanced=true
+15:12:49 | [36mCONCEPT_QB[0m | Generated 30 questions for Graphs. Distribution balanced: true
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the primary purpose of Graphs?..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which of the following best describes a key characteristic o..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "In the context of Data Structures, which scenario best demon..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is a common mistake when implementing Graphs?..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does Graphs compare to alternative approaches in Data St..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the time complexity of the most efficient implementa..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which of the following is NOT a valid use case for Graphs?..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What prerequisite knowledge is most important before learnin..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "Design an approach to solve a complex problem using Graphs. ..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the relationship between Graphs and other concepts i..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the best data structure to use when implementing Gra..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does Graphs handle edge cases such as empty input or bou..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which testing strategy is most effective for validating a Gr..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the memory usage profile of a typical Graphs impleme..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which of the following problems is best solved using Graphs?..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is the key difference between Graphs and a related but ..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "How would you modify Graphs to improve its performance for l..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What invariant must hold true throughout the execution of Gr..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which of the following is a real-world system that commonly ..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does input size affect the behavior of Graphs?..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What is a common optimization technique for Graphs?..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "How would you explain Graphs to someone with no technical ba..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What debugging approach would you use to find a bug in a Gra..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which academic paper or researcher is most associated with p..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What are two variants of Graphs and how do they differ?..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "How would you parallelize an implementation of Graphs?..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What metric is most important when evaluating the quality of..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "Which programming language features are most relevant when i..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "How does the choice of Graphs affect overall system architec..." (sim: 1.000)
+15:12:49 | [31mERROR     [0m | Failed to get embedding: 
+15:12:49 | [31mERROR     [0m | Duplicate check failed: 
+15:12:49 | [36mCONCEPT_QB[0m | Skipping duplicate: "What future developments or research directions are most pro..." (sim: 1.000)
+15:12:49 | [36mCONCEPT_QB[0m | Saved 0/30 questions to bank for Data Structures/Graphs
+15:12:49 | [36mCONCEPT_QB[0m | Generated 30 questions for Data Structures/Graphs
+15:12:49 | [36mCONCEPT_QB[0m | Generating questions for Data Structures/Trees
+15:12:49 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:12:49 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:12:49 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:12:51 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:12:55 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:12:55 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99072, Requested 3133. Please try again in 31m45.12s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:12:55 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:12:55 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:12:55 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:12:56 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:12:56 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:12:56 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:13:16 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:13:16 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99072, Requested 3133. Please try again in 31m45.12s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:13:16 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:13:16 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:13:17 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:13:19 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:13:23 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:13:23 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99041, Requested 3133. Please try again in 31m18.336s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:13:23 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:13:23 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:13:23 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:13:23 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:13:23 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:13:23 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:13:43 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:13:43 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99041, Requested 3133. Please try again in 31m18.336s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:13:45 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:13:45 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:13:45 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:13:45 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:13:47 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:13:51 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:13:51 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99008, Requested 2800. Please try again in 26m2.111999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:13:51 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:13:51 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:13:51 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:13:51 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:13:51 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:13:51 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:14:11 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:14:11 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99008, Requested 2800. Please try again in 26m2.111999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:14:11 | [36mCONCEPT_QB[0m | LLM providers exhausted — using template fallback for Trees
+15:14:11 | [36mCONCEPT_QB[0m | Distribution: {"0":3,"1":11,"2":9,"3":7}, χ²=4.67, balanced=true
+15:14:11 | [36mCONCEPT_QB[0m | Generated 30 questions for Trees. Distribution balanced: true
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:11 | [31mERROR     [0m | Failed to get embedding: 
+15:14:11 | [31mERROR     [0m | Duplicate check failed: 
+15:14:12 | [31mERROR     [0m | Failed to get embedding: 
+15:14:12 | [31mERROR     [0m | Duplicate check failed: 
+15:14:12 | [31mERROR     [0m | Failed to get embedding: 
+15:14:12 | [31mERROR     [0m | Duplicate check failed: 
+15:14:12 | [31mERROR     [0m | Failed to get embedding: 
+15:14:12 | [31mERROR     [0m | Duplicate check failed: 
+15:14:12 | [31mERROR     [0m | Failed to get embedding: 
+15:14:12 | [31mERROR     [0m | Duplicate check failed: 
+15:14:12 | [36mCONCEPT_QB[0m | Saved 30/30 questions to bank for Data Structures/Trees
+15:14:12 | [36mCONCEPT_QB[0m | Generated 30 questions for Data Structures/Trees
+15:20:37 | [36mAUTH      [0m | DEV_MODE: Skipping OTP for replay_1784022637270@test.com
+15:20:37 | [36mAUTH      [0m | USER_SIGNUP_INITIATED_DEV: replay_1784022637270@test.com (dev mode - email verification skipped)
+15:20:37 | [36mAUTH      [0m | USER_SIGNUP_SUCCESS: replay_1784022637270@test.com, userId: 6a56066d3dbb20c2ff4b8dd8
+15:20:37 | [36mGAMIFICATI[0m | No pre-computed skills found for "Replay Topic 1784022637270", falling back to LLM generation
+15:20:37 | [36mPIPELINE  [0m | [CACHE MISS] assessment:Replay Topic 1784022637270:Replay Topic 1784022637270
+15:20:37 | [36mPIPELINE  [0m | [DATABASE] Checking Assessment collection for Replay Topic 1784022637270/Replay Topic 1784022637270
+15:20:37 | [36mPIPELINE  [0m | [GENERATING] Assessment for Replay Topic 1784022637270/Replay Topic 1784022637270
+15:20:38 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:20:38 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:20:38 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:20:39 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:20:44 | [36mAI        [0m | [Fallback] ✓ groq/llama-3.3-70b-versatile succeeded (3441 chars)
+15:20:44 | [36mPIPELINE  [0m | [GENERATED VIA GROQ] Assessment for Replay Topic 1784022637270/Replay Topic 1784022637270
+15:20:44 | [36mPIPELINE  [0m | [SAVED TO MONGO] Assessment Replay Topic 1784022637270/Replay Topic 1784022637270
+15:20:44 | [36mPIPELINE  [0m | [CACHED TO REDIS] assessment:Replay Topic 1784022637270:Replay Topic 1784022637270
+15:20:44 | [32mGAMIFICATI[0m | Pipeline generated 5 diagnostic questions for "Replay Topic 1784022637270" via groq
+15:20:44 | [32mSYSTEM    [0m | Stored topic assessment for 6a56066d3dbb20c2ff4b8dd8 (Replay Topic 1784022637270)
+15:20:44 | [32mGAMIFICATI[0m | Diagnostic submitted for "Replay Topic 1784022637270": Score 0/5 -> Beginner
+15:20:44 | [31mERROR     [0m | Error fetching curriculum structure: 
+15:20:44 | [36mAI        [0m | [SkillTree] Topic "Replay Topic 1784022637270" is custom — using content generation service
+15:20:44 | [36mPIPELINE  [0m | [CACHE MISS] skilltree:levels:Replay Topic 1784022637270
+15:20:44 | [36mPIPELINE  [0m | [DATABASE] Checking SkillTreeLevel for Replay Topic 1784022637270
+15:20:44 | [36mPIPELINE  [0m | [REPOSITORY] Checking Neo4j curriculum for Replay Topic 1784022637270
+15:20:44 | [31mERROR     [0m | Neo4j query error: Can't use aggregate functions inside of aggregate functions. (line 5, column 68 (offset: 239))
+"       RETURN m.name AS module, COLLECT({topic: t.name, subtopics: COLLECT(s.name)}) AS topics"
+                                                                    ^
+15:20:44 | [33mPIPELINE  [0m | Neo4j curriculum query failed: Can't use aggregate functions inside of aggregate functions. (line 5, column 68 (offset: 239))
+"       RETURN m.name AS module, COLLECT({topic: t.name, subtopics: COLLECT(s.name)}) AS topics"
+                                                                    ^
+15:20:44 | [36mPIPELINE  [0m | [GENERATING] Skill tree levels for Replay Topic 1784022637270
+15:20:44 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:20:44 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:20:49 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:20:51 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:20:55 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:20:55 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99840, Requested 846. Please try again in 9m52.704s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:20:55 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:20:55 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:20:55 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:20:56 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:20:56 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:20:56 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:21:16 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:21:16 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99840, Requested 846. Please try again in 9m52.704s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:21:16 | [36mPIPELINE  [0m | [GENERATED VIA NONE] Levels in 32461ms
+15:21:16 | [36mPIPELINE  [0m | [TEMPLATE FALLBACK] Skill tree levels for Replay Topic 1784022637270
+15:21:16 | [36mPIPELINE  [0m | [SAVED TO MONGO] SkillTreeLevel Replay Topic 1784022637270 (35 levels)
+15:21:16 | [36mPIPELINE  [0m | [CACHED TO REDIS] skilltree:levels:Replay Topic 1784022637270
+15:21:16 | [36mAI        [0m | [SkillTree] Got 35 levels from template_fallback
+15:21:16 | [36mCONCEPT_QB[0m | Generating questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:21:16 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:21:16 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:21:17 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:21:19 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:21:23 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:21:23 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99808, Requested 1126. Please try again in 13m26.976s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:21:23 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:21:23 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:21:23 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:21:23 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:21:23 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:21:23 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:21:43 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:21:43 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99808, Requested 1126. Please try again in 13m26.976s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:21:45 | [33mAI        [0m | [SGLang] Health check failed for endpoint=chat: Connection error.
+15:21:45 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:21:45 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:21:45 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:21:47 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:21:51 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:21:51 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99775, Requested 1126. Please try again in 12m58.464s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:21:51 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:21:51 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:21:51 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:21:52 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:21:52 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:21:52 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:22:12 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:22:12 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99775, Requested 1126. Please try again in 12m58.464s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:22:12 | [33mAI        [0m | [Fallback] Skipping sglang — not reachable or disabled
+15:22:12 | [36mAI        [0m | [Fallback] Attempting groq/llama-3.3-70b-versatile (timeout: 15000ms)
+15:22:12 | [33mAI        [0m | Groq rate limit hit. Attempt 1/3. Waiting 2000ms before retrying...
+15:22:14 | [33mAI        [0m | Groq rate limit hit. Attempt 2/3. Waiting 4000ms before retrying...
+15:22:18 | [33mAI        [0m | Groq failure: API quota exceeded or rate limit reached
+15:22:18 | [31mERROR     [0m | Groq outer failure: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99744, Requested 432. Please try again in 2m32.064s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+15:22:18 | [33mAI        [0m | [Fallback] ✗ groq failed: Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_0
+15:22:18 | [36mAI        [0m | [Fallback] Skipping gemini — API key missing or is placeholder
+15:22:18 | [36mAI        [0m | [Fallback] Attempting openai/gpt-4o (timeout: 15000ms)
+15:22:18 | [33mAI        [0m | OpenAI failure: API key is invalid or unauthorized
+15:22:18 | [33mAI        [0m | [Fallback] ✗ openai failed: OpenAI API failure: Request failed with status code 401
+15:22:18 | [36mAI        [0m | [Fallback] Attempting ollama/qwen2.5-coder:7b (timeout: 20000ms)
+15:22:38 | [33mAI        [0m | [Fallback] ✗ ollama failed: timeout of 20000ms exceeded
+15:22:38 | [31mERROR     [0m | [Fallback] ALL providers exhausted
+[31mCAUSE    | [ { provider: [32m'groq'[39m,
+    model: [32m'llama-3.3-70b-versatile'[39m,
+    error:
+     [32m'Groq API failure: 429 {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01ksm3w2r4e9f847r7gh934dpv` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99744, Requested 432. Please try again in 2m32.064s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}'[39m },
+  { provider: [32m'openai'[39m,
+    model: [32m'gpt-4o'[39m,
+    error: [32m'OpenAI API failure: Request failed with status code 401'[39m },
+  { provider: [32m'ollama'[39m,
+    model: [32m'qwen2.5-coder:7b'[39m,
+    error: [32m'timeout of 20000ms exceeded'[39m } ][0m
+15:22:38 | [36mCONCEPT_QB[0m | LLM providers exhausted — using template fallback for Introduction to Replay Topic 1784022637270 Concepts
+15:22:38 | [36mCONCEPT_QB[0m | Distribution: {"0":7,"1":10,"2":6,"3":7}, χ²=1.20, balanced=true
+15:22:38 | [36mCONCEPT_QB[0m | Generated 30 questions for Introduction to Replay Topic 1784022637270 Concepts. Distribution balanced: true
+15:22:38 | [31mERROR     [0m | Failed to get embedding: 
+15:22:38 | [31mERROR     [0m | Duplicate check failed: 
+15:22:38 | [31mERROR     [0m | Failed to get embedding: 
+15:22:38 | [31mERROR     [0m | Duplicate check failed: 
+15:22:38 | [31mERROR     [0m | Failed to get embedding: 
+15:22:38 | [31mERROR     [0m | Duplicate check failed: 
+15:22:38 | [31mERROR     [0m | Failed to get embedding: 
+15:22:38 | [31mERROR     [0m | Duplicate check failed: 
+15:22:38 | [31mERROR     [0m | Failed to get embedding: 
+15:22:38 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [31mERROR     [0m | Failed to get embedding: 
+15:22:39 | [31mERROR     [0m | Duplicate check failed: 
+15:22:39 | [36mCONCEPT_QB[0m | Saved 30/30 questions to bank for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 5)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 10)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 15)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 20)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 25)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 30)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 30)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 30)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 30)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mCONCEPT_QB[0m | Cache hit: Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (30 questions)
+15:22:39 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts (5 selected, 30 total)
+15:22:39 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:22:39 | [36mSYSTEM    [0m | Saved 5 questions for "Introduction to Replay Topic 1784022637270 Concepts" (total seen: 30)
+15:22:39 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:22:39 | [36mGAMIFICATI[0m | Recorded 5 question attempts for Replay Topic 1784022637270/Introduction to Replay Topic 1784022637270 Concepts
+15:22:39 | [32mSYSTEM    [0m | Updated level 1: stars=2, status=completed
+15:22:39 | [36mSYSTEM    [0m | Game saved successfully
+15:22:39 | [36mSYSTEM    [0m | Recorded skill tree progress: 6a56066d3dbb20c2ff4b8dd8 - Replay Topic 1784022637270 - 1
+15:24:02 | [36mAUTH      [0m | DEV_MODE: Skipping OTP for perf_test_1784022842780@test.com
+15:24:03 | [36mAUTH      [0m | USER_SIGNUP_INITIATED_DEV: perf_test_1784022842780@test.com (dev mode - email verification skipped)
+15:24:03 | [31mERROR     [0m | Signup finalization error: User validation failed: profile.learningStyle: `visual` is not a valid enum value for path `learningStyle`.
+15:24:18 | [36mAUTH      [0m | DEV_MODE: Skipping OTP for perf_test_1784022858936@test.com
+15:24:19 | [36mAUTH      [0m | USER_SIGNUP_INITIATED_DEV: perf_test_1784022858936@test.com (dev mode - email verification skipped)
+15:24:19 | [36mAUTH      [0m | USER_SIGNUP_SUCCESS: perf_test_1784022858936@test.com, userId: 6a56074b3dbb20c2ff4b8f3c
+15:24:19 | [36mKNOWLEDGE_[0m | Reused 5 questions from Question Bank for "Binary Search Trees"
+15:24:19 | [36mKNOWLEDGE_[0m | Reused 5 questions from Question Bank for "Binary Search Trees"
+15:24:19 | [36mKNOWLEDGE_[0m | Reused 5 questions from Question Bank for "Binary Search Trees"
+15:24:19 | [36mKNOWLEDGE_[0m | Reused 5 questions from Question Bank for "Binary Search Trees"
+15:24:19 | [36mKNOWLEDGE_[0m | Reused 5 questions from Question Bank for "Binary Search Trees"
+15:24:19 | [36mKNOWLEDGE_[0m | Reused 5 questions from Question Bank for "Binary Search Trees"
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Binary Search Trees/Binary Search Trees (5 selected, 10 total)
+15:24:19 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:24:19 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Binary Search Trees/Binary Search Trees (5 selected, 10 total)
+15:24:19 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:24:19 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Binary Search Trees/Binary Search Trees (5 selected, 10 total)
+15:24:19 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:24:19 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Binary Search Trees/Binary Search Trees (5 selected, 10 total)
+15:24:19 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:24:19 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Binary Search Trees/Binary Search Trees (5 selected, 10 total)
+15:24:19 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:24:19 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mCONCEPT_QB[0m | Cache hit: Binary Search Trees/Binary Search Trees (10 questions)
+15:24:19 | [36mPIPELINE  [0m | [DATABASE HIT] ConceptQuestionBank questions for Binary Search Trees/Binary Search Trees (5 selected, 10 total)
+15:24:19 | [36mAI        [0m | Level questions: 5 from concept_question_bank
+15:24:19 | [36mAI        [0m | Level questions response: _source=concept_question_bank, cached=true, questions=5

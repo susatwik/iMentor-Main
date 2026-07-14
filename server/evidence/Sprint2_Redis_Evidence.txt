@@ -1,0 +1,904 @@
+========================================================================
+SPRINT 2 — Redis Cache Evidence Collection
+========================================================================
+Started at: 2026-07-14T09:55:29.024Z
+
+15:25:29 | [36mREDIS     [0m | Attempting to connect to Redis...
+15:25:29 | [32mREDIS     [0m | Redis client connected successfully.
+Connected to Redis successfully.
+
+--- Redis Server Info ---
+  Redis version:        8.8.0
+  Uptime (seconds):     N/A
+  Used memory:          2.10M
+  Peak memory:          2.11M
+  Total connections:    N/A
+
+========================================================================
+ALL REDIS KEYS (SCAN)
+========================================================================
+
+Total keys found: 151
+
+────────────────────────────────────────────────────────────────────────
+Pattern: "concept_qb:*" — 14 key(s)
+────────────────────────────────────────────────────────────────────────
+
+  Key:  concept_qb:Binary Search Trees_edge:binary search trees_edge
+  TTL:        541158s
+  Type:       string
+  Preview:    [{"_id":"6a550ef6302fb0f28ca54054","question":"What is the primary purpose of Binary Search Trees_edge?","__v":0,"bloomLevel":"remember","concept":"Binary Search Trees_edge","conceptTags":["Binary Sea
+  ├─ Cached items: 10
+
+  Key:  concept_qb:Binary Search Trees:binary search trees
+  TTL:        540887s
+  Type:       string
+  Preview:    [{"_id":"6a550de8302fb0f28ca5403f","question":"What is the primary purpose of Binary Search Trees?","__v":0,"bloomLevel":"remember","concept":"Binary Search Trees","conceptTags":["Binary Search Trees"
+  ├─ Cached items: 10
+
+  Key:  concept_qb:Data Structures:hash tables
+  TTL:        603801s
+  Type:       string
+  Preview:    [{"_id":"6a5603aa283c506eaa72cfdb","question":"What is the primary purpose of a hash function in a hash table?","__v":0,"bloomLevel":"remember","concept":"Hash Tables","conceptTags":["Hash Tables","Ha
+  ├─ Cached items: 26
+
+  Key:  concept_qb:Data Structures:stacks
+  TTL:        603839s
+  Type:       string
+  Preview:    [{"_id":"6a5603d0283c506eaa72cff5","question":"What is the primary operation used to add an element to a stack?","__v":0,"bloomLevel":"remember","concept":"Stacks","conceptTags":["Stacks","Stacks"],"c
+  ├─ Cached items: 29
+
+  Key:  concept_qb:Data Structures:graphs
+  TTL:        543671s
+  Type:       string
+  Preview:    [{"_id":"6a5518c8302fb0f28ca5414c","question":"What is the primary purpose of Graphs?","__v":0,"bloomLevel":"remember","concept":"Graphs","conceptTags":["Graphs","Graphs"],"confidence":0.8,"correctInd
+  ├─ Cached items: 30
+
+  Key:  concept_qb:Data Structures:trees
+  TTL:        604123s
+  Type:       string
+  Preview:    [{"_id":"6a5604eb283c506eaa72d02e","question":"What is the primary purpose of Trees?","__v":0,"bloomLevel":"remember","concept":"Trees","conceptTags":["Trees","Trees"],"confidence":0.8,"correctIndex":
+  ├─ Cached items: 30
+
+  Key:  concept_qb:Binary Search Trees:nonexistentlevel
+  TTL:        541074s
+  Type:       string
+  Preview:    [{"_id":"6a550ea3302fb0f28ca5404a","question":"What is the primary purpose of NonExistentLevel?","__v":0,"bloomLevel":"remember","concept":"NonExistentLevel","conceptTags":["NonExistentLevel","Binary 
+  ├─ Cached items: 10
+
+  Key:  concept_qb:Replay Topic 1784022637270:introduction to replay topic 1784022637270 concepts
+  TTL:        604630s
+  Type:       string
+  Preview:    [{"_id":"6a5606e6283c506eaa72d04f","question":"What is the primary purpose of Introduction to Replay Topic 1784022637270 Concepts?","__v":0,"bloomLevel":"remember","concept":"Introduction to Replay To
+  ├─ Cached items: 30
+
+  Key:  concept_qb:Data Structures:queues
+  TTL:        603877s
+  Type:       string
+  Preview:    [{"_id":"6a5603f5283c506eaa72d012","question":"What is the primary characteristic of a queue data structure?","__v":0,"bloomLevel":"remember","concept":"Queues","conceptTags":["Queues","Queues"],"conf
+  ├─ Cached items: 28
+
+  Key:  concept_qb:Data Structures:linked lists
+  TTL:        603752s
+  Type:       string
+  Preview:    [{"_id":"6a560378283c506eaa72cfc0","question":"What is the primary advantage of using a linked list over an array?","__v":0,"bloomLevel":"remember","concept":"Linked Lists","conceptTags":["Linked List
+  ├─ Cached items: 27
+
+  Key:  concept_qb:Data Structures:binary search trees
+  TTL:        603675s
+  Type:       string
+  Preview:    [{"_id":"6a56032b283c506eaa72cf88","question":"What is the primary advantage of using a Binary Search Tree over a linear search?","__v":0,"bloomLevel":"remember","concept":"Binary Search Trees","conce
+  ├─ Cached items: 29
+
+  Key:  concept_qb:Data Structures:arrays
+  TTL:        603692s
+  Type:       string
+  Preview:    [{"_id":"6a56033c283c506eaa72cfa5","question":"What is the primary purpose of using arrays in programming?","__v":0,"bloomLevel":"remember","concept":"Arrays","conceptTags":["Arrays","Arrays"],"confid
+  ├─ Cached items: 27
+
+  Key:  concept_qb:Data Structures:searching algorithms
+  TTL:        542871s
+  Type:       string
+  Preview:    [{"_id":"6a5515a8302fb0f28ca5412d","question":"What is the primary purpose of Searching Algorithms?","__v":0,"bloomLevel":"remember","concept":"Searching Algorithms","conceptTags":["Searching Algorith
+  ├─ Cached items: 30
+
+  Key:  concept_qb:Data Structures:sorting algorithms
+  TTL:        542788s
+  Type:       string
+  Preview:    [{"_id":"6a551554302fb0f28ca5410f","question":"What is the primary purpose of Sorting Algorithms?","__v":0,"bloomLevel":"remember","concept":"Sorting Algorithms","conceptTags":["Sorting Algorithms","S
+  ├─ Cached items: 30
+
+────────────────────────────────────────────────────────────────────────
+Pattern: "skilltree:questions:*" — 11 key(s)
+────────────────────────────────────────────────────────────────────────
+
+  Key:  skilltree:questions:Binary Search Trees:1
+  TTL:        539300s
+  Type:       string
+  Preview:    [{"question":"What is the primary condition that must be satisfied by all nodes in a tree data structure to facilitate efficient searching?","options":["Each node must have a unique value","All nodes 
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:EE1611:2
+  TTL:        460850s
+  Type:       string
+  Preview:    [{"question":"What is the most fundamental concept in \"Introduction to EE1611 Techniques\"?","options":["A core principle that defines the subject","A secondary supporting idea","An unrelated techniq
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:Binary Search Trees_edge:1
+  TTL:        539405s
+  Type:       string
+  Preview:    [{"question":"Which statement best describes a core concept related to this topic?","options":["A fundamental principle that governs related phenomena","An unrelated observation about the field","A hi
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:Embedded Systems:1
+  TTL:        460030s
+  Type:       string
+  Preview:    [{"question":"What is the most fundamental concept in \"GPIO\"?","options":["A core principle that defines the subject","A secondary supporting idea","An unrelated technique","A practical implementati
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:EE1611:1
+  TTL:        460793s
+  Type:       string
+  Preview:    [{"question":"What is the most fundamental concept in \"Introduction to EE1611 Concepts\"?","options":["A core principle that defines the subject","A secondary supporting idea","An unrelated technique
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:CY1021:1
+  TTL:        535584s
+  Type:       string
+  Preview:    [{"question":"What is the primary difference between an element and a compound?","options":["An element is a mixture of substances, while a compound is a pure substance","An element is a substance tha
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:CY1021:2
+  TTL:        535774s
+  Type:       string
+  Preview:    [{"question":"Which statement best describes a core concept related to this topic?","options":["A fundamental principle that governs related phenomena","An unrelated observation about the field","A hi
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:EE1611:3
+  TTL:        460931s
+  Type:       string
+  Preview:    [{"question":"What is the most fundamental concept in \"Introduction to EE1611 Methods\"?","options":["A core principle that defines the subject","A secondary supporting idea","An unrelated technique"
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:CY1021:3
+  TTL:        535831s
+  Type:       string
+  Preview:    [{"question":"Which statement best describes a core concept related to this topic?","options":["A fundamental principle that governs related phenomena","An unrelated observation about the field","A hi
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:Binary Search Trees:999
+  TTL:        539375s
+  Type:       string
+  Preview:    [{"question":"Which statement best describes a core concept related to this topic?","options":["A fundamental principle that governs related phenomena","An unrelated observation about the field","A hi
+  ├─ Cached items: 5
+
+  Key:  skilltree:questions:Data Structures CS2101:1
+  TTL:        530381s
+  Type:       string
+  Preview:    [{"question":"What is the primary purpose of using a data structure in a program?","options":["To reduce the amount of memory used by the program","To increase the complexity of the program","To impro
+  ├─ Cached items: 5
+
+────────────────────────────────────────────────────────────────────────
+Pattern: "assessment:*" — 3 key(s)
+────────────────────────────────────────────────────────────────────────
+
+  Key:  assessment:Computer Science:Data Structures
+  TTL:        535124s
+  Type:       string
+  Preview:    {"course":"Computer Science","topic":"Data Structures","questions":[{"question":"What is the primary advantage of using a hash table for storing and retrieving data?","options":["It allows for efficie
+  ├─ Object keys:  9 (course, topic, questions, generatedBy, model, pipelineVersion, generatedAt, source,...)
+
+  Key:  assessment:Replay Topic 1784022637270:Replay Topic 1784022637270
+  TTL:        604515s
+  Type:       string
+  Preview:    {"course":"Replay Topic 1784022637270","topic":"Replay Topic 1784022637270","questions":[{"question":"What is the primary function of the replay mechanism in learning?","options":["To reinforce previo
+  ├─ Object keys:  9 (course, topic, questions, generatedBy, model, pipelineVersion, generatedAt, source,...)
+
+  Key:  assessment:CY1021:CY1021
+  TTL:        535464s
+  Type:       string
+  Preview:    {"course":"CY1021","topic":"CY1021","questions":[{"question":"What is the primary function of the cell membrane?","options":["To provide structural support to the cell","To regulate the movement of ma
+  ├─ Object keys:  9 (course, topic, questions, generatedBy, model, pipelineVersion, generatedAt, source,...)
+
+────────────────────────────────────────────────────────────────────────
+Pattern: "other" — 123 key(s)
+────────────────────────────────────────────────────────────────────────
+
+  Key:  token_blacklist:24d11ac9-eaf7-45cb-80ed-e48c48bab550
+  TTL:        275363s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:d84c651d-68de-4188-a62d-e21439a35af6
+  TTL:        276703s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:fae156c4-7446-4d00-afc5-b38d2ead0fc9
+  TTL:        275752s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:EE4621:ee4621___fundamentals_of_distribution_system
+  TTL:        535416s
+  Type:       string
+  Preview:    {"course":"EE4621","subtopicId":"ee4621___fundamentals_of_distribution_system","subtopicName":"Fundamentals of Distribution System","topicName":"Distribution System Planning and Automation","moduleNam
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:8f6a9c44-dec9-427a-9a8f-4e0f1d7e9b9d
+  TTL:        274478s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:f05988f3-6f61-4a51-a1b4-e72f80be1cfb
+  TTL:        275779s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:d77efa66-93ab-439e-a478-36d315ee0dc2
+  TTL:        280148s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:9300994f-9e64-415f-a1a5-b76276b9c433
+  TTL:        274361s
+  Type:       string
+  Preview:    revoked
+
+  Key:  quiz:Computer Science:general
+  TTL:        535136s
+  Type:       string
+  Preview:    {"course":"Computer Science","module":"general","questions":[{"question":"What is the primary function of an algorithm in computer science?","options":["To design a user interface","To solve a specifi
+  ├─ Object keys:  9 (course, module, questions, generatedBy, model, pipelineVersion, generatedAt, source,...)
+
+  Key:  lecture:Computer Science:variables-and-data-types
+  TTL:        535060s
+  Type:       string
+  Preview:    {"course":"Computer Science","subtopicId":"variables-and-data-types","subtopicName":"","topicName":"","moduleName":"","markdown":"## Introduction to Variables and Data Types\n### Learning Objective\nB
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  skilltree:Test Course
+  TTL:        110649s
+  Type:       string
+  Preview:    {"userId":"6a4cfbf9d69ed7f2797783b5","curriculumId":null,"courseName":"Test Course","title":"Test Course","source":"course","version":1,"graphJson":{"nodes":[{"id":"node-module-1--topic-1--subtopic-1"
+  ├─ Object keys:  26 (userId, curriculumId, courseName, title, source, version, graphJson, nodes,...)
+
+  Key:  token_blacklist:6ba71d84-79d9-4b95-a780-a88bfec19c60
+  TTL:        274359s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:097825ea-d44b-40e7-a278-07d1b275d244
+  TTL:        278606s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:f1c94f0b-6905-4549-a0fc-c07400344504
+  TTL:        279170s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:be494dd3-a01e-47f1-ab13-577c336167b6
+  TTL:        275785s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:e9519f1e-4c8f-4250-9702-441c4848b085
+  TTL:        278504s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:4867e6c5-2944-4615-ac2c-53dea888436c
+  TTL:        275152s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:247c813b-3558-4c27-82f5-2f509f8243ee
+  TTL:        274288s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:f02c0405-1e95-4298-856f-e81b98673e3e
+  TTL:        279154s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:594ed152-78b3-4927-95c9-077e2c21a50d
+  TTL:        275091s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:4c9e9b74-a304-4758-b62e-51ae505cbc3f
+  TTL:        280148s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:35e43c8d-7969-4cd4-b832-3efd9beddf02
+  TTL:        274490s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:299cb8d8-8888-4e2f-a129-dae60b31bc95
+  TTL:        274390s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:6607c223-6ce0-4b3b-acd8-6713bf1c34ea
+  TTL:        279167s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:CS1031:selection_and_insertion_sorts
+  TTL:        535397s
+  Type:       string
+  Preview:    {"course":"CS1031","subtopicId":"selection_and_insertion_sorts","subtopicName":"Selection and Insertion sorts","topicName":"CS1031 - Problem Solving through Computer Programming","moduleName":"","mark
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:f03f1457-0e55-4fcd-8083-0f60d02b12d7
+  TTL:        275783s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:fc70c6e7-226e-41fe-a0f5-107aedf5cd88
+  TTL:        274478s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:6155ea1d-14ab-4c3a-9381-30e078c477cd
+  TTL:        275751s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:221fc424-6653-4f57-8d68-8aae3edac885
+  TTL:        275783s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:70d1bab6-5427-4058-a9f4-831efc61081e
+  TTL:        274394s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:c5c44bc9-1d56-4142-9005-b265858a5236
+  TTL:        275751s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:CS1031:search_algorithms
+  TTL:        535395s
+  Type:       string
+  Preview:    {"course":"CS1031","subtopicId":"search_algorithms","subtopicName":"Search algorithms","topicName":"CS1031 - Problem Solving through Computer Programming","moduleName":"","markdown":"## Introduction t
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  quiz:Computer Science:algorithms
+  TTL:        535253s
+  Type:       string
+  Preview:    {"course":"Computer Science","module":"algorithms","questions":[{"question":"What is the primary purpose of the Big-O notation in the analysis of algorithms?","options":["To measure the actual running
+  ├─ Object keys:  9 (course, module, questions, generatedBy, model, pipelineVersion, generatedAt, source,...)
+
+  Key:  token_blacklist:39f788ee-cd74-488f-8f43-29f809f1c6b7
+  TTL:        274390s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:c1548f32-4575-4a9a-8aee-10194cec95d4
+  TTL:        279154s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:a42092b7-ed72-4d01-bd3e-1bd6e08d571f
+  TTL:        275893s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:Physics101:Quantum Mechanics
+  TTL:        459346s
+  Type:       string
+  Preview:    {"course":"Physics101","subtopicId":"Quantum Mechanics","subtopicName":"Quantum Mechanics","topicName":"Modern Physics","moduleName":"","markdown":"I'm currently unable to process your request — all A
+  ├─ Object keys:  11 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  lecture:CS1031:algorithms
+  TTL:        530524s
+  Type:       string
+  Preview:    {"course":"CS1031","subtopicId":"algorithms","subtopicName":"","topicName":"","moduleName":"","markdown":"## Introduction to Algorithms\n### CS1031 Lecture Note\n#### Learning Objective\nBy the end of
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  lecture:CS1031:string_processing:_algorithms_for_implementing_string_functions_like_strlen
+  TTL:        535392s
+  Type:       string
+  Preview:    {"course":"CS1031","subtopicId":"string_processing:_algorithms_for_implementing_string_functions_like_strlen","subtopicName":"String processing: Algorithms for implementing String functions like Strle
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:ce5fd88b-eeb1-4ebb-8e2d-ae1ebfbbe6e3
+  TTL:        275742s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:CS1031:file_and_directory_handling:_reading_and_writing_to/from_a_file
+  TTL:        535383s
+  Type:       string
+  Preview:    {"course":"CS1031","subtopicId":"file_and_directory_handling:_reading_and_writing_to/from_a_file","subtopicName":"File and Directory Handling: Reading and Writing to/from a file","topicName":"CS1031 -
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:3cf13645-ee1a-4a90-8cd3-d54b474ed2ed
+  TTL:        274394s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:9e04fbc3-c30a-416a-826d-ab301fd0383c
+  TTL:        274494s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:1ae1eebb-3192-43e4-8ebc-a56d0cd4d3e5
+  TTL:        275751s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:06a55bd5-44a5-4022-9f62-b57980c07d69
+  TTL:        274382s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:52ee2f44-6cf0-4023-bd78-b8da90fcae97
+  TTL:        274233s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:90f4a63c-bcc6-471b-8485-3077db8b5ec9
+  TTL:        275779s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:e14e90e1-7e7a-439d-b04d-f9c0ab9f79b1
+  TTL:        273959s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:8cb58d79-b957-48a8-844e-bd4b6ad3c97b
+  TTL:        275896s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:b1c82e2a-f287-47c0-a535-eb6af07a2880
+  TTL:        275788s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:Computer Science:introduction-to-algorithms
+  TTL:        535073s
+  Type:       string
+  Preview:    {"course":"Computer Science","subtopicId":"introduction-to-algorithms","subtopicName":"","topicName":"","moduleName":"","markdown":"## Introduction to Algorithms\n### Learning Objective\nThe primary l
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:5fac5ce8-fcf9-4e5a-9394-e2b0844eb048
+  TTL:        275779s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:7c2b6ea2-e9ba-4f78-94ad-a7081ed44c78
+  TTL:        275793s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:dc87a0e7-538e-4704-94b3-ae1ec265488b
+  TTL:        274070s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:0d5e0996-c4b3-4c9d-9566-52c19c6c5bec
+  TTL:        274490s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:d119c658-72a4-4e3b-bee7-229a554dcf3d
+  TTL:        275187s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:4d8dfb84-21ab-461f-b671-6d43178967b1
+  TTL:        280148s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:EmbeddedSystems:GPIO
+  TTL:        460002s
+  Type:       string
+  Preview:    {"course":"EmbeddedSystems","subtopicId":"GPIO","subtopicName":"GPIO Programming","topicName":"Microcontrollers","moduleName":"","markdown":"I'm currently unable to process your request — all AI provi
+  ├─ Object keys:  11 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:cbf6eaca-25fb-4ddb-852c-ff5f396385f1
+  TTL:        275786s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:ab7c6973-85fc-4497-adbd-235cf096ad5c
+  TTL:        273864s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:4ac334f6-0d8e-467f-a06d-e0cc6ec36b15
+  TTL:        275783s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:5213747a-99be-439c-9243-a89a167e6004
+  TTL:        276703s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:15fb617c-ba5d-44f1-8c0c-fe44dd6e6a5b
+  TTL:        278606s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:a72063d7-a604-4a10-9b8c-f42684ef1216
+  TTL:        275363s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:CS1031:algorithms_and_flowcharts
+  TTL:        529898s
+  Type:       string
+  Preview:    {"course":"CS1031","subtopicId":"algorithms_and_flowcharts","subtopicName":"","topicName":"","moduleName":"","markdown":"## Introduction to Algorithms and Flowcharts\n### Learning Objective\nBy the en
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:7886f13c-ad90-42cf-92fe-d0986f95a43d
+  TTL:        279167s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:037b48fb-fddb-4e43-aaab-97c65feab320
+  TTL:        273167s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:levels:CS1031
+  TTL:        530031s
+  Type:       string
+  Preview:    {"levels":[{"id":1,"name":"Introduction to Programming","description":"Understand the basics of programming and its applications","difficulty":"easy","status":"unlocked","stars":0,"credits":10,"subtop
+  ├─ Object keys:  7 (levels, isAdminCourse, generatedBy, model, pipelineVersion, generatedAt, source)
+
+  Key:  token_blacklist:4967e292-b310-4683-8364-eb7af82b8890
+  TTL:        275791s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:levels:Replay Topic 1784022637270
+  TTL:        604548s
+  Type:       string
+  Preview:    {"levels":[{"id":1,"name":"Introduction to Replay Topic 1784022637270 Concepts","description":"Learn and master Replay Topic 1784022637270 — Level 1","difficulty":"easy","status":"unlocked","stars":0,
+  ├─ Object keys:  7 (levels, isAdminCourse, generatedBy, model, pipelineVersion, generatedAt, source)
+
+  Key:  token_blacklist:36df86d2-1012-4494-8670-38bb743b81a6
+  TTL:        274361s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:b2a0bb29-c395-41a2-b577-e71f136a81ca
+  TTL:        275123s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:Computer Science:basics-of-programming
+  TTL:        535038s
+  Type:       string
+  Preview:    {"course":"Computer Science","subtopicId":"basics-of-programming","subtopicName":"","topicName":"","moduleName":"","markdown":"## Introduction to Basics of Programming\n### Learning Objective\nThe pri
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  lecture:CS1031:sorting_algorithms:_bubble
+  TTL:        535401s
+  Type:       string
+  Preview:    {"course":"CS1031","subtopicId":"sorting_algorithms:_bubble","subtopicName":"Sorting algorithms: Bubble","topicName":"CS1031 - Problem Solving through Computer Programming","moduleName":"","markdown":
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:912e1828-1fb7-4127-8602-20e57495beab
+  TTL:        275790s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:0d817222-90cb-44de-a8ca-447f23e8e3e9
+  TTL:        274494s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:2a830649-89f5-42bd-b2e6-2e7b8957f266
+  TTL:        275779s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:555bb625-1a10-4ad7-9de6-eece9db9d900
+  TTL:        279154s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:bc526b02-0163-49dc-9268-a44b6988c117
+  TTL:        274492s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:99d6c8eb-1cac-4eb2-b3f7-c590389b419f
+  TTL:        276703s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:levels:CY1021
+  TTL:        535575s
+  Type:       string
+  Preview:    {"levels":[{"id":1,"name":"Introduction to Chemistry","description":"Understand the basic concepts and principles of chemistry","difficulty":"easy","status":"unlocked","stars":0,"credits":10,"subtopic
+  ├─ Object keys:  7 (levels, isAdminCourse, generatedBy, model, pipelineVersion, generatedAt, source)
+
+  Key:  token_blacklist:2bf4471f-4390-4816-b59d-ed5a5a228726
+  TTL:        274382s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:f6b373f4-8595-4f98-b415-d99f96e5227a
+  TTL:        274476s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:4c752972-958f-430a-88d1-33aeebc1cf68
+  TTL:        274492s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:8d89688e-d992-48e0-b0ac-1c3b7e7182c9
+  TTL:        274359s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:E2E Test
+  TTL:        111101s
+  Type:       string
+  Preview:    {"_id":"6a4e7f0d40c8144eaa8f59a4","userId":"6a4cfbf9d69ed7f2797783b5","curriculumId":"6a4e7f0d40c8144eaa8f599a","title":"E2E Test","source":"csv","version":1,"graphJson":{"nodes":[{"id":"node-m1--t1--
+  ├─ Object keys:  25 (_id, userId, curriculumId, title, source, version, graphJson, nodes,...)
+
+  Key:  lecture:CS1031:recursion.
+  TTL:        535404s
+  Type:       string
+  Preview:    {"course":"CS1031","subtopicId":"recursion.","subtopicName":"Recursion.","topicName":"CS1031 - Problem Solving through Computer Programming","moduleName":"","markdown":"## Introduction to Recursion in
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:64021662-41a9-40e8-b1fb-9228a34c1392
+  TTL:        279154s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:dd6c6b2c-80af-434f-aff8-1d4afddda3a4
+  TTL:        273343s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:57380ae2-ff24-4f7f-9d7c-e982485c0a39
+  TTL:        269648s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:7b1ec555-142c-420e-9009-8fb21030dd58
+  TTL:        274392s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:levels:Introduction to Algorithms
+  TTL:        530434s
+  Type:       string
+  Preview:    {"levels":[{"id":1,"name":"Algorithmic Foundations","description":"Understand the definition and importance of algorithms in computer science","difficulty":"easy","status":"unlocked","stars":0,"credit
+  ├─ Object keys:  7 (levels, isAdminCourse, generatedBy, model, pipelineVersion, generatedAt, source)
+
+  Key:  token_blacklist:cde54346-3216-44a4-a05d-762517f1e4ed
+  TTL:        279170s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:75470e74-e002-4f0e-9c28-5a1c3f7cfe5d
+  TTL:        278606s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:course:Machine Learning
+  TTL:        448213s
+  Type:       string
+  Preview:    [{"_id":"6a53a3dddf24731e6e23d994","skillId":"ml_intro","name":"Introduction to ML","description":"Basic concepts of Machine Learning","category":"Machine Learning Fundamentals","course":"Machine Lear
+  ├─ Cached items: 11
+
+  Key:  skilltree:levels:Binary Search Trees
+  TTL:        539348s
+  Type:       string
+  Preview:    {"levels":[{"id":1,"name":"Introduction to Binary Search Trees Concepts","description":"Learn and master Binary Search Trees — Level 1","difficulty":"easy","status":"unlocked","stars":0,"credits":10,"
+  ├─ Object keys:  7 (levels, isAdminCourse, generatedBy, model, pipelineVersion, generatedAt, source)
+
+  Key:  token_blacklist:9ead06b3-7632-4508-a91c-38814b8a8506
+  TTL:        275756s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:076ca7eb-f13e-41e9-9d48-dedbaeef56d2
+  TTL:        279169s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:ffe7ab9e-2375-4db8-9951-4e1235ad82da
+  TTL:        279167s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:4a034f6f-9c7a-488a-923d-c72a2fbf1c72
+  TTL:        280148s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:levels:Data Structures CS2101
+  TTL:        530378s
+  Type:       string
+  Preview:    {"levels":[{"id":1,"name":"Introduction to Data Structures","description":"Understand the importance and basics of data structures in computer science","difficulty":"easy","status":"unlocked","stars":
+  ├─ Object keys:  7 (levels, isAdminCourse, generatedBy, model, pipelineVersion, generatedAt, source)
+
+  Key:  token_blacklist:81fb9787-7b1a-40ed-84bb-cbefd8162b30
+  TTL:        274392s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:de5f3520-71d4-4f54-920b-83029df8a634
+  TTL:        274366s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:e43612f9-462b-4613-a783-483b4994f265
+  TTL:        275783s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:37177074-0ca8-475a-a37a-54697ea91dc6
+  TTL:        274366s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:CSV Test Course
+  TTL:        110999s
+  Type:       string
+  Preview:    {"_id":"6a4e7ea8334447cbd2ab65e1","userId":"6a4cfbf9d69ed7f2797783b5","curriculumId":"6a4e7e4f65d56afd3cab82ef","title":"CSV Test Course","source":"csv","version":1,"graphJson":{"nodes":[{"id":"node-m
+  ├─ Object keys:  25 (_id, userId, curriculumId, title, source, version, graphJson, nodes,...)
+
+  Key:  lecture:HS2012:hs2012___experiment_1__introduction_and_setup
+  TTL:        535425s
+  Type:       string
+  Preview:    {"course":"HS2012","subtopicId":"hs2012___experiment_1__introduction_and_setup","subtopicName":"Experiment 1: Introduction and Setup","topicName":"NCC/Social Services","moduleName":"","markdown":"## I
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:8db7958c-72f8-4f0d-9a61-2850b6b696d6
+  TTL:        274948s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:c50654fb-492f-4b73-929a-42e26fe17340
+  TTL:        274381s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:4f3fe92c-830e-4319-a100-4cdbcfb333c7
+  TTL:        276703s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:levels:Quantum Computing
+  TTL:        459259s
+  Type:       string
+  Preview:    {"levels":[{"id":1,"name":"Introduction to Quantum Computing Concepts","description":"Learn and master Quantum Computing — Level 1","difficulty":"easy","status":"unlocked","stars":0,"credits":10,"subt
+  ├─ Object keys:  2 (levels, isAdminCourse)
+
+  Key:  token_blacklist:f54559a0-914e-4170-90e7-1dc812a0c2f8
+  TTL:        275363s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:Computer Science:introduction-to-data-types
+  TTL:        535049s
+  Type:       string
+  Preview:    {"course":"Computer Science","subtopicId":"introduction-to-data-types","subtopicName":"","topicName":"","moduleName":"","markdown":"## Introduction to Data Types\n### Learning Objective\nThe primary o
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+  Key:  token_blacklist:eff24340-a218-48c6-891a-e2ec0cc5cb35
+  TTL:        278606s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:c2db289c-efa1-4f61-a22d-6d9117d5f517
+  TTL:        274384s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:576e9c0e-4cc7-45d3-8e98-ee21a8f10983
+  TTL:        275894s
+  Type:       string
+  Preview:    revoked
+
+  Key:  skilltree:levels:Embedded Systems
+  TTL:        459974s
+  Type:       string
+  Preview:    {"levels":[{"id":1,"name":"Introduction to Embedded Systems Concepts","description":"Learn and master Embedded Systems — Level 1","difficulty":"easy","status":"unlocked","stars":0,"credits":10,"subtop
+  ├─ Object keys:  2 (levels, isAdminCourse)
+
+  Key:  token_blacklist:dd470098-1b01-40ad-b517-d01921cd6d15
+  TTL:        274350s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:ea572d25-4c43-4cb4-8553-2446cde10040
+  TTL:        269761s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:96a9542b-9003-4f09-b4c2-5d8435e29304
+  TTL:        275363s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:f71a1ed3-a5c3-4bfe-bc8b-d484dfc03dfe
+  TTL:        279167s
+  Type:       string
+  Preview:    revoked
+
+  Key:  token_blacklist:d8002924-13ce-4075-9270-d5b4b2df7037
+  TTL:        279170s
+  Type:       string
+  Preview:    revoked
+
+  Key:  lecture:Computer Science:searching-algorithms
+  TTL:        535267s
+  Type:       string
+  Preview:    {"course":"Computer Science","subtopicId":"searching-algorithms","subtopicName":"","topicName":"","moduleName":"","markdown":"## Introduction to Searching Algorithms\n### Learning Objective\nThe prima
+  ├─ Object keys:  15 (course, subtopicId, subtopicName, topicName, moduleName, markdown, html, conceptMap,...)
+
+========================================================================
+SUMMARY
+========================================================================
+  Total keys:              151
+  Estimated memory usage:  19.1 KB
+  TTL range:               110649s — 604630s
+  TTL avg:                 368994s
+  No expiry (TTL=-1):      0 keys
+  Missing (TTL=-2):        0 keys
+
+  Pattern breakdown:
+    concept_qb:*                   14 key(s)
+    skilltree:questions:*          11 key(s)
+    assessment:*                   3 key(s)
+    other                          123 key(s)
+
+  Key patterns observed:
+    skilltree:questions:EE1611:*
+    skilltree:questions:CY1021:*
+    skilltree:questions:Binary Search Trees:*
+    token_blacklist:24d11ac9-eaf7-*cb-*ed-e48c48bab550
+    token_blacklist:d84c651d-*de-*-a62d-e21439a35af6
+    token_blacklist:fae156c4-*-*d00-afc5-b38d2ead0fc9
+    skilltree:questions:Binary Search Trees_edge:*
+    lecture:EE4621:ee4621___fundamentals_of_distribution_system
+    token_blacklist:8f6a9c44-dec9-*a-*a8f-*e0f1d7e9b9d
+    concept_qb:Binary Search Trees_edge:binary search trees_edge
+    skilltree:questions:Embedded Systems:*
+    token_blacklist:f05988f3-*f61-*a51-a1b4-e72f80be1cfb
+    token_blacklist:d77efa66-*ab-*e-a478-*d315ee0dc2
+    token_blacklist:9300994f-*e64-*f-a1a5-b76276b9c433
+    quiz:Computer Science:general
+    lecture:Computer Science:variables-and-data-types
+    skilltree:Test Course
+    concept_qb:Binary Search Trees:binary search trees
+    token_blacklist:6ba71d84-*d9-*b95-a780-a88bfec19c60
+    token_blacklist:097825ea-d44b-*e7-a278-*d1b275d244
+    ... and 126 more unique patterns
+
+Output written to: /tmp/redis_evidence.txt
+
+-b76276b9c433
+    quiz:Computer Science:general
+    lecture:Computer Science:variables-and-data-types
+    skilltree:Test Course
+    concept_qb:Binary Search Trees:binary search trees
+    token_blacklist:6ba71d84-*d9-*b95-a780-a88bfec19c60
+    token_blacklist:097825ea-d44b-*e7-a278-*d1b275d244
+    ... and 126 more unique patterns
+
+Output written to: /tmp/redis_evidence.txt
+

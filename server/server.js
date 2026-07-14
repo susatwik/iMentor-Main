@@ -265,6 +265,12 @@ app.use("/api/knowledge-sources", authMiddleware, knowledgeSourceRoutes);
 app.use('/api/feedback', authMiddleware, feedbackRoutes);
 app.use('/api/gamification', authMiddleware, gamificationRoutes);
 
+// --- Course Matching Routes (CSV upload, validate, autocomplete) ---
+app.use('/api/course-matching', authMiddleware, require('./routes/index_skilltreeCourseMatching'));
+
+// --- Skill Tree Course Bridge (Course → Skill Tree reuse pipeline) ---
+app.use('/api/skill-tree', authMiddleware, require('./routes/skillTreeCourseBridge'));
+
 // --- Internal Service Routes (Python → Node.js callbacks, no JWT required) ---
 const { syncSkillTreeToMongo } = require('./services/skillTreeSyncService');
 app.post('/api/internal/skill-tree/sync', (req, res, next) => {
@@ -300,6 +306,7 @@ app.use('/api/debug', authMiddleware, debugRoutes);
 app.use('/api/progress', authMiddleware, require('./routes/progress'));
 app.use('/api/jobs', authMiddleware, require('./routes/jobs'));
 app.use('/api/quiz', authMiddleware, quizRoutes); // [Team1] Quiz generation, submission & grading
+app.use('/api/question-bank', authMiddleware, require('./routes/questionBank')); // Question Bank CRUD
 app.use('/api/adaptive-profile', authMiddleware, adaptiveProfileRoutes); // [Team8] Student adaptive learning profiles
 app.use('/api/assessment', authMiddleware, require('./routes/knowledgeAssessment')); // Knowledge Assessment Engine
 

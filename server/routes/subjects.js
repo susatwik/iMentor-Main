@@ -123,15 +123,97 @@ router.get('/', async (req, res) => {
             }
         }
 
-        // 4. Fall back to AdminDocument collection
+        // 4. Fall back to direct Neo4j query
+        if (courses.length === 0) {
+            try {
+                const result = await neo4jRun(
+                    `MATCH (c:Course)
+                     WHERE c.code IS NOT NULL AND c.code <> ''
+                     RETURN c.code AS code, c.name AS name,
+                            c.semester AS semester, c.credits AS credits,
+                            c.department AS dept, c.category AS category
+                     ORDER BY c.code`
+                );
+                if (result.records && result.records.length > 0) {
+                    courses = result.records.map(r => {
+                        const o = r.toObject();
+                        return {
+                            code: o.code || '',
+                            name: o.name || o.code || '',
+                            semester: o.semester || null,
+                            credits: o.credits != null ? o.credits : null,
+                            dept: o.dept || null,
+                            category: o.category || null,
+                        };
+                    }).filter(c => c.code);
+                    if (courses.length > 0) {
+                        log.info('DB', `Got ${courses.length} courses from direct Neo4j query (fallback)`);
+                    }
+                }
+            } catch (neoErr) {
+                log.warn('DB', `Direct Neo4j query fallback failed: ${neoErr.message}`);
+            }
+        }
+
+        // 5. Fall back to AdminDocument collection
         if (courses.length === 0) {
             const subjectObjects = await AdminDocument.find().sort({ originalName: 1 }).select('originalName').lean();
             courses = subjectObjects.map(doc => ({ code: doc.originalName, name: doc.originalName, semester: null, credits: null, dept: null, category: null }));
             if (courses.length > 0) {
                 log.info('DB', `Got ${courses.length} subjects from AdminDocument (fallback)`);
-            } else {
-                log.warn('DB', 'No subjects found: neither Neo4j curriculum nor AdminDocument have data');
             }
+        }
+
+        // 5. Fall back to curriculum_inventory.json on disk
+        if (courses.length === 0) {
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                const inventoryPath = path.join(__dirname, '..', '..', 'curriculum_reports', 'curriculum_inventory.json');
+                if (fs.existsSync(inventoryPath)) {
+                    const raw = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+                    const inventoryCourses = Array.isArray(raw.courses) ? raw.courses : [];
+                    courses = inventoryCourses.map(c => ({
+                        code: c.courseName || c.name || '',
+                        name: c.name || c.courseName || c.courseCode || '',
+                        semester: c.semester || null,
+                        credits: c.credits != null ? c.credits : null,
+                        dept: c.department || c.dept || null,
+                        category: c.category || null,
+                    })).filter(c => c.code);
+                    if (courses.length > 0) {
+                        log.info('DB', `Got ${courses.length} courses from curriculum_inventory.json (fallback)`);
+                    }
+                }
+            } catch (fsErr) {
+                log.warn('DB', `curriculum_inventory.json fallback failed: ${fsErr.message}`);
+            }
+        }
+
+        // 6. Fall back to course_bootstrap directory listing
+        if (courses.length === 0) {
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                const bootstrapDir = path.join(__dirname, '..', 'course_bootstrap');
+                if (fs.existsSync(bootstrapDir)) {
+                    const entries = fs.readdirSync(bootstrapDir).filter(e => {
+                        const fullPath = path.join(bootstrapDir, e);
+                        return fs.statSync(fullPath).isDirectory() && !e.startsWith('.');
+                    });
+                    courses = entries.map(code => ({ code, name: code, semester: null, credits: null, dept: null, category: null }));
+                    if (courses.length > 0) {
+                        log.info('DB', `Got ${courses.length} courses from course_bootstrap/ directory listing (fallback)`);
+                    }
+                }
+            } catch (fsErr) {
+                log.warn('DB', `course_bootstrap directory fallback failed: ${fsErr.message}`);
+            }
+        }
+
+        // If empty, log diagnostics
+        if (courses.length === 0) {
+            log.warn('DB', 'No subjects found: Neo4j, Redis, AdminDocument, inventory file, and bootstrap dir all empty');
         }
 
         // 5. Only cache NON-EMPTY results

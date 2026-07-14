@@ -12,7 +12,7 @@ router.post('/generate', async (req, res) => {
     const result = await knowledgeAssessment.generateDiagnosticAssessment({
       course, module, topic, userId: req.user?._id,
     });
-    res.json(result);
+    res.json({ success: true, ...result });
   } catch (error) {
     log.error('ASSESS_ROUTE', `Generate error: ${error.message}`);
     res.status(500).json({ message: 'Failed to generate assessment', error: error.message });
@@ -21,12 +21,12 @@ router.post('/generate', async (req, res) => {
 
 router.post('/submit', async (req, res) => {
   try {
-    const { responses, topic, course } = req.body;
+    const { responses, topic, course, weakAreas, strengths } = req.body;
     if (!responses || !Array.isArray(responses) || responses.length === 0) {
       return res.status(400).json({ message: 'Responses array is required' });
     }
     const result = await knowledgeAssessment.evaluateAndClassify({
-      responses, topic: topic || course, course, userId: req.user?._id,
+      responses, topic: topic || course, course, userId: req.user?._id, weakAreas, strengths,
     });
     res.json(result);
   } catch (error) {
