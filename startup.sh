@@ -6,7 +6,7 @@
 
 set -e
 
-PROJECT_DIR="/home/sri/Downloads/iMentor_march/chatbot"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_ENV="imentor"
 cd "$PROJECT_DIR"
 
