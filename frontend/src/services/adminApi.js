@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // --- CONFIGURATION ---
-const ADMIN_API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:2000/api'}/admin`;
+const ADMIN_API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api'}/admin`;
 const ADMIN_USERNAME_FRONTEND = import.meta.env.VITE_ADMIN_USERNAME || 'admin@admin.com';
 const ADMIN_PASSWORD_FRONTEND = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
 

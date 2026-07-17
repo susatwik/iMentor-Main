@@ -17,6 +17,8 @@ const {
 } = require('../../../services/socraticTutorService');
 const tutorStateMachine = require('../../../services/tutorStateMachine');
 const knowledgeStateService = require('../../../services/knowledgeStateService');
+const socraticService = require('../../../services/socraticService');
+const masteryService = require('../../../services/masteryService');
 const axios = require('axios');
 const { performWebSearch } = require('../../../services/webSearchService');
 const socketService = require('../../../services/socketService');
@@ -24,29 +26,10 @@ const { triggerPeriodicAnalysis } = require('../../../middleware/contextualMemor
 const log = require('../../../utils/logger');
 const { streamEvent, TUTOR_MODE_TYPES, emitTutorKnowledgeEvents } = require('../helpers');
 const { computeTurnXp, awardTurnXpAsync, scheduleQualityBonusAsync } = require('../../../services/tutorXpService');
-const masteryService = require('../../../services/masteryService'); // [Team8]
-const tutorEnhancementService = require('../../../services/tutorEnhancementService'); // [Team8]
-const priorKnowledgeDetector = require('../../../services/priorKnowledgeDetector'); // [Team8]
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
-
-// [Team8] Select starting Bloom level based on declared difficulty + prior knowledge signal
-function selectStartingCognitiveLevel(difficultyLevel, hasPriorKnowledge) {
-    if (difficultyLevel === 'advanced') return 'L3_CRITICAL';
-    if (difficultyLevel === 'beginner') return 'L1_CONCEPT';
-    if (hasPriorKnowledge && difficultyLevel === 'intermediate') return 'L2_APPLICATION';
-    return 'L1_CONCEPT';
-}
-
-// [Team4] Build optional client timing metadata to pass into processTutorResponse
-function buildTutorMetadata(ctx = {}) {
-    const meta = {};
-    if (ctx.responseTime != null) meta.responseTime = Number(ctx.responseTime);
-    if (ctx.clientId) meta.clientId = String(ctx.clientId);
-    return meta;
-}
 
 /**
  * Build the $each array for ChatHistory push.
@@ -55,37 +38,49 @@ function buildTutorMetadata(ctx = {}) {
 function buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting) {
     return isAutoGreeting ? [aiMessageForDb] : [userMessageForDb, aiMessageForDb];
 }
-
+ 
+function selectStartingCognitiveLevel(difficultyLevel, hasPriorKnowledge) {
+    if (difficultyLevel === 'advanced') {
+        log.info('TUTOR', `🚀 Advanced request → Starting at L3_CRITICAL`);
+        return 'L3_CRITICAL';
+    }
+    if (difficultyLevel === 'beginner') {
+        log.info('TUTOR', `📚 Beginner request → Starting at L1_CONCEPT`);
+        return 'L1_CONCEPT';
+    }
+    if (hasPriorKnowledge && difficultyLevel === 'intermediate') {
+        log.info('TUTOR', `⬆️  Prior knowledge detected → Starting at L2_APPLICATION`);
+        return 'L2_APPLICATION';
+    }
+    return 'L1_CONCEPT';
+}
+ 
 // ─────────────────────────────────────────────────────────────────────────────
 // GENERAL SOCRATIC (no course context)
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Returns true if this handler handled the request.
- */
+ 
 async function handleGeneral(res, ctx) {
     const {
         tutorMode, tutorModeType, query, sessionId, userId,
         llmConfig, chatSession, userMessageForDb, contextualMemory,
         isAutoGreeting,
     } = ctx;
-    const effectiveQuery = (query === '__tutor_init__') ? '' : query.trim();
-
+ 
     if (!tutorMode || tutorModeType !== TUTOR_MODE_TYPES.GENERAL_SOCRATIC) return false;
-
+ 
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
-
+ 
     const sendStatus = (status) => streamEvent(res, { type: 'status_update', content: status });
-
+ 
     let tutorState = await getTutorSessionState(sessionId);
-
+ 
     // ── Continue an active general Socratic loop ──────────────────────────────
     if (tutorState && (!tutorState.courseName || tutorState.courseName === 'General')) {
         sendStatus('Evaluating your understanding...');
-
+ 
         let smState = null;
         try {
             smState = await tutorStateMachine.getSessionState(sessionId);
@@ -97,9 +92,36 @@ async function handleGeneral(res, ctx) {
         } catch (smErr) {
             log.warn('TUTOR', `State machine init failed (non-fatal): ${smErr.message}`);
         }
-
-        let currentSmState = smState;  // hoisted — updated after state machine writes
-
+ 
+        let currentSmState = smState;
+ 
+        // Enforce retry threshold
+        try {
+            const retryCheck = tutorEnhancementService.checkRetryThreshold(sessionId, 3);
+            if (retryCheck && retryCheck.exceeded) {
+                const hintInfo = await tutorEnhancementService.generateProgressiveHint(
+                    tutorState?.teachingUnit || 'general',
+                    tutorState?.teachingUnit || 'concept',
+                    retryCheck.retryCount || 3,
+                    query.trim()
+                );
+                tutorEnhancementService.recordSessionMetric(sessionId, 'hint_given', { level: hintInfo.level });
+                const hintReply = {
+                    sender: 'bot', role: 'model',
+                    text: hintInfo.hint,
+                    parts: [{ text: hintInfo.hint }],
+                    timestamp: new Date(),
+                    source_pipeline: 'tutor-retry-hint',
+                    socraticState: SOCRATIC_STATES.HINT_GIVEN
+                };
+                streamEvent(res, { type: 'final_answer', content: hintReply });
+                res.end();
+                return true;
+            }
+        } catch (retryErr) {
+            log.warn('TUTOR', `Retry threshold check failed: ${retryErr.message}`);
+        }
+ 
         const tutorResult = await processTutorResponse(
             query.trim(),
             sessionId,
@@ -113,8 +135,7 @@ async function handleGeneral(res, ctx) {
                 }
             }
         );
-
-        // Update cognitive state from result
+ 
         if (tutorResult && tutorResult.classification) {
             try {
                 const cls = tutorResult.classification;
@@ -140,7 +161,6 @@ async function handleGeneral(res, ctx) {
                 } else if (statusStr === 'WRONG' || statusStr === 'UNKNOWN') {
                     await tutorStateMachine.incrementHints(sessionId);
                 }
-
                 const conceptName = tutorState?.teachingUnit || tutorState?.subtopicName || tutorState?.moduleTitle || tutorResult?.moduleTitle || 'general';
                 const hintUsed = statusStr === 'WRONG' || statusStr === 'UNKNOWN';
                 await emitTutorKnowledgeEvents({ userId, sessionId, statusStr, conceptName, hintUsed, mastered: !!masteryData?.achieved });
@@ -148,13 +168,13 @@ async function handleGeneral(res, ctx) {
                 log.warn('TUTOR', `State machine update failed (non-fatal): ${smUpdateErr.message}`);
             }
         }
-
-        // ── Live XP — computed once here, used in reply and deferred award ────
+ 
         const _genCls = (() => { const c = tutorResult?.classification; return typeof c === 'object' ? (c?.status || 'UNKNOWN') : (c || 'UNKNOWN'); })();
         const _genCogLvl = currentSmState?.cognitiveLevelName || currentSmState?.cognitiveLevel || tutorState?.cognitiveLevel || 'L1_CONCEPT';
-        const _genHints  = tutorState?.hintsGiven || 0;
+        const _genHints = tutorState?.hintsGiven || 0;
         const genXpResult = tutorResult ? computeTurnXp(_genCls, _genCogLvl, _genHints) : null;
-
+        const _masteryProgress = masteryService.calculateMasteryProgress(currentSmState, _genCls);
+ 
         if (!tutorResult) {
             const fallbackReply = {
                 sender: 'bot', role: 'model',
@@ -164,11 +184,8 @@ async function handleGeneral(res, ctx) {
                 source_pipeline: 'tutor-general-fallback',
                 criticalThinkingCues: []
             };
-
             streamEvent(res, { type: 'final_answer', content: fallbackReply });
             res.end();
-
-            // Deferred DB write — don't block the response
             setImmediate(async () => {
                 try {
                     const _fallbackAiMsg = { role: 'model', parts: [{ text: fallbackReply.text }], timestamp: new Date(), source_pipeline: 'tutor-general-fallback' };
@@ -186,15 +203,18 @@ async function handleGeneral(res, ctx) {
                     log.error('TUTOR', `Deferred DB write failed: ${err.message}`);
                 }
             });
-
             return true;
         }
-
+ 
+        // ── Mastery / prior knowledge skip ────────────────────────────────────
         if (tutorResult.isMastered) {
             const masteredUnit = tutorState.teachingUnit || tutorState.moduleTitle || 'this concept';
             await clearTutorSessionState(sessionId);
-
-            const masteryText = `Great work — you've shown strong understanding of **${masteredUnit}**.\n\nDo you want to go one level deeper, apply it to a real example, or switch topics? Which option do you choose and why?`;
+ 
+            const masteryText = tutorResult.pedagogicalMove === 'SKIP_SUBTOPIC'
+                ? tutorResult.followUpQuestion
+                : `Great work — you've shown strong understanding of **${masteredUnit}**.\n\nDo you want to go one level deeper, apply it to a real example, or switch topics? Which option do you choose and why?`;
+ 
             const masteryReply = {
                 sender: 'bot', role: 'model',
                 text: masteryText, parts: [{ text: masteryText }],
@@ -204,11 +224,8 @@ async function handleGeneral(res, ctx) {
                 thinking: `General Socratic mastery achieved for ${masteredUnit}`,
                 criticalThinkingCues: []
             };
-
             streamEvent(res, { type: 'final_answer', content: masteryReply });
             res.end();
-
-            // Deferred DB write — don't block the response
             setImmediate(async () => {
                 try {
                     const _masteryAiMsg = { role: 'model', parts: [{ text: masteryText }], timestamp: new Date(), source_pipeline: 'tutor-general-mastery' };
@@ -226,10 +243,9 @@ async function handleGeneral(res, ctx) {
                     log.error('TUTOR', `Deferred DB write failed: ${err.message}`);
                 }
             });
-
             return true;
         }
-
+ 
         const socraticReply = {
             sender: 'bot', role: 'model',
             text: tutorResult.followUpQuestion,
@@ -239,16 +255,14 @@ async function handleGeneral(res, ctx) {
             socraticState: tutorResult.socraticState,
             thinking: `General Socratic mode. Move: ${tutorResult.pedagogicalMove}. ${tutorResult.reasoning || ''}`,
             criticalThinkingCues: [],
-            masteryProgress: tutorResult.masteryProgress || null,
+            masteryProgress: tutorResult.masteryProgress || _masteryProgress || null,
             steps: tutorResult.steps || [],
             confidenceScore: 85,
             xpDelta: genXpResult
         };
-
         streamEvent(res, { type: 'final_answer', content: socraticReply });
         res.end();
-
-        // Deferred DB write + live XP award — don't block the response
+ 
         setImmediate(async () => {
             try {
                 const _socraticAiMsg = { role: 'model', parts: [{ text: tutorResult.followUpQuestion }], timestamp: new Date(), source_pipeline: socraticReply.source_pipeline };
@@ -265,54 +279,103 @@ async function handleGeneral(res, ctx) {
             } catch (err) {
                 log.error('TUTOR', `Deferred DB write failed: ${err.message}`);
             }
-            // Live XP award (deferred — zero latency impact)
             if (genXpResult) {
                 const _gConceptName = tutorState?.teachingUnit || tutorState?.moduleTitle || 'general';
                 awardTurnXpAsync(userId, genXpResult.xp, _gConceptName, `tutor_${_genCls.toLowerCase()}`);
                 scheduleQualityBonusAsync(userId, query.trim(), tutorResult.followUpQuestion, _gConceptName, llmConfig);
             }
         });
-
+ 
         return true;
     }
-
+ 
     // ── Initialize a new general Socratic thread ──────────────────────────────
     sendStatus('Preparing Socratic session...');
-
+ 
     const rawQuery = query.trim();
+ 
+    // ── Detect prior knowledge and difficulty intent ──────────────────────────
+    const priorKnowledgeAnalysis = priorKnowledgeDetector.detectPriorKnowledge(rawQuery);
+    const { hasPriorKnowledge, masteredTopics, difficultyLevel, signals } = priorKnowledgeAnalysis;
+ 
+    if (hasPriorKnowledge) {
+        log.info('TUTOR', `Prior Knowledge Profile:`);
+        log.info('TUTOR', `  Topics: ${masteredTopics.join(', ') || 'N/A'}`);
+        log.info('TUTOR', `  Difficulty: ${difficultyLevel}`);
+        log.info('TUTOR', `  Confidence: ${Math.round(priorKnowledgeAnalysis.confidence * 100)}%`);
+    } else if (signals.advancedRequest || signals.beginnerRequest) {
+        log.info('TUTOR', `Difficulty Intent: ${difficultyLevel}`);
+    }
+ 
+    // ── Extract teaching unit ─────────────────────────────────────────────────
     let teachingUnit = rawQuery
         .replace(/^(tell me about|explain|what is|what us|how does|teach me|i want to learn about|describe|what's|who is|let'?s?\s*(start|go|begin|learn)\s*(with)?|start\s*(with)?|begin\s*(with)?)\s*/i, '')
         .replace(/\?$/, '')
         .trim();
-
     teachingUnit = teachingUnit
         ? teachingUnit.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')
         : 'General AI Concepts';
-
-    let contextForIntro = '';
-    if (contextualMemory?.systemPrompt) {
-        contextForIntro = `[STUDENT PROFILE FOR PERSONALIZATION]:\n${contextualMemory.systemPrompt}`;
+ 
+    // ── SKIP: prior knowledge detected — jump straight to L2 question ─────────
+    if (hasPriorKnowledge && rawQuery.trim().length > 20) {
+        log.info('TUTOR', `⚡ Prior knowledge on init — skipping intro for "${teachingUnit}"`);
+ 
+        const skipMsg = `Great — it's clear you already know **${teachingUnit}** well! ` +
+            `No need to go over the basics. Let's jump to something more challenging. 🚀\n\n` +
+            `Here's a deeper question: Can you think of a real-world scenario where **${teachingUnit}** ` +
+            `would be the wrong choice, and what you would use instead?`;
+ 
+        const generalState = {
+            moduleTitle: teachingUnit,
+            topic: teachingUnit,
+            teachingUnit,
+            teachingUnitType: 'general',
+            courseName: 'General',
+            lastQuestion: skipMsg,
+            turnCount: 0,
+            startedAt: new Date().toISOString(),
+            socraticState: SOCRATIC_STATES.L2_APPLICATION,
+            masteryScore: 2.0,
+            cognitiveLevel: 'L2_APPLICATION',
+            consecutiveWrong: 0,
+            hintsGiven: 0,
+            history: [],
+            consecutiveCorrect: 0,
+            learningPath: await buildInitialLearningPath('General', { subtopicName: teachingUnit }),
+            priorKnowledgeAnalysis: { hasPriorKnowledge, masteredTopics, difficultyLevel, signals }
+        };
+        await setTutorSessionState(sessionId, generalState);
+ 
+        const skipReply = {
+            sender: 'bot', role: 'model',
+            text: skipMsg,
+            parts: [{ text: skipMsg }],
+            timestamp: new Date(),
+            source_pipeline: 'tutor-prior-knowledge-skip',
+            socraticState: SOCRATIC_STATES.L2_APPLICATION,
+            thinking: `Prior knowledge detected. Skipped intro, starting at L2.`,
+            criticalThinkingCues: []
+        };
+ 
+        const aiMsgForDb = {
+            role: 'model',
+            parts: [{ text: skipMsg }],
+            timestamp: new Date(),
+            source_pipeline: 'tutor-prior-knowledge-skip'
+        };
+        await ChatHistory.findOneAndUpdate(
+            { sessionId, userId },
+            {
+                $push: { messages: { $each: buildMessagesEach(userMessageForDb, aiMsgForDb, isAutoGreeting) } },
+                $set: { isTutorMode: true, tutorModeType: TUTOR_MODE_TYPES.GENERAL_SOCRATIC, updatedAt: new Date() }
+            },
+            { upsert: true }
+        );
+ 
+        streamEvent(res, { type: 'final_answer', content: skipReply });
+        res.end();
+        return true;
     }
-
-    // [Team8] Detect prior knowledge from student's initial query — sets starting Bloom level
-    let hasPriorKnowledge = false;
-    let startingCognitiveLevel = 'L1_CONCEPT';
-    try {
-        const pkResult = await priorKnowledgeDetector.detectPriorKnowledge(query, teachingUnit);
-        hasPriorKnowledge = pkResult?.hasPriorKnowledge || false;
-        const difficultyLevel = pkResult?.suggestedLevel || 'beginner';
-        startingCognitiveLevel = selectStartingCognitiveLevel(difficultyLevel, hasPriorKnowledge);
-        if (hasPriorKnowledge) {
-            sendStatus('Detected prior knowledge — adjusting difficulty...');
-            log.info('TUTOR', `Prior knowledge detected for "${teachingUnit}" — starting at ${startingCognitiveLevel}`);
-        }
-    } catch (pkErr) {
-        log.warn('TUTOR', `Prior knowledge detection failed (non-fatal): ${pkErr.message}`);
-    }
-    if (startingCognitiveLevel !== 'L1_CONCEPT') {
-        llmConfig = { ...llmConfig, currentCognitiveLevel: startingCognitiveLevel };
-    }
-    // [/Team8]
 
     let initialResponse = '';
     try {
@@ -333,7 +396,9 @@ async function handleGeneral(res, ctx) {
         log.warn('TUTOR', `General Socratic init failed: ${err.message}`);
         initialResponse = `Let's explore **${teachingUnit}** together.\n\nTo begin, what do you already believe about this topic?`;
     }
-
+ 
+    const startingCognitiveLevel = selectStartingCognitiveLevel(difficultyLevel, hasPriorKnowledge);
+ 
     const generalState = {
         moduleTitle: teachingUnit,
         topic: teachingUnit,
@@ -345,15 +410,16 @@ async function handleGeneral(res, ctx) {
         startedAt: new Date().toISOString(),
         socraticState: SOCRATIC_STATES.INTRODUCTION,
         masteryScore: 0,
-        cognitiveLevel: 'L1_CONCEPT',
+        cognitiveLevel: startingCognitiveLevel,
         consecutiveWrong: 0,
         hintsGiven: 0,
         history: [],
         consecutiveCorrect: 0,
-        learningPath: await buildInitialLearningPath('General', { subtopicName: teachingUnit })
+        learningPath: await buildInitialLearningPath('General', { subtopicName: teachingUnit }),
+        priorKnowledgeAnalysis: { hasPriorKnowledge, masteredTopics, difficultyLevel, signals }
     };
     await setTutorSessionState(sessionId, generalState);
-
+ 
     const introReply = {
         sender: 'bot', role: 'model',
         text: initialResponse, parts: [{ text: initialResponse }],
@@ -363,8 +429,11 @@ async function handleGeneral(res, ctx) {
         thinking: `General Socratic tutor initialized. Teaching unit: ${teachingUnit}`,
         criticalThinkingCues: []
     };
-
-    const _genIntroAiMsg = { role: 'model', parts: [{ text: initialResponse }], timestamp: new Date(), source_pipeline: 'tutor-general-introduction' };
+ 
+    const _genIntroAiMsg = {
+        role: 'model', parts: [{ text: initialResponse }],
+        timestamp: new Date(), source_pipeline: 'tutor-general-introduction'
+    };
     await ChatHistory.findOneAndUpdate(
         { sessionId, userId },
         {
@@ -373,22 +442,19 @@ async function handleGeneral(res, ctx) {
         },
         { upsert: true }
     );
-
+ 
     const messageCount = (chatSession?.messages?.length || 0) + 2;
     triggerPeriodicAnalysis(sessionId, userId, messageCount, llmConfig);
-
+ 
     streamEvent(res, { type: 'final_answer', content: introReply });
     res.end();
     return true;
 }
-
+ 
 // ─────────────────────────────────────────────────────────────────────────────
 // COURSE-STRUCTURED SOCRATIC
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Returns true if this handler handled the request.
- */
+ 
 async function handleStructured(res, ctx) {
     const {
         tutorMode, tutorModeType, query, sessionId, userId,
@@ -396,37 +462,29 @@ async function handleStructured(res, ctx) {
         documentContextName, currentModulePathId, user: reqUser,
         isAutoGreeting,
     } = ctx;
-    const effectiveQuery = (query === '__tutor_init__') ? '' : query.trim();
-
+ 
     if (!tutorMode || tutorModeType !== TUTOR_MODE_TYPES.COURSE_STRUCTURED) return false;
-
+ 
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
-
+ 
     const sendStatus = (status) => streamEvent(res, { type: 'status_update', content: status });
-
+ 
     let tutorState = await getTutorSessionState(sessionId);
-
+ 
     // ── Topic shift detection ─────────────────────────────────────────────────
     if (tutorState) {
         const rawQuery = query.trim();
         const shiftKeywords = /^(tell me about|explain|what is|what us|how does|teach me|i want to learn about|describe|what's|who is|let'?s?\s*(start|go|begin|learn)\s*(with)?|start\s*(with)?|begin\s*(with)?)\s+/i;
-
         if (shiftKeywords.test(rawQuery)) {
-            let extractedTopic = rawQuery
-                .replace(shiftKeywords, '')
-                .replace(/\?$/, '')
-                .trim();
-
+            let extractedTopic = rawQuery.replace(shiftKeywords, '').replace(/\?$/, '').trim();
             if (extractedTopic && extractedTopic.length > 2 && extractedTopic.length < 50) {
                 const currentUnit = (tutorState.teachingUnit || '').toLowerCase();
                 const pivotTopic = extractedTopic.toLowerCase();
-
                 const isRelated = currentUnit.includes(pivotTopic) || pivotTopic.includes(currentUnit) ||
                     (tutorState.moduleName && tutorState.moduleName.toLowerCase().includes(pivotTopic));
-
                 if (!isRelated) {
                     log.info('TUTOR', `Topic shift detected: "${currentUnit}" -> "${extractedTopic}". Resetting.`);
                     await clearTutorSessionState(sessionId);
@@ -435,11 +493,11 @@ async function handleStructured(res, ctx) {
             }
         }
     }
-
+ 
     // ── Continue an existing course lesson ────────────────────────────────────
     if (tutorState) {
         log.info('TUTOR', `Continuing lesson "${tutorState.teachingUnit}" (Turn ${tutorState.turnCount})`);
-
+ 
         let smState = null;
         try {
             smState = await tutorStateMachine.getSessionState(sessionId);
@@ -456,31 +514,24 @@ async function handleStructured(res, ctx) {
         } catch (smErr) {
             log.warn('TUTOR', `State machine init failed (non-fatal): ${smErr.message}`);
         }
-
-        let currentSmState = smState;  // hoisted — updated after cognitive level writes
-
-        // Fetch graph facts (non-blocking — augments context, failure is safe)
+ 
+        let currentSmState = smState;
+ 
         let graphFacts = '';
         try {
             const PYTHON_RAG_SERVICE_URL = process.env.PYTHON_RAG_SERVICE_URL || 'http://localhost:2001';
             const graphRes = await axios.post(
                 `${PYTHON_RAG_SERVICE_URL}/graph/search`,
-                {
-                    query: query.trim(),
-                    user_id: userId,
-                    document_context: tutorState?.courseName || null,
-                },
+                { query: query.trim(), user_id: userId, document_context: tutorState?.courseName || null },
                 { timeout: 3000 }
             );
             if (graphRes.data?.facts) graphFacts = graphRes.data.facts;
         } catch (_gErr) {
             log.debug('TUTOR', `Graph search skipped (non-fatal): ${_gErr.message}`);
         }
-
-        const augmentedQuery = graphFacts
-            ? `${query.trim()}\n\n[Graph context: ${graphFacts}]`
-            : query.trim();
-
+ 
+        const augmentedQuery = graphFacts ? `${query.trim()}\n\n[Graph context: ${graphFacts}]` : query.trim();
+ 
         const tutorResult = await processTutorResponse(
             augmentedQuery,
             sessionId,
@@ -494,8 +545,7 @@ async function handleStructured(res, ctx) {
                 }
             }
         );
-
-        // Update cognitive state from result
+ 
         if (tutorResult && tutorResult.classification) {
             try {
                 const cls = tutorResult.classification;
@@ -509,9 +559,7 @@ async function handleStructured(res, ctx) {
                     reasoning: cls?.reasoning || null
                 });
                 masteryData = await tutorStateMachine.checkMastery(sessionId);
-                if (masteryData?.achieved) {
-                    await tutorStateMachine.advanceLearningStep(sessionId);
-                }
+                if (masteryData?.achieved) await tutorStateMachine.advanceLearningStep(sessionId);
                 const freshSmState = await tutorStateMachine.getSessionState(sessionId);
                 currentSmState = freshSmState;
                 if (freshSmState?.consecutiveCorrect >= 2) {
@@ -521,7 +569,6 @@ async function handleStructured(res, ctx) {
                 } else if (statusStr === 'WRONG' || statusStr === 'UNKNOWN') {
                     await tutorStateMachine.incrementHints(sessionId);
                 }
-
                 const conceptName = tutorState?.teachingUnit || tutorState?.subtopicName || tutorState?.moduleTitle || tutorResult?.moduleTitle || 'general';
                 const hintUsed = statusStr === 'WRONG' || statusStr === 'UNKNOWN';
                 await emitTutorKnowledgeEvents({ userId, sessionId, statusStr, conceptName, hintUsed, mastered: !!masteryData?.achieved });
@@ -529,19 +576,19 @@ async function handleStructured(res, ctx) {
                 log.warn('TUTOR', `State machine update failed (non-fatal): ${smUpdateErr.message}`);
             }
         }
-
-        // ── Live XP — pure computation (zero I/O), included in reply for instant display
+ 
         const _strCls = (() => { const c = tutorResult?.classification; return typeof c === 'object' ? (c?.status || 'UNKNOWN') : (c || 'UNKNOWN'); })();
         const _strCogLvl = currentSmState?.cognitiveLevelName || currentSmState?.cognitiveLevel || tutorState?.cognitiveLevel || 'L1_CONCEPT';
-        const _strHints  = tutorState?.hintsGiven || 0;
-        const xpResult  = tutorResult ? computeTurnXp(_strCls, _strCogLvl, _strHints, !!tutorResult.isMastered) : null;
-
+        const _strHints = tutorState?.hintsGiven || 0;
+        const xpResult = tutorResult ? computeTurnXp(_strCls, _strCogLvl, _strHints, !!tutorResult.isMastered) : null;
+        const _masteryProgress = masteryService.calculateMasteryProgress(currentSmState, _strCls);
+ 
         if (!tutorResult) {
             log.error('TUTOR', 'Failed to generate tutor response - LLM service unavailable');
             const errorReply = {
                 sender: 'bot', role: 'model',
-                text: "I'm having trouble connecting to the AI service right now. This is temporary. Please try again in a moment, or you can:\n\n- **Retry** the question\n- **Change topics** to a different module\n- **Switch to regular chat mode** while I recover\n\nWe apologize for the interruption!",
-                parts: [{ text: "I'm having trouble connecting to the AI service right now. This is temporary. Please try again in a moment, or you can:\n\n- **Retry** the question\n- **Change topics** to a different module\n- **Switch to regular chat mode** while I recover\n\nWe apologize for the interruption!" }],
+                text: "I'm having trouble connecting to the AI service right now. Please try again in a moment.",
+                parts: [{ text: "I'm having trouble connecting to the AI service right now. Please try again in a moment." }],
                 timestamp: new Date(),
                 source_pipeline: 'tutor-error-recovery',
                 confidenceScore: 0,
@@ -551,20 +598,20 @@ async function handleStructured(res, ctx) {
             res.end();
             return true;
         }
-
+ 
         // ── Mastery handling ──────────────────────────────────────────────────
         if (tutorResult.isMastered) {
             log.success('SUCCESS', `Mastery achieved for: "${tutorState.teachingUnit || tutorResult.moduleTitle}"`);
-
+ 
             let finalReplyText = tutorResult.followUpQuestion;
             let nextTopicState = null;
             let advanceResult = null;
-
+            let completedTopics = [];
+ 
             const courseName = tutorState.courseName || documentContextName;
             if (courseName && courseName !== 'General') {
                 let completedSubtopics = [];
-                let completedTopics = [];
-
+ 
                 try {
                     const currentUser = await User.findById(reqUser._id);
                     const userProgress = currentUser?.curriculumProgress?.get(courseName);
@@ -573,7 +620,7 @@ async function handleStructured(res, ctx) {
                 } catch (e) {
                     log.warn('TUTOR', `Progress fetch failed: ${e.message}`);
                 }
-
+ 
                 const currentPosition = {
                     moduleIndex: tutorState.moduleIndex || 0,
                     topicIndex: tutorState.topicIndex || 0,
@@ -588,16 +635,14 @@ async function handleStructured(res, ctx) {
                     isLastInTopic: tutorState.isLastInTopic || false,
                     isLastInModule: tutorState.isLastInModule || false
                 };
-
+ 
                 advanceResult = await advanceToNextSubtopic(courseName, currentPosition, completedSubtopics, completedTopics);
-
+ 
                 if (advanceResult.completedSubtopics.length > completedSubtopics.length || advanceResult.topicJustCompleted || advanceResult.moduleJustCompleted) {
                     try {
                         const userToUpdate = await User.findById(reqUser._id);
                         if (userToUpdate) {
-                            if (!userToUpdate.curriculumProgress) {
-                                userToUpdate.curriculumProgress = new Map();
-                            }
+                            if (!userToUpdate.curriculumProgress) userToUpdate.curriculumProgress = new Map();
                             const existingProgress = userToUpdate.curriculumProgress.get(courseName) || {};
                             userToUpdate.curriculumProgress.set(courseName, {
                                 completedSubtopics: advanceResult.completedSubtopics,
@@ -617,20 +662,18 @@ async function handleStructured(res, ctx) {
                         log.error('DB', `Failed to update progress: ${updateErr.message}`);
                     }
                 }
-
+ 
                 if (advanceResult.nextPosition && !advanceResult.nextPosition.isComplete) {
                     const nextUnit = advanceResult.nextPosition.teachingUnit;
                     log.info('TUTOR', `Advancing to next unit: "${nextUnit}"`);
                     sendStatus(`Preparing next lesson: ${nextUnit}...`);
-
+ 
                     let nextRagContext = '';
                     try {
                         const nextContextData = await getSubtopicContext(courseName, advanceResult.nextPosition.subtopicId, advanceResult.nextPosition.topicId);
                         if (nextContextData?.qdrant_chunks && nextContextData.qdrant_chunks.length > 0) {
                             nextRagContext = nextContextData.qdrant_chunks.map(chunk => chunk.text).join('\n\n').slice(0, 1500);
-                            log.info('TOT', `RAG Context injected for "${nextUnit}"`);
                         } else {
-                            log.info('RESEARCH', `No RAG info. Using web search for "${nextUnit}"`);
                             const searchResult = await performWebSearch(`${nextUnit} concept explanation`);
                             if (searchResult && searchResult.toolOutput) {
                                 nextRagContext = `[WEB SEARCH CONTEXT]:\n${searchResult.toolOutput.slice(0, 1500)}`;
@@ -639,24 +682,21 @@ async function handleStructured(res, ctx) {
                     } catch (ctxErr) {
                         log.warn('TUTOR', `Next unit context failed: ${ctxErr.message}`);
                     }
-
+ 
                     let nextEnhancedContext = nextRagContext;
-                    if (contextualMemory?.systemPrompt) {
-                        nextEnhancedContext += `\n\n[STUDENT PROFILE]:\n${contextualMemory.systemPrompt}`;
-                    }
-
+                    const nextMemoryContext = socraticService.buildPersonalizationContext(contextualMemory, query);
+                    if (nextMemoryContext) nextEnhancedContext += `\n\n[STUDENT PROFILE]:\n${nextMemoryContext}`;
+ 
                     const nextIntro = await startSocraticSession(nextUnit, nextEnhancedContext, llmConfig, advanceResult.nextPosition);
-
+ 
                     let transitionParts = [];
                     transitionParts.push(`Great job! You've mastered **${tutorState.teachingUnit || tutorResult.moduleTitle}**.`);
-
                     if (advanceResult.topicJustCompleted) {
                         transitionParts.push(`We've also finished the whole topic on **${advanceResult.topicCompletedName}**.`);
                     }
-
                     transitionParts.push(`Let's move on to the next idea:\n\n${nextIntro}`);
                     finalReplyText = transitionParts.join(' ');
-
+ 
                     await clearTutorSessionState(sessionId);
                     nextTopicState = {
                         moduleId: advanceResult.nextPosition.moduleId,
@@ -679,8 +719,6 @@ async function handleStructured(res, ctx) {
                         startedAt: new Date().toISOString(),
                         socraticState: SOCRATIC_STATES.INTRODUCTION,
                         masteryScore: 0,
-                        // Carry forward the cognitive level the student demonstrated.
-                        // The Socratic engine will adapt down if they struggle at this level.
                         cognitiveLevel: currentSmState?.cognitiveLevelName || currentSmState?.cognitiveLevel || 'L1_CONCEPT',
                         history: [],
                         consecutiveUnderstands: 0
@@ -688,15 +726,15 @@ async function handleStructured(res, ctx) {
                     await setTutorSessionState(sessionId, nextTopicState);
                 } else if (advanceResult.nextPosition?.isComplete) {
                     await clearTutorSessionState(sessionId);
-                    finalReplyText = `🎉 **Congratulations!**\n\nYou've mastered **${tutorState.teachingUnit || tutorResult.moduleTitle}** and completed the entire **${courseName}** curriculum!\n\nThis is a major achievement in your learning journey. Would you like to:\n\n- **Review** any specific topic\n- Start a **new course**\n- Take a **final assessment**\n- Explore related **advanced concepts**`;
+                    finalReplyText = `🎉 **Congratulations!**\n\nYou've mastered **${tutorState.teachingUnit || tutorResult.moduleTitle}** and completed the entire **${courseName}** curriculum!\n\nWould you like to:\n\n- **Review** any specific topic\n- Start a **new course**\n- Take a **final assessment**`;
                 } else {
                     await clearTutorSessionState(sessionId);
-                    finalReplyText = `🎉 **Mastery Achieved!** You've completed your current goal of mastering **${tutorState.teachingUnit || tutorResult.moduleTitle}**.\n\nWhat would you like to learn next?`;
+                    finalReplyText = `🎉 **Mastery Achieved!** You've completed **${tutorState.teachingUnit || tutorResult.moduleTitle}**.\n\nWhat would you like to learn next?`;
                 }
             } else {
                 await clearTutorSessionState(sessionId);
             }
-
+ 
             const masteryReply = {
                 sender: 'bot', role: 'model',
                 text: finalReplyText, parts: [{ text: finalReplyText }],
@@ -705,9 +743,9 @@ async function handleStructured(res, ctx) {
                 socraticState: nextTopicState ? SOCRATIC_STATES.INTRODUCTION : tutorResult.socraticState,
                 thinking: `Mastery achieved for "${tutorResult.moduleTitle}". Auto-advanced: ${nextTopicState ? 'Yes' : 'No'}.`,
                 criticalThinkingCues: [],
-                xpDelta: xpResult  // includes mastery bonus (isMastery=true was passed to computeTurnXp)
+                xpDelta: xpResult
             };
-
+ 
             const aiMessageForDb = {
                 role: 'model', parts: [{ text: finalReplyText }],
                 timestamp: new Date(), source_pipeline: 'tutor-mastery'
@@ -720,25 +758,16 @@ async function handleStructured(res, ctx) {
                 },
                 { upsert: true }
             );
-
+ 
             const messageCount = (chatSession?.messages?.length || 0) + 2;
             triggerPeriodicAnalysis(sessionId, userId, messageCount, llmConfig);
-
-            // Build the accumulated completedModules list for the event
-            const updatedCompletedModules = [
-                ...new Set([
-                    ...(advanceResult?.moduleJustCompleted && tutorState.moduleId
-                        ? [...(completedTopics || []), tutorState.moduleId]
-                        : []),
-                ])
-            ];
-            // Re-read the saved DB value to get accurate completedModules
+ 
             let dbCompletedModules = [];
             try {
                 const freshUser = await User.findById(reqUser._id).select('curriculumProgress');
                 dbCompletedModules = freshUser?.curriculumProgress?.get(courseName)?.completedModules || [];
             } catch (_) {}
-
+ 
             const progressUpdate = {
                 type: 'progress_update',
                 content: {
@@ -765,29 +794,27 @@ async function handleStructured(res, ctx) {
                 }
             };
             streamEvent(res, progressUpdate);
-
+ 
             masteryReply.currentPosition = progressUpdate.content.currentPosition;
             masteryReply.progressUpdate = progressUpdate.content;
-
+ 
             streamEvent(res, { type: 'final_answer', content: masteryReply });
             res.end();
-
-            // Deferred live XP award for mastery turn
+ 
             setImmediate(() => {
                 if (xpResult) {
                     const _mConceptName = tutorState?.teachingUnit || tutorState?.subtopicName || 'general';
-                    // Base turn XP + mastery bonus are combined inside xpResult.xp (isMastery=true)
                     awardTurnXpAsync(userId, xpResult.xp, _mConceptName, 'tutor_mastery');
                     scheduleQualityBonusAsync(userId, query.trim(), finalReplyText, _mConceptName, llmConfig);
                 }
             });
-
+ 
             return true;
         }
         // ── End mastery handling ──────────────────────────────────────────────
-
+ 
         log.success('TUTOR', `Follow-up generated (Move: ${tutorResult.pedagogicalMove})`);
-
+ 
         const socraticReply = {
             sender: 'bot', role: 'model',
             text: tutorResult.followUpQuestion,
@@ -797,7 +824,7 @@ async function handleStructured(res, ctx) {
             socraticState: tutorResult.socraticState,
             thinking: `Classification: ${tutorResult.classification}. Move: ${tutorResult.pedagogicalMove}. ${tutorResult.reasoning || ''}`,
             criticalThinkingCues: [],
-            masteryProgress: tutorResult.masteryProgress || null,
+            masteryProgress: tutorResult.masteryProgress || _masteryProgress || null,
             steps: tutorResult.steps || [],
             confidenceScore: 85,
             xpDelta: xpResult,
@@ -812,7 +839,7 @@ async function handleStructured(res, ctx) {
                 courseName: tutorState.courseName
             }
         };
-
+ 
         const aiMessageForDb = {
             role: 'model', parts: [{ text: tutorResult.followUpQuestion }],
             timestamp: new Date(), source_pipeline: socraticReply.source_pipeline
@@ -825,14 +852,13 @@ async function handleStructured(res, ctx) {
             },
             { upsert: true }
         );
-
+ 
         const messageCount = (chatSession?.messages?.length || 0) + 2;
         triggerPeriodicAnalysis(sessionId, userId, messageCount, llmConfig);
-
+ 
         streamEvent(res, { type: 'final_answer', content: socraticReply });
         res.end();
-
-        // Deferred live XP award — zero latency impact
+ 
         setImmediate(() => {
             if (xpResult) {
                 const _sConceptName = tutorState?.teachingUnit || tutorState?.subtopicName || 'general';
@@ -840,19 +866,19 @@ async function handleStructured(res, ctx) {
                 scheduleQualityBonusAsync(userId, query.trim(), tutorResult.followUpQuestion, _sConceptName, llmConfig);
             }
         });
-
+ 
         return true;
     }
-
+ 
     // ── Auto-initialize new tutor session (curriculum-driven) ─────────────────
     const courseName = documentContextName || 'General';
     log.info('TUTOR', `Initializing new tutor session for ${courseName}`);
     sendStatus('Resolving curriculum position…');
-
+ 
     let completedSubtopics = [];
     let completedTopics = [];
     let completedModules = [];
-
+ 
     if (courseName !== 'General' && reqUser) {
         try {
             const currentUser = await User.findById(reqUser._id);
@@ -864,14 +890,13 @@ async function handleStructured(res, ctx) {
             log.warn('TUTOR', `Pre-init progress fetch failed: ${e.message}`);
         }
     }
-
+ 
     let position = null;
     let teachingUnit = '';
-
+ 
     if (courseName !== 'General') {
         try {
             position = await resolveCurrentPosition(courseName, completedSubtopics, completedTopics, currentModulePathId);
-
             if (position && position.teachingUnit) {
                 teachingUnit = position.teachingUnit;
                 log.info('TUTOR', `Lesson Plan: "${teachingUnit}"`);
@@ -879,24 +904,19 @@ async function handleStructured(res, ctx) {
                 const completionReply = {
                     sender: 'bot', role: 'model',
                     text: `🎉 **Congratulations!** You have completed the entire **${courseName}** ${currentModulePathId ? 'module' : 'curriculum'}!\n\nWould you like to:\n- **Review** any topic\n- Start a **different course**\n- Do some **practice questions**`,
-                    parts: [{ text: `🎉 **Congratulations!** You have completed the entire **${courseName}** ${currentModulePathId ? 'module' : 'curriculum'}!\n\nWould you like to:\n- **Review** any topic\n- Start a **different course**\n- Do some **practice questions**` }],
+                    parts: [{ text: `🎉 **Congratulations!** You have completed the entire **${courseName}** ${currentModulePathId ? 'module' : 'curriculum'}!` }],
                     timestamp: new Date(),
                     source_pipeline: 'tutor-completion',
                     socraticState: SOCRATIC_STATES.MASTERY_ACHIEVED,
                     thinking: 'All curriculum items mastered.',
                     criticalThinkingCues: []
                 };
-
-                const aiMessageForDb = {
-                    role: 'model', parts: [{ text: completionReply.text }],
-                    timestamp: new Date(), source_pipeline: 'tutor-completion'
-                };
+                const aiMessageForDb = { role: 'model', parts: [{ text: completionReply.text }], timestamp: new Date(), source_pipeline: 'tutor-completion' };
                 await ChatHistory.findOneAndUpdate(
                     { sessionId, userId },
                     { $push: { messages: { $each: buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting), $slice: -100 } } },
                     { upsert: true }
                 );
-
                 streamEvent(res, { type: 'final_answer', content: completionReply });
                 res.end();
                 return true;
@@ -911,29 +931,24 @@ async function handleStructured(res, ctx) {
             log.warn('TUTOR', `Position resolution failed: ${err.message}`);
         }
     }
-
+ 
     if (!teachingUnit) {
         const rawQuery = query.trim();
         let extracted = rawQuery
             .replace(/^(tell me about|explain|what is|what us|how does|teach me|i want to learn about|describe|what's|who is|let'?s?\s*(start|go|begin|learn)\s*(with)?|start\s*(with)?|begin\s*(with)?)\s*/i, '')
             .replace(/\?$/, '')
             .trim();
-
-        extracted = extracted.split(' ').map(word =>
-            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-        ).join(' ');
-
+        extracted = extracted.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
         teachingUnit = (extracted && extracted.length > 2) ? extracted : (courseName !== 'General' ? courseName : 'General Concepts');
     }
-
+ 
     sendStatus(`Preparing lesson on ${teachingUnit}…`);
-
+ 
     let ragContext = '';
     let contextualMemoryText = '';
     let strugglingTopics = [];
-
+ 
     try {
-        log.info('TUTOR', 'Fetching contextual memory and student trace...');
         sendStatus('Loading student profile...');
         const [memoryContext, struggles] = await Promise.all([
             knowledgeStateService.getContextualMemory(userId, teachingUnit),
@@ -941,58 +956,37 @@ async function handleStructured(res, ctx) {
         ]);
         contextualMemoryText = memoryContext || '';
         strugglingTopics = struggles || [];
-
-        if (contextualMemoryText) {
-            log.info('SYSTEM', 'Contextual memory successfully loaded.');
-        }
     } catch (memErr) {
         log.error('SYSTEM', 'Contextual memory fetch failed', memErr);
     }
-
+ 
     try {
-        log.info('TUTOR', `Starting RAG context fetch for unit: ${teachingUnit}`);
         sendStatus('Gathering knowledge from course curriculum...');
         const subtopicId = position?.subtopicId;
         const topicId = position?.topicId;
-
         const contextData = await getSubtopicContext(courseName, subtopicId, topicId);
         if (contextData && contextData.qdrant_chunks && contextData.qdrant_chunks.length > 0) {
             ragContext = contextData.qdrant_chunks.map(chunk => chunk.text).join('\n\n').slice(0, 1500);
-            log.info('SYSTEM', `Injected ${contextData.qdrant_chunks.length} RAG chunks`);
-        } else {
-            log.info('SYSTEM', `No local RAG results for "${teachingUnit}". Relying on LLM internal knowledge...`);
-            ragContext = '';
         }
     } catch (e) {
         log.warn('SYSTEM', `Context fetch failed: ${e.message}`);
-        ragContext = ragContext || '';
     }
-
+ 
     ragContext = ragContext || '';
-
+ 
     let initialResponse = '';
     try {
-        log.info('TUTOR', `Starting LLM generation for: ${teachingUnit}...`);
         sendStatus(`Generating Socratic introduction for ${teachingUnit}...`);
+        let enhancedContext = ragContext;
         const topicContext = position?.topicName ? `(part of ${position.topicName})` : '';
         const moduleContext = position?.moduleName ? `in ${position.moduleName}` : '';
-
-        let enhancedContext = ragContext;
-
-        if (topicContext) {
-            enhancedContext += `\n\nThis subtopic ${topicContext} ${moduleContext}.`;
-        }
-
-        if (contextualMemoryText) {
-            enhancedContext += `\n\n[STUDENT PROFILE FOR PERSONALIZATION]:\n${contextualMemoryText}`;
-        }
-
+        if (topicContext) enhancedContext += `\n\nThis subtopic ${topicContext} ${moduleContext}.`;
+        if (contextualMemoryText) enhancedContext += `\n\n[STUDENT PROFILE FOR PERSONALIZATION]:\n${contextualMemoryText}`;
         if (strugglingTopics.length > 0) {
             const strugglingNames = strugglingTopics.map(t => t.conceptName || t.name).join(', ');
-            enhancedContext += `\n\n[STUDENT STRUGGLES]: The student has previously struggled with: ${strugglingNames}. Provide extra guidance if this topic relates.`;
+            enhancedContext += `\n\n[STUDENT STRUGGLES]: The student has previously struggled with: ${strugglingNames}.`;
         }
-
-        // Prerequisite check — non-blocking, injects warning into context if gaps found
+ 
         if (position?.topicId && courseName !== 'General') {
             try {
                 const PYTHON_RAG_SERVICE_URL = process.env.PYTHON_RAG_SERVICE_URL || 'http://localhost:2001';
@@ -1005,13 +999,12 @@ async function handleStructured(res, ctx) {
                 if (missing.length > 0) {
                     const names = missing.map(p => p.name || p.id).join(', ');
                     enhancedContext += `\n\n[PREREQUISITE ALERT]: Student may benefit from reviewing: ${names}.`;
-                    log.info('TUTOR', `Prerequisite gaps detected: ${names}`);
                 }
             } catch (prereqErr) {
                 log.warn('TUTOR', `Prereq check skipped (non-fatal): ${prereqErr.message}`);
             }
         }
-
+ 
         initialResponse = await startSocraticSession(
             teachingUnit,
             enhancedContext,
@@ -1030,9 +1023,21 @@ async function handleStructured(res, ctx) {
         log.error('TUTOR', `Error in startSocraticSession: ${err.message}`, err);
         initialResponse = `Let's dive into **${teachingUnit}**!\n\nTo get started, can you tell me what you already know about this topic?`;
     }
-
-    sendStatus(`Starting lesson on ${teachingUnit}…`);
-
+ 
+    // ── Detect prior knowledge and difficulty intent ──────────────────────────
+    const rawQuery = query.trim();
+    const priorKnowledgeAnalysis = priorKnowledgeDetector.detectPriorKnowledge(rawQuery);
+    const { hasPriorKnowledge: structHasPriorKnowledge, masteredTopics: structMasteredTopics, difficultyLevel: structDifficultyLevel, signals: structSignals } = priorKnowledgeAnalysis;
+ 
+    if (priorKnowledgeAnalysis.hasPriorKnowledge) {
+        log.info('TUTOR', `Prior Knowledge Profile (Structured):`);
+        log.info('TUTOR', `  Topics: ${structMasteredTopics.join(', ') || 'N/A'}`);
+        log.info('TUTOR', `  Difficulty: ${structDifficultyLevel}`);
+        log.info('TUTOR', `  Confidence: ${Math.round(priorKnowledgeAnalysis.confidence * 100)}%`);
+    }
+ 
+    const startingCognitiveLevel = selectStartingCognitiveLevel(structDifficultyLevel, structHasPriorKnowledge);
+ 
     const newTutorState = {
         moduleId: position?.moduleId || null,
         moduleName: position?.moduleName || null,
@@ -1054,16 +1059,22 @@ async function handleStructured(res, ctx) {
         startedAt: new Date().toISOString(),
         socraticState: SOCRATIC_STATES.INTRODUCTION,
         masteryScore: 0,
-        cognitiveLevel: 'L1_CONCEPT',
+        cognitiveLevel: startingCognitiveLevel,
         topic: position?.subtopicName || position?.topicName || teachingUnit,
         consecutiveWrong: 0,
         hintsGiven: 0,
         history: [],
-        learningPath: await buildInitialLearningPath(courseName, position)
+        learningPath: await buildInitialLearningPath(courseName, position),
+        priorKnowledgeAnalysis: {
+            hasPriorKnowledge: structHasPriorKnowledge,
+            masteredTopics: structMasteredTopics,
+            difficultyLevel: structDifficultyLevel,
+            signals: structSignals
+        }
     };
-
+ 
     await setTutorSessionState(sessionId, newTutorState);
-
+ 
     await saveUserProgress(userId.toString(), courseName, {
         completedSubtopics,
         completedTopics,
@@ -1071,18 +1082,18 @@ async function handleStructured(res, ctx) {
         currentPosition: position,
         lastActiveDate: new Date().toISOString()
     });
-
+ 
     const introReply = {
         sender: 'bot', role: 'model',
         text: initialResponse, parts: [{ text: initialResponse }],
         timestamp: new Date(),
         source_pipeline: 'tutor-introduction',
         socraticState: SOCRATIC_STATES.INTRODUCTION,
-        thinking: `Curriculum-driven tutor initialized. Teaching: "${teachingUnit}" (${position?.teachingUnitType || 'topic'}) in ${position?.moduleName || courseName}.`,
+        thinking: `Curriculum-driven tutor initialized. Teaching: "${teachingUnit}" in ${position?.moduleName || courseName}.`,
         currentPosition: position,
         criticalThinkingCues: []
     };
-
+ 
     const aiMessageForDb = {
         role: 'model', parts: [{ text: initialResponse }],
         timestamp: new Date(), source_pipeline: 'tutor-introduction'
@@ -1095,10 +1106,11 @@ async function handleStructured(res, ctx) {
         },
         { upsert: true }
     );
-
+ 
     streamEvent(res, { type: 'final_answer', content: introReply });
     res.end();
     return true;
 }
-
+ 
 module.exports = { handleGeneral, handleStructured };
+ 

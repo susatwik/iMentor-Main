@@ -213,8 +213,14 @@ const api = {
           const event = JSON.parse(chunk.slice(6));
           if (event.type === 'final_answer') {
             finalData = event.content;
+          } else if (event.type === 'error') {
+            const content = event.content || {};
+            const userMsg = content.userMessage || content;
+            const err = new Error(userMsg || 'AI service error during stream');
+            err.aiProviderDetail = content.providerDetail || content.aiError || undefined;
+            throw err;
           }
-        } catch (_) { /* skip malformed chunks */ }
+        } catch (e) { throw e; /* propagate error to caller */ }
       }
     }
 

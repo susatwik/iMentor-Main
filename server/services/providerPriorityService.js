@@ -2,24 +2,32 @@ const { checkOllamaHealth } = require('./ollamaHealthService');
 
 const SGLANG_ENABLED = process.env.SGLANG_ENABLED === 'true';
 
-// No fallback chains — user choice is final.
-// When SGLANG_ENABLED, local_llm and ollama both map to local inference.
-const PROVIDER_FALLBACK_ORDER = SGLANG_ENABLED
-    ? ['ollama']
-    : ['ollama', 'gemini'];
+// Base preferred fallback order. We'll expose a chain starting from the
+// preferred provider and following the global priority: Gemini -> Groq -> SGLang -> Ollama
+const BASE_PROVIDER_PRIORITY = ['gemini', 'groq', 'sglang', 'ollama'];
+// Backwards-compatible export name
+const PROVIDER_FALLBACK_ORDER = BASE_PROVIDER_PRIORITY.slice();
 
 function normalizeProvider(provider) {
     if (typeof provider !== 'string') return 'ollama';
     const normalized = provider.trim().toLowerCase();
-    // 'local_llm' is the UI alias for local inference (SGLang/Ollama)
     if (normalized === 'local_llm') return 'ollama';
-    return PROVIDER_FALLBACK_ORDER.includes(normalized) ? normalized : 'ollama';
+    if (BASE_PROVIDER_PRIORITY.includes(normalized)) return normalized;
+    return 'ollama';
 }
 
 function getProviderChain(preferredProvider) {
-    // No fallback — return only the chosen provider
     const preferred = normalizeProvider(preferredProvider);
-    return [preferred];
+    // Build chain starting with preferred, then append remaining providers in BASE_PROVIDER_PRIORITY order.
+    const list = BASE_PROVIDER_PRIORITY.slice();
+    // If SGLang isn't enabled, remove it from chain
+    if (!SGLANG_ENABLED) {
+        const idx = list.indexOf('sglang');
+        if (idx !== -1) list.splice(idx, 1);
+    }
+    // Ensure uniqueness and preferred-first ordering
+    const ordered = [preferred, ...list.filter(p => p !== preferred)];
+    return ordered;
 }
 
 function getApiKeyForProvider(provider, preferredProvider, userApiKey) {
@@ -37,39 +45,30 @@ async function resolveProviderByPreference({
     skipOllamaHealthCheck = false,
 }) {
     const preferred = normalizeProvider(preferredProvider);
+    const chain = getProviderChain(preferred);
 
     const ollamaCandidates = [userOllamaUrl, process.env.OLLAMA_API_BASE_URL]
         .filter((url) => typeof url === 'string' && url.trim())
         .map((url) => url.trim().replace(/\/+$/, ''));
 
-    let ollamaAvailable = false;
     let workingOllamaUrl = null;
-
-    if (preferred === 'ollama' && ollamaCandidates.length > 0) {
-        if (skipOllamaHealthCheck) {
-            ollamaAvailable = true;
-            workingOllamaUrl = ollamaCandidates[0];
-        } else {
-            for (const candidate of ollamaCandidates) {
-                if (await checkOllamaHealth(candidate)) {
-                    ollamaAvailable = true;
-                    workingOllamaUrl = candidate;
-                    break;
-                }
-            }
+    for (const candidate of ollamaCandidates) {
+        if (skipOllamaHealthCheck || await checkOllamaHealth(candidate)) {
+            workingOllamaUrl = candidate;
+            break;
         }
     }
 
-    // No silent fallback — user gets what they chose or an error
     const availability = {
-        ollama: ollamaAvailable,
+        ollama: Boolean(workingOllamaUrl),
         gemini: !SGLANG_ENABLED && Boolean(process.env.GEMINI_API_KEY || (preferred === 'gemini' && userApiKey)),
+        groq: Boolean(process.env.GROQ_API_KEY || (preferred === 'groq' && userApiKey)),
+        sglang: SGLANG_ENABLED
     };
 
-    // Only the preferred provider — no fallback to others
     return {
         chosenProvider: preferred,
-        chain: [preferred],
+        chain,
         availability,
         workingOllamaUrl,
         apiKey: getApiKeyForProvider(preferred, preferredProvider, userApiKey),

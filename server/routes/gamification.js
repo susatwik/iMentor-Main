@@ -316,12 +316,11 @@ router.post('/skill-tree/diagnostic', async (req, res) => {
         const questions = selectedSkills.map(skill => {
             const q = skill.assessmentQuestions[Math.floor(Math.random() * skill.assessmentQuestions.length)];
             return {
-                question: q.question,
-                options: q.options,
-                level: skill.difficulty,
-                skillId: skill.skillId, // Store for verification
-                type: 'mcq'
-            };
+                    question: q.question,
+                    options: q.options || [],
+                    correctIndex: correctIdx !== -1 ? correctIdx : 0,
+                    explanation: q.explanation || ''
+                };
         });
 
         log.success('GAMIFICATION', `Served ${questions.length} pre-computed diagnostic questions for "${topic}"`);
@@ -333,14 +332,62 @@ router.post('/skill-tree/diagnostic', async (req, res) => {
     }
 });
 
-// Helper for legacy LLM fallback
+// Helper for legacy LLM fallback — generates diagnostic questions via LLM for custom topics
 async function generateDiagnosticWithLLM(topic, req, res) {
-    // [Implementation from original route...]
-    // (For brevity in this diff, I'll move the original logic here)
-    let previousQuestionsBlock = '';
-    // ... (rest of original logic)
-    // For now, I'll just return a simplified fallback OR keep it if possible
-    return res.status(501).json({ message: 'Dynamic generation currently disabled. Please select a pre-configured course like "Machine Learning".' });
+    try {
+        const prompt = `You are an expert educator assessing a student's knowledge of "${topic}".
+
+Generate exactly 5 diagnostic multiple-choice questions to assess the student's level.
+Use this mix: 2 beginner, 2 intermediate, 1 advanced question.
+
+CRITICAL INSTRUCTIONS:
+1. Each question must be directly about "${topic}".
+2. Provide exactly 4 options per question.
+3. Do NOT prefix options with "A.", "B.", etc. - just plain text.
+4. One option must be clearly correct.
+5. Return ONLY valid JSON - no markdown, no explanation outside JSON.
+
+JSON format:
+[
+  {
+    "question": "Question text here?",
+    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+    "correctAnswer": "Option 1",
+    "level": "beginner",
+    "explanation": "Why Option 1 is correct."
+  }
+]`;
+
+        let responseText = await groqService.generateContentWithHistory([], prompt, null, {});
+
+        responseText = responseText.replace(/```json|```/g, '').trim();
+        const jsonMatch = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (!jsonMatch) throw new Error('Groq returned non-JSON response');
+
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+            throw new Error('Groq returned empty question array');
+        }
+
+        const questions = parsed.slice(0, 5).map((q, i) => ({
+            question: q.question,
+            options: q.options,
+            level: q.level || (i < 2 ? 'beginner' : i < 4 ? 'intermediate' : 'advanced'),
+            skillId: null,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation || '',
+            type: 'mcq'
+        }));
+
+        log.success('GAMIFICATION', `Groq generated ${questions.length} diagnostic questions for "${topic}"`);
+        return res.json({ questions });
+
+    } catch (err) {
+        log.error('GAMIFICATION', `generateDiagnosticWithLLM error for "${topic}": ${err.message}`);
+        return res.status(500).json({ 
+            message: 'Unable to generate questions. Please try again.' 
+        });
+    }
 }
 
 // @route   POST /api/gamification/skill-tree/diagnostic/submit
@@ -357,30 +404,41 @@ router.post('/skill-tree/diagnostic/submit', async (req, res) => {
         let score = 0;
         const gradingDetails = [];
 
-        // Fetch the skills involved to get correct answers
+        // Fetch DB skills for pre-configured courses (skillId is set)
         const skillIds = answers.map(a => a.skillId).filter(Boolean);
-        const skillsFound = await SkillTree.find({ skillId: { $in: skillIds } }).lean();
-        
+        const skillsFound = skillIds.length > 0
+            ? await SkillTree.find({ skillId: { $in: skillIds } }).lean()
+            : [];
+
         // Map for quick lookup
         const skillMap = {};
         skillsFound.forEach(s => skillMap[s.skillId] = s);
 
         for (const submission of answers) {
-            const skill = skillMap[submission.skillId];
-            if (skill && skill.assessmentQuestions) {
+            let isCorrect = false;
+            let explanation = '';
+
+            if (submission.skillId && skillMap[submission.skillId]) {
+                // Pre-configured course: grade against DB
+                const skill = skillMap[submission.skillId];
                 const questionData = skill.assessmentQuestions.find(q => q.question === submission.question);
                 if (questionData) {
-                    const isCorrect = submission.answer.trim().toLowerCase() === questionData.correctAnswer.trim().toLowerCase() ||
-                                    submission.answer.charAt(0).toUpperCase() === questionData.correctAnswer.charAt(0).toUpperCase(); // Match 'A' in 'A. Answer'
-                    
-                    if (isCorrect) score++;
-                    gradingDetails.push({
-                        question: submission.question,
-                        correct: isCorrect,
-                        explanation: questionData.explanation
-                    });
+                    isCorrect = submission.answer.trim().toLowerCase() === questionData.correctAnswer.trim().toLowerCase() ||
+                                submission.answer.charAt(0).toUpperCase() === questionData.correctAnswer.charAt(0).toUpperCase();
+                    explanation = questionData.explanation || '';
                 }
+            } else if (submission.correctAnswer) {
+                // Custom topic (LLM-generated): grade using correctAnswer embedded in answer submission
+                isCorrect = submission.answer.trim().toLowerCase() === submission.correctAnswer.trim().toLowerCase();
+                explanation = submission.explanation || '';
             }
+
+            if (isCorrect) score++;
+            gradingDetails.push({
+                question: submission.question,
+                correct: isCorrect,
+                explanation
+            });
         }
 
         // 2. Map score to level
@@ -508,13 +566,7 @@ JSON Structure (Return ONLY the array):
 
 Generate exactly ${totalLevels} UNIQUE levels for: ${topic}`;
 
-                const response = await LLMRouter.generate({
-                    query: prompt,
-                    systemPrompt: null,
-                    chatHistory: [],
-                    userId: req.user._id,
-                    deepResearchContext: false
-                });
+               const response = await groqService.generateContentWithHistory([], prompt, null, {});
 
                 // Try to parse JSON from response
                 const jsonMatch = response.match(/\[[\s\S]*\]/);
@@ -652,7 +704,8 @@ router.post('/skill-tree/level-questions', async (req, res) => {
                     question: q.question,
                     options: q.options || [],
                     correctIndex: correctIdx !== -1 ? correctIdx : 0,
-                    explanation: q.explanation || ''
+                    explanation: q.explanation || '',
+                    hints: q.hints || []
                 };
             });
 
@@ -739,13 +792,7 @@ JSON Structure (Return ONLY the array):
                 setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
             );
             responseText = await Promise.race([
-                LLMRouter.generate({
-                    query: prompt,
-                    systemPrompt: null,
-                    chatHistory: [],
-                    userId: req.user._id,
-                    deepResearchContext: false
-                }),
+               groqService.generateContentWithHistory([], prompt, null, {}),
                 llmTimeoutPromise
             ]);
             generationSuccess = true;
@@ -1889,5 +1936,4 @@ router.post('/skill/:skillId/checkpoint', async (req, res) => {
 });
 
 module.exports = router;
-
 

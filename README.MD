@@ -1,10 +1,75 @@
-# EE Syllabi Pipeline & Startup Configuration Update
+# Team - 2 Changes
 
-This document describes the changes introduced in the `ee-syllabi-generator` branch, the architecture of the new Electrical Engineering (EE) syllabi pipeline, and the test cases/verification steps for the testing team.
+This branch incorporates the **Token Optimization Framework** alongside existing EE Syllabi Pipeline and startup configuration updates.
 
 ---
 
-## 1. Summary of Changes
+## 1. Token Optimization Framework
+
+We have implemented an end-to-end token optimization pipeline designed to minimize LLM token consumption, reduce latency, and lower API usage costs across both standard text/history prompts and real-time streaming operations.
+
+### Key Optimization Components
+* **Input Minification (`server/utils/tokenOptimizer.js`):**
+  * Automatically removes HTML/markdown comments and collapses unnecessary whitespace/newlines before payloads are sent to LLMs.
+  * Respects code blocks (delimited by ` ``` `), keeping indentation and block content completely intact.
+* **Shorthand Abbreviation System:**
+  * Injects a token-saving directive into system prompts instructing the models to respond using standard, predefined abbreviations (e.g. `w/` for `with`, `db` for `database`, `ctx` for `context`, etc.).
+* **Response Expansion (Standard & Streaming):**
+  * Intercepts outbound model completions and restores all abbreviated terms back to their full, human-readable forms.
+  * Incorporates a stateful `StreamingTokenExpander` in `server/services/llmStreamingService.js` that tracks partial chunk buffers to perform seamless word-boundary-aware expansion during streaming (so words are not fragmented).
+* **Multi-Provider Support:**
+  * Automatically optimizes inputs and expands outputs for **Gemini** (`geminiService.js`), **Groq** (`groqService.js`), and **SGLang** (`sglangService.js`).
+
+---
+
+## 2. Model Optimization Framework
+
+We have implemented a comprehensive Model Optimization Framework that improves model routing decisions, tunes parameters dynamically on the fly, manages context windows safely, and ensures fault-tolerant provider recovery.
+
+### Key Optimization Components
+
+* **Dynamic Context-Aware Parameter Tuning (`server/services/smartModelRouterService.js`):**
+  * **Code & Math Detection:** Analyzes the syntax of queries for specific domain keywords (e.g. `def `, `class`, `const`, `matrix`, `integral`, `eigenvalue`).
+  * **Deterministic Forcing:** Automatically sets a highly precise temperature (`0.2`) for mathematical or code generation tasks to optimize factual correctness and syntactic validity.
+  * **Research-Aware Window Allocation:** Automatically scales `temperature` to `0.2` and allocates up to `8192` output tokens when in Deep Research mode to support elaborate long-form responses.
+  
+* **Hybrid Quality-Cost Routing:**
+  * Minimizes latency and costs by routing simple queries (complexity score `<= 35`) or standard questions to local SLMs/Ollama models.
+  * Automatically shifts high-complexity queries (complexity score `>= 75`) to capable cloud-backed fallback models (e.g., Llama 3.3 70B on Groq, Gemini 2.0 Flash) to prevent the generation of poor or incomplete answers.
+  * Adjusts target cloud providers based on token requirements (routing longer requests to Gemini and shorter requests to Groq).
+
+* **Automatic Context Window Management & History Truncation:**
+  * Prevents upstream API failures (e.g. Groq 8k context length limits returning HTTP 400 bad requests).
+  * Measures context payload length dynamically using characters-to-tokens approximations.
+  * Automatically drops older conversation turns sequentially while strictly preserving developer/system instructions and the active user prompt.
+
+* **Resilient Provider Fallback & Health-Checks (`server/services/llmFallbackService.js`):**
+  * Fixed duplicate variable declarations, duplicate switch cases, and duplicate Set definitions.
+  * Ensured seamless and robust fallback chain processing (`sglang` $\rightarrow$ `groq` $\rightarrow$ `gemini` $\rightarrow$ `ollama`) for both standard generation and chunked streaming modes.
+
+### Verification of Optimization Features
+
+We have built dedicated verification test suites to ensure both the Token and Model Optimization frameworks perform flawlessly.
+
+#### 1. Token Optimizer Tests
+Execute the following command to test minification, response expansion, case-preservation, JSON-safety, and split backtick safety:
+```bash
+node server/tests/test_token_optimizer.js
+```
+
+#### 2. Model Router Tests
+Execute the following command to verify complexity calculations, domain parameter tuning, hybrid routing logic, and context window truncation:
+```bash
+node server/tests/test_model_router.js
+```
+
+---
+
+## 3. EE Syllabi Pipeline & Startup Configuration Update
+
+This section describes the changes introduced in the `ee-syllabi-generator` branch, the architecture of the new Electrical Engineering (EE) syllabi pipeline, and the test cases/verification steps for the testing team.
+
+### 3.1. Summary of Changes
 
 ### A. Dynamic Startup Configuration (`startup.sh`)
 * **Before:** `PROJECT_DIR` was hardcoded to `/run/media/komeshbathula/New Volume1/NIT Projects/iMentor-Main`.
@@ -30,7 +95,7 @@ This document describes the changes introduced in the `ee-syllabi-generator` bra
 
 ---
 
-## 2. Ingestion Architecture Flow
+### 3.2. Ingestion Architecture Flow
 
 ```mermaid
 graph TD
@@ -44,7 +109,7 @@ graph TD
 
 ---
 
-## 3. Testing Team Instructions
+### 3.3. Testing Team Instructions
 
 Please follow the verification steps below to test the dynamic path configuration, syllabus generation, and STN ingestion.
 

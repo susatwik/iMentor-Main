@@ -4,6 +4,7 @@ const { selectLLM } = require('./llmRouterService');
 const geminiService = require('./geminiService');
 const ollamaService = require('./ollamaService');
 const groqService = require('./groqService');
+const rewardService = require('./rewardService');
 const log = require('../utils/logger');
 const socketService = require('./socketService');
 
@@ -209,6 +210,12 @@ async function awardLearningCredits(userId, creditsAmount, reason, topic = '') {
             log.error('SYSTEM', 'Credits socket event failed', e);
         }
 
+        try {
+            await rewardService.recordCreditAward(userId, creditsAmount, reason, topic, 'learning_credit', { level: profile.level });
+        } catch (recordErr) {
+            log.warn('SYSTEM', 'Learning credit audit record failed', recordErr);
+        }
+
         return {
             newCredits: profile.totalLearningCredits,
             newLevel: profile.level,
@@ -256,6 +263,12 @@ async function awardXP(userId, xpAmount, reason = 'application', topic = '') {
 
         // Emit socket event for XP
         socketService.emitToUser(userId, 'xp_awarded', { amount: xpAmount, newTotal: profile.totalXP, newLevel: newXPLevel, reason, topic });
+
+        try {
+            await rewardService.recordCreditAward(userId, xpAmount, reason, topic, 'xp', { xpLevel: newXPLevel });
+        } catch (auditErr) {
+            log.warn('SYSTEM', 'XP audit record failed', auditErr);
+        }
 
         // log.info('SYSTEM', `XP: ${oldXP} -> ${profile.totalXP}`);
 
@@ -420,6 +433,7 @@ async function awardBadge(userId, badgeId, badgeName) {
 async function getUserStats(userId) {
     try {
         const profile = await getOrCreateProfile(userId);
+        const recentRewardHistory = await rewardService.getRecentCreditHistory(userId, 20);
 
         return {
             totalLearningCredits: profile.totalLearningCredits,
@@ -437,6 +451,7 @@ async function getUserStats(userId) {
             recentCreditsHistory: profile.learningCreditsHistory.slice(-10).reverse(), // Last 10 Learning Credits awards
             learningCreditsHistory: profile.learningCreditsHistory || [], // Complete history for filtering
             recentXPHistory: (profile.xpHistory || []).slice(-10).reverse(),
+            recentRewardHistory,
             topicScores: Object.fromEntries(profile.topicScores),
             learningCredits: profile.learningCredits || 0,  // Legacy field
             creditsHistory: profile.creditsHistory || []     // Legacy field

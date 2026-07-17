@@ -19,7 +19,7 @@ router.get('/recommendations/:sessionId', async (req, res) => {
     try {
         if (redisClient && redisClient.isOpen) {
             const cachedData = await redisClient.get(cacheKey);
- 
+  
             console.log(`[Learning Route] GET recommendations for session ${sessionId}:`);
             console.log(`  - Cache Key: ${cacheKey}`);
             console.log(`  - Data from Redis: ${cachedData ? cachedData.substring(0, 100) + '...' : 'null'}`);
@@ -37,14 +37,14 @@ router.get('/recommendations/:sessionId', async (req, res) => {
         res.status(500).json({ message: 'Server error retrieving recommendations.' });
     }
 });
- 
+  
 // @route   POST /api/learning/find-document
 // @desc    Perform a JIT RAG search for a recommended topic.
 // @access  Private
 router.post('/find-document', async (req, res) => {
     const { topic } = req.body;
     const userId = req.user._id.toString();
- 
+  
     if (!topic) {
         return res.status(400).json({ message: 'Topic is required.' });
     }
@@ -72,7 +72,7 @@ router.post('/find-document', async (req, res) => {
         }
  
         res.status(404).json({ message: 'No relevant document could be found for that topic.' });
- 
+  
     } catch (error) {
         const errorMsg = error.response?.data?.error || error.message;
         console.error(`[Learning Route] RAG search failed for topic "${topic}":`, errorMsg);
@@ -159,4 +159,5 @@ router.post('/init-profile', authMiddleware, async (req, res) => {
 });
  
 module.exports = router;
+ 
  

@@ -368,6 +368,9 @@ function MessageBubble({ sender, text, thinking, references, timestamp, sourcePi
                                         <p className="text-white text-sm leading-relaxed">
                                             {mainContent || "Our AI service is experiencing a temporary hiccup. Please try again in a few moments."}
                                         </p>
+                                        {activeMessage.providerDetail && (
+                                            <pre className="mt-2 text-xs text-red-200 bg-red-900/10 p-2 rounded overflow-auto">{activeMessage.providerDetail}</pre>
+                                        )}
                                     </div>
                                 </div>
                                 <button

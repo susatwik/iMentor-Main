@@ -12,19 +12,39 @@ function calculateComplexityScore({ query = '', tokenEstimate = 0, reasoningMode
   if (reasoningMode === 'deep_research') score += 35;
 
   // --- Content-aware complexity boosts ---
-  // Code: presence of code keywords or backticks/brackets
   const codeSignals = ['def ', 'function ', 'class ', 'import ', 'const ', 'var ', 'let ', '```', '#!/', 'algorithm', 'implement', 'debug', 'runtime', 'compile'];
   if (codeSignals.some(s => q.includes(s))) score += 2;
 
-  // Math: equations, formulas, or mathematical terminology
   const mathSignals = ['equation', 'formula', 'integral', 'derivative', 'matrix', 'vector', 'probability', 'calculus', 'theorem', 'proof', '\\frac', '\\sum', 'differentiat', 'eigenvalu'];
   if (mathSignals.some(s => q.includes(s))) score += 1;
 
-  // Deep research: multi-source, comparative, survey-like
   const researchSignals = ['research', 'literature', 'survey', 'state of the art', 'compare approaches', 'recent advances', 'paper', 'study'];
   if (researchSignals.some(s => q.includes(s))) score += 3;
 
   return Math.max(0, Math.min(100, score));
+}
+
+function tuneParameters({ query = '', complexityScore = 50, reasoningMode = 'standard' }) {
+  const q = String(query || '').toLowerCase();
+  let temperature = 0.7;
+  let maxOutputTokens = 4096;
+
+  const mathSignals = ['equation', 'formula', 'integral', 'derivative', 'matrix', 'vector', 'probability', 'calculus', 'theorem', 'proof', '\\frac', '\\sum', 'differentiat', 'eigenvalu'];
+  const codeSignals = ['def ', 'function ', 'class ', 'import ', 'const ', 'var ', 'let ', '```', '#!/', 'algorithm', 'implement', 'debug', 'runtime', 'compile'];
+
+  if (codeSignals.some(s => q.includes(s)) || mathSignals.some(s => q.includes(s))) {
+    temperature = 0.2; // low temperature for precise code/math outputs
+  }
+
+  if (reasoningMode === 'deep_research') {
+    temperature = 0.2;
+    maxOutputTokens = 8192;
+  } else if (reasoningMode === 'complex_reasoning' || complexityScore >= 70) {
+    temperature = 0.4;
+    maxOutputTokens = 4096;
+  }
+
+  return { temperature, maxOutputTokens };
 }
 
 function pickModelFromCatalog(catalog = [], provider, fallbackModelId = null) {
@@ -46,6 +66,7 @@ function pickModelFromCatalog(catalog = [], provider, fallbackModelId = null) {
 }
 
 async function selectModel({
+  query = '',
   complexityScore,
   reasoningMode,
   tokenEstimate,
@@ -57,54 +78,71 @@ async function selectModel({
 }) {
   const score = Number.isFinite(complexityScore)
     ? complexityScore
-    : calculateComplexityScore({ tokenEstimate, reasoningMode });
+    : calculateComplexityScore({ query, tokenEstimate, reasoningMode });
 
   let provider = userPreference || 'ollama';
   let strategy = 'manual_provider_default';
 
-  // Global priority: ollama > groq > gemini
-  // Always prefer Ollama when it's active
+  const GROQ_ENABLED = Boolean(process.env.GROQ_API_KEY);
+  const GEMINI_ENABLED = Boolean(process.env.GEMINI_API_KEY);
 
+  // Global priority: ollama > groq > gemini
   if (isOllamaActive) {
-    // Ollama is available — always prefer it
     provider = 'ollama';
     if (localMode) {
       strategy = 'local_mode_ollama';
     } else if (reasoningMode === 'deep_research') {
-      strategy = 'deep_research_ollama';
-    } else if (score >= 70) {
-      strategy = 'complex_reasoning_ollama';
+      if (GROQ_ENABLED || GEMINI_ENABLED) {
+        provider = tokenEstimate > 5000 && GEMINI_ENABLED ? 'gemini' : (GROQ_ENABLED ? 'groq' : 'gemini');
+        strategy = 'deep_research_hybrid_cloud_fallback';
+      } else {
+        strategy = 'deep_research_ollama';
+      }
+    } else if (score >= 75) {
+      if (GROQ_ENABLED || GEMINI_ENABLED) {
+        provider = tokenEstimate > 5000 && GEMINI_ENABLED ? 'gemini' : (GROQ_ENABLED ? 'groq' : 'gemini');
+        strategy = 'high_complexity_hybrid_cloud_fallback';
+      } else {
+        strategy = 'complex_reasoning_ollama';
+      }
     } else {
       strategy = 'ollama_default';
     }
   } else if (reasoningMode === 'deep_research') {
-    // Ollama unavailable: fallback to Groq first, then Gemini for very large contexts
-    if (tokenEstimate > 5000) {
+    if (tokenEstimate > 5000 && GEMINI_ENABLED) {
       provider = 'gemini';
       strategy = 'deep_research_high_tokens_gemini_fallback';
-    } else {
+    } else if (GROQ_ENABLED) {
       provider = 'groq';
       strategy = 'deep_research_groq_fallback';
+    } else {
+      provider = GEMINI_ENABLED ? 'gemini' : 'ollama';
+      strategy = 'deep_research_no_groq_fallback';
     }
   } else if (score >= 70) {
-    if (tokenEstimate > 5000) {
+    if (tokenEstimate > 5000 && GEMINI_ENABLED) {
       provider = 'gemini';
       strategy = 'complex_high_tokens_gemini_fallback';
-    } else {
+    } else if (GROQ_ENABLED) {
       provider = 'groq';
       strategy = 'complex_reasoning_groq_fallback';
+    } else {
+      provider = GEMINI_ENABLED ? 'gemini' : 'ollama';
+      strategy = 'complex_no_groq_fallback';
     }
   } else if (score <= 35 || latencyBudget === 'low') {
-    provider = 'groq';
+    provider = GROQ_ENABLED ? 'groq' : (GEMINI_ENABLED ? 'gemini' : 'ollama');
     strategy = 'simple_query_groq_fallback';
   } else {
-    provider = 'groq';
+    provider = GROQ_ENABLED ? 'groq' : (GEMINI_ENABLED ? 'gemini' : 'ollama');
     strategy = 'standard_groq_fallback';
   }
 
   const selected = pickModelFromCatalog(catalog, provider)
     || pickModelFromCatalog(catalog, userPreference || provider)
     || { modelId: null, provider };
+
+  const tunedParameters = tuneParameters({ query, complexityScore: score, reasoningMode });
 
   const decision = {
     provider: selected.provider || provider,
@@ -118,6 +156,7 @@ async function selectModel({
     taskType: reasoningMode === 'deep_research' ? 'research'
       : (score >= 70 ? 'complex_reasoning'
         : (score <= 35 ? 'simple_chat' : 'standard')),
+    tunedParameters,
   };
 
   log.info('AI', `Model routing decision: ${JSON.stringify(decision)}`);
@@ -126,5 +165,6 @@ async function selectModel({
 
 module.exports = {
   calculateComplexityScore,
+  tuneParameters,
   selectModel,
 };

@@ -5,8 +5,8 @@
  * Guarantees a response regardless of provider availability:
  *   1. Respects user preference (local-first or cloud-first)
  *   2. If preferred provider fails → tries full chain automatically
- *   3. Local-first:  ollama → groq → gemini → anthropic → mistral
- *   4. Cloud-first:  user-preferred-cloud → groq → gemini → ollama → anthropic → mistral
+ *   3. Local-first:  sglang → groq → gemini
+ *   4. Cloud-first:  gemini → groq → sglang
  *   5. Works for chat, Socratic, tools, research — every call site
  *   6. Supports thinking models (qwen3, gemma3, deepseek-r1) with native think flag
  *   7. [Optimization] Per-provider concurrency control via Bottleneck
@@ -183,8 +183,10 @@ function getApiKey(provider, userKeys = {}) {
 
 // ─── FALLBACK CHAIN BUILDER ────────────────────────────────────────────────
 // SGLang is handled via local / API calls. Groq and Gemini are fallback targets.
+// Ollama is REMOVED from LLM chains — it is for embeddings only (now replaced by FastEmbed).
+// SGLang is handled via callFast/getFastModel. Cloud fallback = Groq → Gemini.
 const LOCAL_FIRST_CHAIN  = ['sglang', 'groq', 'gemini'];
-const CLOUD_FIRST_CHAIN  = ['groq', 'gemini', 'sglang'];
+const CLOUD_FIRST_CHAIN  = ['gemini', 'groq', 'sglang'];
 
 /**
  * Build an ordered provider chain with user preference first.
@@ -298,6 +300,7 @@ async function callWithFallback({
                                 onToken(token);
                             }
                         }
+
                     );
                 } else if (onToken && UNIFIED_STREAM_PROVIDERS.has(provider)) {
                     // Gemini/Groq via unified streaming service
@@ -347,7 +350,15 @@ async function callWithFallback({
                 } else {
                     // Non-streaming path for gemini/groq
                     const svc = getServiceForProvider(provider);
-                    return await svc.generateContentWithHistory(chatHistory, userQuery, systemPrompt, callOptions);
+                    if (!svc) {
+                        throw new Error(`No service implementation for provider: ${provider}`);
+                    }
+                    return await svc.generateContentWithHistory(
+                        chatHistory,
+                        userQuery,
+                        systemPrompt,
+                        callOptions
+                    );
                 }
             };
 
@@ -423,16 +434,22 @@ function resolveModelForProvider(provider, options = {}) {
         return process.env.OLLAMA_DEFAULT_MODEL || 'qwen3.5:9b';
     }
     return optModel || 'gemini-2.0-flash';
+    switch (provider) {
+        case 'ollama':  return options.model || process.env.OLLAMA_DEFAULT_MODEL || 'qwen3.5:9b';
+        case 'gemini':  return options.geminiModel || options.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        case 'groq':    return options.model || process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+        default:        return options.model || 'gemini-2.0-flash';
+    }
 }
 
 // ─── FAST MODEL SELECTOR (for overhead calls) ──────────────────────────────
 /**
  * Returns the fastest available provider+model for low-latency overhead calls.
- * Priority: SGLang (primary, local GPU) → Groq → Gemini.
+ * Priority: SGLang (local GPU) → Groq (fast cloud) → Groq → Gemini.
  * Ollama is NEVER used for LLM generation tasks — embeddings only.
  */
 async function getFastModel(userApiKeys = {}, ollamaUrlHint = null) {
-    // 1) SGLang — primary for all LLM generation calls if enabled and responsive
+    // 1) SGLang — primary for all LLM generation calls if enabled and responsive when deployed
     if (process.env.SGLANG_ENABLED === 'true') {
         const sglangUrl = process.env.SGLANG_CHAT_URL || 'http://localhost:8000/v1';
         try {
@@ -449,7 +466,16 @@ async function getFastModel(userApiKeys = {}, ollamaUrlHint = null) {
         }
     }
 
-    // 2) Groq — fast cloud provider
+    // 2) Groq — fast cloud fallback, no admin validation needed
+    if (hasApiKey('groq', userApiKeys)) {
+        return {
+            provider: 'groq',
+            model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+            apiKey: getApiKey('groq', userApiKeys),
+        };
+    }
+
+    // 3) Groq — fast cloud provider
     if (hasApiKey('groq', userApiKeys)) {
         return {
             provider: 'groq',
@@ -495,6 +521,25 @@ async function callFast({ prompt, systemPrompt = null, userApiKeys = {}, ollamaU
         }, { timeout: 30000 });
         const text = resp.data?.choices?.[0]?.message?.content?.trim() || '';
         if (!text) throw new Error('SGLang fast call returned empty response');
+        return text;
+    }
+
+    // Groq — use SDK directly for non-streaming fast calls
+    if (fast.provider === 'groq') {
+        const Groq = require('groq-sdk');
+        const groq = new Groq({ apiKey: fast.apiKey });
+        const messages = [];
+        if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+        messages.push({ role: 'user', content: prompt });
+        const resp = await groq.chat.completions.create({
+            model: fast.model,
+            messages,
+            max_tokens: options.maxOutputTokens ?? 2048,
+            temperature: options.temperature ?? 0.3,
+            stream: false,
+        });
+        const text = resp.choices?.[0]?.message?.content?.trim() || '';
+        if (!text) throw new Error('Groq fast call returned empty response');
         return text;
     }
 

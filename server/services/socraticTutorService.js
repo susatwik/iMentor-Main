@@ -85,6 +85,47 @@ const SUPPORT_LEVELS = {
     DIRECT: 'DIRECT'          // Direct reteaching
 };
 
+// ─── Learning Gap Analyzer ─────────────────────────────────────────────
+
+const DEFAULT_SKILL_TREE = [
+    "Arrays",
+    "Linked Lists",
+    "Stacks",
+    "Queues",
+    "Trees",
+    "Graphs",
+    "Dynamic Programming"
+];
+
+function generateLearningProfile(masteredTopics = []) {
+
+    const strengths = masteredTopics;
+
+    const gaps = DEFAULT_SKILL_TREE.filter(
+        topic => !masteredTopics.includes(topic)
+    );
+
+    const progress = Math.round(
+        (strengths.length / DEFAULT_SKILL_TREE.length) * 100
+    );
+
+    let learnerLevel = "Beginner";
+
+    if (progress >= 70) {
+        learnerLevel = "Advanced";
+    } else if (progress >= 40) {
+        learnerLevel = "Intermediate";
+    }
+
+    return {
+        strengths,
+        gaps,
+        progress,
+        learnerLevel,
+        nextTopics: gaps.slice(0, 3)
+    };
+}
+
 /**
  * Multi-provider LLM call with automatic fallback (ported from Team1-6).
  * Tries preferred provider first, then falls back through all available providers.
@@ -254,8 +295,13 @@ Return ONLY valid JSON:
     "quality": "CORRECT|PARTIAL|MISCONCEPTION",
     "xpMultiplier": 1.0,
   "specificGaps": [],
+  "priorKnowledge": false,
   "reasoning": "Brief one-sentence explanation of your classification"
-}`;
+}
+
+PRIOR KNOWLEDGE RULE: If the student's response shows they already know this topic well
+(confident explanation, correct examples, asks to skip), set "priorKnowledge": true
+AND set "understanding": "CORRECT" and "confidence": "HIGH".`;
 
 
     // [Team8] Prior knowledge keyword fast-path — detects self-reported mastery before LLM call
@@ -282,6 +328,36 @@ Return ONLY valid JSON:
     // [/Team8 fast-path]
 
     try {
+
+        const priorKnowledgeKeywords = [
+    /i (already |do |)(know|knew|understand|learned|studied)/i,
+    /i have knowledge/i,
+    /i have experience/i,
+    /i have worked on/i,
+    /i'?ve (implemented|used|built|written|done|solved|practiced)/i,
+    /i (am|'?m) (familiar|comfortable|confident) with/i,
+    /i know (arrays|linked lists|trees|graphs|java|python|oop)/i,
+    /more than \d+ (problems|projects)/i,
+    /skip this/i,
+    /already covered/i,
+    /already know/i
+];
+        const keywordMatch = priorKnowledgeKeywords.some(rx => rx.test(studentResponse));
+        if (keywordMatch ){
+            log.info('TUTOR',
+                 `⚡ Prior knowledge Check => ${keywordMatch} | Input: ${studentResponse}`
+            );
+            return {
+                understanding: 'CORRECT',
+                confidence: 'HIGH',
+                emotionalState: 'CONFIDENT',
+                effortLevel: 'HIGH',
+                specificGaps: [],
+                priorKnowledge: true,
+                reasoning: 'Student stated prior knowledge with explanation'
+            };
+        }
+
         const responseText = await generateWithFallback(
             [],
             prompt,
@@ -313,7 +389,15 @@ Return ONLY valid JSON:
                 specificGaps: Array.isArray(parsed.specificGaps) ? parsed.specificGaps : [],
                 reasoning: parsed.reasoning || 'Assessment parsed with defaults'
             };
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.priorKnowledge) {
+                parsed.understanding = 'CORRECT';
+                parsed.confidence = 'HIGH';
+                parsed.emotionalState = parsed.emotionalState || 'CONFIDENT';
+            }
+            return parsed;
         }
+        
         throw new Error('No JSON found in assessment response');
     } catch (error) {
         log.warn('TUTOR', `Assessment failed, using fallback: ${error.message}`);
@@ -623,9 +707,12 @@ CRITICAL RULES:
                 provider: llmConfig.llmProvider,
                 model: llmOptions.geminiModel || llmOptions.model,
                 apiKey: llmOptions.apiKey,
-                systemPrompt: systemPrompt,
+                systemPrompt: systemPrompt.substring(0, 1200),
                 onToken,
-                options: llmOptions
+                options: {
+                    ...llmOptions,
+                    maxTokens: 200
+                }
             });
             console.log(`\n\n[STUDENT INPUT]\nTopic: ${topic}\n\n[TUTOR ACTION]\nExplaining fundamentals\n\n[SOCRATIC QUESTION]\n(Waiting for response)\n`);
             return sanitizeGeneratedText(response);
@@ -702,7 +789,10 @@ async function processTutorResponse(studentResponse, sessionId, llmConfig, onPro
         try {
             const contextData = await getSubtopicContext(state.courseName, state.subtopicId, state.topicId);
             if (contextData?.qdrant_chunks?.length > 0) {
-                unitContext = contextData.qdrant_chunks.map(c => c.text).join('\n\n').substring(0, 2000);
+                unitContext = contextData.qdrant_chunks
+                .map(c => c.text)
+                .join('\n\n')
+                .substring(0, 800);
             }
         } catch (ctxErr) {
             log.warn('TUTOR', `Context error: ${ctxErr.message}`);
@@ -788,7 +878,7 @@ async function processTutorResponse(studentResponse, sessionId, llmConfig, onPro
             stnContext: unitContext || topic
         },
         history,
-        unitContext
+        unitContext.slice(-5)
     );
 
     const supportLevel = determineSupportLevel(state, assessment, responseTime);
@@ -1136,9 +1226,97 @@ CRITICAL RULES:
         : (classification.status === 'WRONG' || classification.status === 'UNKNOWN' ? -0.5 : 0));
     const newMastery = Math.min(5.0, masteryScore + masteryDelta);
     const projectedMastery = Math.max(0, newMastery);
+    const priorKnowledge = assessment.priorKnowledge || false;
     // Mastery requires BOTH consecutive correct answers AND a minimum mastery score
-    const isMastered = (consecutiveCorrect >= 2 && projectedMastery >= 2.0) || projectedMastery >= 3.5;
+    const isMastered = priorKnowledge ||
+        (consecutiveCorrect >= 2 && projectedMastery >= 2.0) ||
+        projectedMastery >= 3.5;
+if (priorKnowledge) {
 
+    log.info('TUTOR', `⚡ Prior knowledge — skipping "${topic}"`);
+
+    const masteredTopics = [
+        ...(state.masteredTopics || []),
+        topic
+    ];
+
+    const learningProfile =
+    generateLearningProfile(masteredTopics);
+
+log.info(
+    'TUTOR',
+    `📊 Learning Profile Generated`
+);
+
+log.info(
+    'TUTOR',
+    `Level=${learningProfile.learnerLevel} | Progress=${learningProfile.progress}%`
+);
+
+log.info(
+    'TUTOR',
+    `Strengths=${learningProfile.strengths.join(", ")}`
+);
+
+log.info(
+    'TUTOR',
+    `Next=${learningProfile.nextTopics.join(", ")}`
+);
+
+
+
+    const nextTopic =
+        learningPath?.steps?.[currentStep + 1] ||
+        "the next advanced concept";
+
+    const skipMsg = sanitizeGeneratedText(
+`Great — you already know ${topic}.
+
+📊 Learning Profile
+
+Level:
+${learningProfile.learnerLevel}
+
+Strengths:
+${learningProfile.strengths.join(", ")}
+
+Learning Gaps:
+${learningProfile.gaps.slice(0, 4).join(", ")}
+
+Recommended Learning Path:
+${learningProfile.nextTopics.join(" → ")}
+
+🎯 Suggested Next Goal:
+Master ${learningProfile.nextTopics[0] || "the next topic"}
+
+Progress:
+${learningProfile.progress}%
+
+What do you know about ${nextTopic}?`
+    );
+
+    await setTutorSessionState(sessionId, {
+        ...state,
+        masteredTopics,
+        lastQuestion: skipMsg,
+        turnCount: turnCount + 1,
+        masteryScore: 5.0,
+        consecutiveCorrect: 2,
+        consecutiveWrong: 0
+    });
+
+    return {
+        followUpQuestion: skipMsg,
+        classification: 'CORRECT',
+        pedagogicalMove: 'SKIP_SUBTOPIC',
+        learningProfile,
+        isMastered: true,
+        socraticState: 'MASTERY_ACHIEVED',
+        position,
+        masteryProgress: { current: 5.0, required: 3.5 },
+        topic
+    };
+}
     // ── Award gamification credits on subtopic mastery (fire-and-forget) ──────
     if (isMastered && !state.masteryAwarded && state.userId) {
         setImmediate(async () => {

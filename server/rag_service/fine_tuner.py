@@ -1,6 +1,5 @@
 # server/rag_service/fine_tuner.py
 import os
-import torch
 import subprocess
 import logging
 import shutil
@@ -8,18 +7,9 @@ import requests
 import hmac
 import hashlib
 import json
-from datasets import load_dataset
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    TrainingArguments,
-    pipeline
-)
-from peft import LoraConfig, get_peft_model, PeftModel
-from trl import SFTTrainer
 
 logger = logging.getLogger(__name__)
+
 
 # --- Configuration ---
 # Using a lightweight, instruct-tuned base suitable for CPU/Consumer GPU
@@ -74,6 +64,25 @@ def run_fine_tuning(dataset_path: str, model_tag_to_update: str, job_id: str):
     logger.info(f"Base Model: {BASE_MODEL}")
 
     try:
+        # Defer heavy training imports to runtime so the module can be imported
+        # without requiring the training stack (trl/peft/transformers/torch).
+        try:
+            import torch
+            from datasets import load_dataset
+            from transformers import (
+                AutoModelForCausalLM,
+                AutoTokenizer,
+                BitsAndBytesConfig,
+                TrainingArguments,
+                pipeline,
+            )
+            from peft import LoraConfig, get_peft_model, PeftModel
+            from trl import SFTTrainer
+        except Exception as imp_err:
+            logger.error(f"Training dependencies unavailable: {imp_err}")
+            report_status_to_nodejs(job_id, "failed", f"Training dependencies missing: {imp_err}")
+            return
+
         # 1. Load Dataset
         logger.info(f"Step 1/6: Loading dataset from {dataset_path}...")
         dataset = load_dataset("json", data_files={"train": dataset_path}, split="train")
