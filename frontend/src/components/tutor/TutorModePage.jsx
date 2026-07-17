@@ -82,10 +82,11 @@ function TutorModePage({
     // Guard: prevents clearing localStorage during initial mount before data is loaded
     const quizResultsReady = useRef(false);
     const [questionResults, setQuestionResults] = useState(() => {
+        const userId = regularUser?.id || 'guest';
         // Try course-specific key first (when subject is already loaded)
         const subject = selectedSubject || localStorage.getItem('aiTutorSelectedSubject');
         if (subject) {
-            const saved = localStorage.getItem(`quizResults_${subject}`);
+            const saved = localStorage.getItem(`quizResults_${userId}_${subject}`);
             if (saved) {
                 try {
                     return JSON.parse(saved);
@@ -97,7 +98,7 @@ function TutorModePage({
             }
         }
         // Fallback: restore from last-session snapshot (survives server restart + session clear)
-        const snapshot = localStorage.getItem('quizResults_snapshot');
+        const snapshot = localStorage.getItem(`quizResults_snapshot_${userId}`);
         if (snapshot) {
             try {
                 const { results } = JSON.parse(snapshot);
@@ -114,9 +115,10 @@ function TutorModePage({
     // Load quiz results from localStorage whenever the selected course changes
     useEffect(() => {
         if (!selectedSubject) return;
+        const userId = regularUser?.id || 'guest';
         quizResultsReady.current = false; // New course — pause saves briefly
 
-        const saved = localStorage.getItem(`quizResults_${selectedSubject}`);
+        const saved = localStorage.getItem(`quizResults_${userId}_${selectedSubject}`);
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -134,7 +136,7 @@ function TutorModePage({
         const t = setTimeout(() => { quizResultsReady.current = true; }, 300);
         setHasSynced(false); // Reset sync flag when course changes
         return () => clearTimeout(t);
-    }, [selectedSubject]);
+    }, [selectedSubject, regularUser]);
 
     const [backendQuizIndex, setBackendQuizIndex] = useState(null);
     const [localQuizIndex, setLocalQuizIndex] = useState(0);
@@ -190,22 +192,23 @@ function TutorModePage({
 
     // Persist results to localStorage whenever they change
     useEffect(() => {
-        if (!selectedSubject || !hasSynced) return; // Wait for initial sync
+        if (!selectedSubject || !hasSynced || !regularUser?.id) return; // Wait for initial sync
+        const userId = regularUser.id;
         if (Object.keys(questionResults).length > 0) {
             // Save to course-specific key
-            localStorage.setItem(`quizResults_${selectedSubject}`, JSON.stringify(questionResults));
+            localStorage.setItem(`quizResults_${userId}_${selectedSubject}`, JSON.stringify(questionResults));
             // Also save a snapshot with course name — survives server restart & session clear
-            localStorage.setItem('quizResults_snapshot', JSON.stringify({
+            localStorage.setItem(`quizResults_snapshot_${userId}`, JSON.stringify({
                 course: selectedSubject,
                 results: questionResults,
                 savedAt: Date.now()
             }));
         } else if (quizResultsReady.current) {
             // Only clear when the user explicitly reset (not on initial mount)
-            localStorage.removeItem(`quizResults_${selectedSubject}`);
-            localStorage.removeItem('quizResults_snapshot');
+            localStorage.removeItem(`quizResults_${userId}_${selectedSubject}`);
+            localStorage.removeItem(`quizResults_snapshot_${userId}`);
         }
-    }, [questionResults, selectedSubject]);
+    }, [questionResults, selectedSubject, hasSynced, regularUser]);
 
 
     const [currentModulePathId, setCurrentModulePathId] = useState(null);
@@ -216,23 +219,27 @@ function TutorModePage({
     const sessionKeyFor = useCallback((mode, mid) => {
         const sub = selectedSubject || 'default';
         const mId = mid || currentModulePathId || 'start';
+        const userId = regularUser?.id || 'guest';
         if (mode === 'structured') {
-            return `tutorSession_structured_${sub}_${mId}`;
+            return `tutorSession_structured_${userId}_${sub}_${mId}`;
         }
-        return `tutorSession_${mode}_${sub}`;
-    }, [selectedSubject, currentModulePathId]);
+        return `tutorSession_${mode}_${userId}_${sub}`;
+    }, [selectedSubject, currentModulePathId, regularUser]);
 
     // Progress tracking - loaded from localStorage (scoped per course)
     const [completedSubtopics, setCompletedSubtopics] = useState(() => {
-        const saved = localStorage.getItem(`tutorProgress_subtopics_${selectedSubject || 'default'}`);
+        const userId = regularUser?.id || 'guest';
+        const saved = localStorage.getItem(`tutorProgress_subtopics_${userId}_${selectedSubject || 'default'}`);
         return saved ? JSON.parse(saved) : [];
     });
     const [completedTopics, setCompletedTopics] = useState(() => {
-        const saved = localStorage.getItem(`tutorProgress_topics_${selectedSubject || 'default'}`);
+        const userId = regularUser?.id || 'guest';
+        const saved = localStorage.getItem(`tutorProgress_topics_${userId}_${selectedSubject || 'default'}`);
         return saved ? JSON.parse(saved) : [];
     });
     const [completedModules, setCompletedModules] = useState(() => {
-        const saved = localStorage.getItem(`tutorProgress_modules_${selectedSubject || 'default'}`);
+        const userId = regularUser?.id || 'guest';
+        const saved = localStorage.getItem(`tutorProgress_modules_${userId}_${selectedSubject || 'default'}`);
         return saved ? JSON.parse(saved) : [];
     });
 
@@ -253,34 +260,35 @@ function TutorModePage({
 
     // Persist progress to localStorage (scoped per course)
     useEffect(() => {
-        if (selectedSubject) {
-            localStorage.setItem(`tutorProgress_subtopics_${selectedSubject}`, JSON.stringify(completedSubtopics));
+        if (selectedSubject && regularUser?.id) {
+            localStorage.setItem(`tutorProgress_subtopics_${regularUser.id}_${selectedSubject}`, JSON.stringify(completedSubtopics));
         }
-    }, [completedSubtopics, selectedSubject]);
+    }, [completedSubtopics, selectedSubject, regularUser]);
 
     useEffect(() => {
-        if (selectedSubject) {
-            localStorage.setItem(`tutorProgress_topics_${selectedSubject}`, JSON.stringify(completedTopics));
+        if (selectedSubject && regularUser?.id) {
+            localStorage.setItem(`tutorProgress_topics_${regularUser.id}_${selectedSubject}`, JSON.stringify(completedTopics));
         }
-    }, [completedTopics, selectedSubject]);
+    }, [completedTopics, selectedSubject, regularUser]);
 
     useEffect(() => {
-        if (selectedSubject) {
-            localStorage.setItem(`tutorProgress_modules_${selectedSubject}`, JSON.stringify(completedModules));
+        if (selectedSubject && regularUser?.id) {
+            localStorage.setItem(`tutorProgress_modules_${regularUser.id}_${selectedSubject}`, JSON.stringify(completedModules));
         }
-    }, [completedModules, selectedSubject]);
+    }, [completedModules, selectedSubject, regularUser]);
 
     // When selectedSubject changes, reload progress from localStorage for that course
     useEffect(() => {
-        if (selectedSubject) {
-            const savedSub = localStorage.getItem(`tutorProgress_subtopics_${selectedSubject}`);
-            const savedTop = localStorage.getItem(`tutorProgress_topics_${selectedSubject}`);
-            const savedMod = localStorage.getItem(`tutorProgress_modules_${selectedSubject}`);
+        if (selectedSubject && regularUser?.id) {
+            const userId = regularUser.id;
+            const savedSub = localStorage.getItem(`tutorProgress_subtopics_${userId}_${selectedSubject}`);
+            const savedTop = localStorage.getItem(`tutorProgress_topics_${userId}_${selectedSubject}`);
+            const savedMod = localStorage.getItem(`tutorProgress_modules_${userId}_${selectedSubject}`);
             setCompletedSubtopics(savedSub ? JSON.parse(savedSub) : []);
             setCompletedTopics(savedTop ? JSON.parse(savedTop) : []);
             setCompletedModules(savedMod ? JSON.parse(savedMod) : []);
         }
-    }, [selectedSubject]);
+    }, [selectedSubject, regularUser]);
 
     // Listen for progress updates from chat (mastery achieved)
     useEffect(() => {
@@ -350,7 +358,7 @@ function TutorModePage({
                     setCurrentModulePathId(pos.moduleId);
                     // Force the current session to own this mapped module when auto-advanced or newly started
                     if (currentSessionId) {
-                        const moduleKey = `tutorSession_structured_${selectedSubject || 'default'}_${pos.moduleId}`;
+                        const moduleKey = sessionKeyFor('structured', pos.moduleId);
                         localStorage.setItem(moduleKey, currentSessionId);
                     }
                 }
@@ -373,7 +381,7 @@ function TutorModePage({
 
     useEffect(() => {
         const handleQuizResult = (event) => {
-            const { result, index: eventIdx, feedback } = event.detail; // result: 'correct' | 'incorrect'
+            const { result, index: eventIdx, feedback, selectedOption } = event.detail; // result: 'correct' | 'incorrect'
 
             // Priority: index from event (captures state at time of sending), 
             // fallback to current ref.
@@ -382,11 +390,12 @@ function TutorModePage({
                 : currentQuestionRef.current?.index;
 
             if (idx !== undefined && idx !== null) {
+                const topic = currentQuestionRef.current?.question?.topic;
                 setQuestionResults(prev => {
                     // Logic for "Constant" score: Once marked correct, keep it.
                     // This prevents flip-flopping if the AI re-evaluates follow-up chat.
                     if (prev[idx]?.result === 'correct' && result === 'incorrect') return prev;
-                    return { ...prev, [idx]: { result, feedback } };
+                    return { ...prev, [idx]: { result, feedback, topic, selectedOption } };
                 });
             }
         };
@@ -427,12 +436,15 @@ Source Fact: "[Insert a direct quote from the DOCUMENT ANSWER that contains the 
 
 Correction: [If "Needs Adjustment", provide the complete correct explanation based ONLY on the document. If "Correct", this section should say "Your answer matches the course material perfectly."]
 
+Reflective Socratic Follow-up: [Provide a brief, open-ended question that prompts the student to think deeper about the concept, apply it to a new scenario, or reflect on why their answer differed from the expected model. This must be a Socratic question that helps them self-discover.]
+
 Next Step: Click "Next" in the Quiz Panel to continue.
 
 RULES:
 1. ONLY mark "✅ Correct" if all essential concepts from the DOCUMENT ANSWER are present.
 2. If the answer is vague, incomplete, or slightly off, mark "❌ Needs Adjustment".
-3. Accuracy is paramount. Use ONLY the provided DOCUMENT ANSWER.`
+3. Accuracy is paramount. Use ONLY the provided DOCUMENT ANSWER.
+4. Always include a "Reflective Socratic Follow-up" question at the end of your analysis to guide the student towards deeper understanding, regardless of whether their answer was correct or needs adjustment.`
             );
         }
     }, [setSystemPrompt]);
@@ -546,9 +558,37 @@ RULES:
         }
     }, [selectedSubject]);
 
+    // Position tracking - Resolve active Socratic position from backend
+    const fetchTutorPosition = useCallback(async () => {
+        if (!selectedSubject) {
+            setCurrentTopic(null);
+            setCurrentSubtopic(null);
+            setCurrentModulePathId(null);
+            return;
+        }
+        try {
+            const res = await api.getTutorProgress(selectedSubject);
+            if (res?.success && res?.position) {
+                const pos = res.position;
+                setCurrentTopic(pos.topicId || null);
+                setCurrentSubtopic(pos.subtopicId || null);
+                setCurrentModulePathId(pos.moduleId || null);
+
+                // Force the current session to own this mapped module when loaded/restored
+                if (currentSessionId && pos.moduleId) {
+                    const moduleKey = sessionKeyFor('structured', pos.moduleId);
+                    localStorage.setItem(moduleKey, currentSessionId);
+                }
+            }
+        } catch (err) {
+            console.error("[TutorModePage] Failed to fetch resolved tutor position on load:", err);
+        }
+    }, [selectedSubject, currentSessionId]);
+
     useEffect(() => {
         fetchProgress();
-    }, [fetchProgress]);
+        fetchTutorPosition();
+    }, [fetchProgress, fetchTutorPosition]);
 
     // Function to mark progress - can be called from chat when mastery is achieved
     const markSubtopicComplete = async (subtopicId) => {
@@ -759,6 +799,7 @@ RULES:
                                     ) : (
                                         <QuizPanel
                                             selectedCourse={selectedSubject}
+                                            moduleId={currentModulePathId}
                                             onQuestionChange={handleQuestionChange}
                                             questionResults={questionResults}
                                             onResetQuiz={handleResetQuiz}

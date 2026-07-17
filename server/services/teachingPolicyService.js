@@ -1,22 +1,29 @@
 // server/services/teachingPolicyService.js
 // Full adaptive teaching policy — deterministic, no external calls.
 
-function clamp01(value) {
-    const n = Number(value);
-    if (Number.isNaN(n)) return 0;
-    return Math.max(0, Math.min(1, n));
-}
+const { normalizeMasteryScore } = require('./teachingReflectionService');
 
 /**
  * Cognitive level order used to determine when to advance or downgrade.
  */
-const COGNITIVE_ORDER = ['L1_CONCEPT', 'L2_COMPREHENSION', 'L3_APPLICATION', 'L4_EVALUATION'];
+// Aligned with socraticTutorService.js / tutorStateMachine.js cognitive labels
+const COGNITIVE_ORDER = ['L1_CONCEPT', 'L2_APPLICATION', 'L3_CRITICAL', 'L4_EVALUATION'];
 const COGNITIVE_LABELS = {
     L1_CONCEPT: 'recall',
-    L2_COMPREHENSION: 'comprehension',
-    L3_APPLICATION: 'application',
-    L4_EVALUATION: 'synthesis'
+    L2_APPLICATION: 'application',
+    L3_CRITICAL: 'analysis',
+    L4_EVALUATION: 'evaluation'
 };
+
+/** Map legacy enum values for backward compatibility */
+function normalizeCognitiveLevel(level) {
+    const aliases = {
+        L2_COMPREHENSION: 'L2_APPLICATION',
+        L3_APPLICATION: 'L3_CRITICAL'
+    };
+    const normalized = aliases[level] || level || 'L1_CONCEPT';
+    return COGNITIVE_ORDER.includes(normalized) ? normalized : 'L1_CONCEPT';
+}
 
 /**
  * Map an action to a prose instruction injected into the LLM system prompt.
@@ -51,25 +58,28 @@ function decideTeachingAction({
     understandingLevel = null,
     isFirstTurn = false
 } = {}) {
-    const mastery = clamp01(masteryScore);
+    const mastery = normalizeMasteryScore(masteryScore);
     const wrong = Math.max(consecutiveWrong, 0);
     const hints = Math.max(hintUsage, hintsGiven, 0);
-    const levelIdx = COGNITIVE_ORDER.indexOf(cognitiveLevel);
+    const normalizedLevel = normalizeCognitiveLevel(cognitiveLevel);
+    const levelIdx = COGNITIVE_ORDER.indexOf(normalizedLevel);
     const safeIdx = levelIdx === -1 ? 0 : levelIdx;
 
     // ── Emotional state overrides ──────────────────────────────────────────────
-    if (emotionalState === 'FRUSTRATION' || emotionalState === 'ANXIETY') {
-        if (wrong >= 1 || hints >= 1) {
-            return build('ENCOURAGE', mastery, cognitiveLevel);
+    const isFrustrated = emotionalState === 'FRUSTRATION' || emotionalState === 'FRUSTRATED' || emotionalState === 'ANXIETY';
+    if (isFrustrated) {
+        if (wrong >= 2 || hints >= 2) {
+            return build('ENCOURAGE', mastery, normalizedLevel);
         }
     }
-    if (emotionalState === 'BOREDOM' && mastery > 0.55 && safeIdx < COGNITIVE_ORDER.length - 1) {
-        return build('ADVANCE_DIFFICULTY', mastery, cognitiveLevel);
+    const isBored = emotionalState === 'BOREDOM' || emotionalState === 'BORED';
+    if (isBored && mastery > 0.55 && safeIdx < COGNITIVE_ORDER.length - 1) {
+        return build('ADVANCE_DIFFICULTY', mastery, normalizedLevel);
     }
 
-    // ── Very first turn — always explain before questioning ───────────────────
+    // ── First turn — Socratic elicitation before exposition ───────────────────
     if (isFirstTurn || turnCount === 0) {
-        return build('EXPLAIN_CONCEPT', mastery, cognitiveLevel);
+        return build('ASK_QUESTION', mastery, normalizedLevel);
     }
 
     // ── Progress-ratio heuristic (curriculum-guided mode) ────────────────────
@@ -77,36 +87,36 @@ function decideTeachingAction({
         const total = currentStep + remainingSteps + 1;
         const ratio = total > 0 ? currentStep / total : 0;
 
-        if (ratio < 0.20) return build('EXPLAIN_CONCEPT', mastery, cognitiveLevel);
-        if (ratio < 0.50) return build('ASK_QUESTION', mastery, cognitiveLevel);
+        if (ratio < 0.20) return build('ASK_QUESTION', mastery, normalizedLevel);
+        if (ratio < 0.50) return build('ASK_QUESTION', mastery, normalizedLevel);
         if (ratio < 0.80) {
-            if (wrong >= 2) return build('GIVE_HINT', mastery, cognitiveLevel);
-            return build('ASK_QUESTION', mastery, cognitiveLevel);
+            if (wrong >= 2) return build('GIVE_HINT', mastery, normalizedLevel);
+            return build('ASK_QUESTION', mastery, normalizedLevel);
         }
-        return build('SUMMARISE_AND_ADVANCE', mastery, cognitiveLevel);
+        return build('SUMMARISE_AND_ADVANCE', mastery, normalizedLevel);
     }
 
     // ── Stuck detection ───────────────────────────────────────────────────────
-    if (wrong >= 4) return build('RETEACH_CONCEPT', mastery, cognitiveLevel);
-    if (wrong >= 3 && hints >= 3) return build('REVIEW_PREREQUISITES', mastery, cognitiveLevel);
-    if (wrong >= 2) return build('GIVE_HINT', mastery, cognitiveLevel);
-    if (hints >= 4) return build('SIMPLIFY_PROBLEM', mastery, cognitiveLevel);
+    if (wrong >= 4) return build('RETEACH_CONCEPT', mastery, normalizedLevel);
+    if (wrong >= 3 && hints >= 3) return build('REVIEW_PREREQUISITES', mastery, normalizedLevel);
+    if (wrong >= 2) return build('GIVE_HINT', mastery, normalizedLevel);
+    if (hints >= 4) return build('SIMPLIFY_PROBLEM', mastery, normalizedLevel);
 
     // ── Understanding level (from StudentKnowledgeState) ─────────────────────
-    if (understandingLevel === 'MISUNDERSTOOD' || understandingLevel === 'CONFUSED') {
-        return wrong >= 1 ? build('RETEACH_CONCEPT', mastery, cognitiveLevel) : build('GIVE_HINT', mastery, cognitiveLevel);
+    if (understandingLevel === 'MISUNDERSTOOD' || understandingLevel === 'CONFUSED' || understandingLevel === 'MISCONCEPTION') {
+        return wrong >= 2 ? build('RETEACH_CONCEPT', mastery, normalizedLevel) : build('GIVE_HINT', mastery, normalizedLevel);
     }
 
     // ── Mastery-based routing ─────────────────────────────────────────────────
-    if (mastery < 0.25) return build('EXPLAIN_CONCEPT', mastery, cognitiveLevel);
+    if (mastery < 0.25 && wrong >= 1) return build('GIVE_HINT', mastery, normalizedLevel);
     if (mastery >= 0.85 && safeIdx < COGNITIVE_ORDER.length - 1) {
-        return build('ADVANCE_DIFFICULTY', mastery, cognitiveLevel);
+        return build('ADVANCE_DIFFICULTY', mastery, normalizedLevel);
     }
     if (mastery >= 0.75 && turnCount > 0 && turnCount % 8 === 0) {
-        return build('METACOGNITIVE_PROMPT', mastery, cognitiveLevel);
+        return build('METACOGNITIVE_PROMPT', mastery, normalizedLevel);
     }
 
-    return build('ASK_QUESTION', mastery, cognitiveLevel);
+    return build('ASK_QUESTION', mastery, normalizedLevel);
 }
 
 /**
@@ -124,21 +134,28 @@ function build(action, mastery, cognitiveLevel) {
 /**
  * Determine whether the session should advance to the next cognitive level.
  */
-function shouldAdvanceCognitiveLevel({ masteryScore = 0, consecutiveWrong = 0, turnCount = 0 } = {}) {
-    return clamp01(masteryScore) >= 0.8 && consecutiveWrong === 0 && turnCount >= 3;
+function shouldAdvanceCognitiveLevel({
+    masteryScore = 0,
+    consecutiveWrong = 0,
+    turnCount = 0,
+    consecutiveCorrectAtLevel = 0
+} = {}) {
+    if (consecutiveCorrectAtLevel >= 2 && consecutiveWrong === 0) return true;
+    return normalizeMasteryScore(masteryScore) >= 0.8 && consecutiveWrong === 0 && turnCount >= 3;
 }
 
 /**
  * Determine whether the session should downgrade cognitive level (struggling student).
  */
 function shouldDowngradeCognitiveLevel({ masteryScore = 0, consecutiveWrong = 0 } = {}) {
-    return consecutiveWrong >= 3 || clamp01(masteryScore) < 0.2;
+    return consecutiveWrong >= 3 || normalizeMasteryScore(masteryScore) < 0.2;
 }
 
 module.exports = {
     decideTeachingAction,
     shouldAdvanceCognitiveLevel,
     shouldDowngradeCognitiveLevel,
+    normalizeCognitiveLevel,
     COGNITIVE_ORDER,
     ACTION_INSTRUCTIONS,
 };

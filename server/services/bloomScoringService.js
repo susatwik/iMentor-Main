@@ -44,14 +44,32 @@ function getCategoryName(level) {
 }
 
 /**
- * Updates the user's score based on the query complexity.
+ * Updates the user's score based on the Bloom's level and optional XP multiplier.
+ *
+ * @param {string}  userId        - MongoDB user ID
+ * @param {string}  query         - Raw student response (used as fallback for heuristic)
+ * @param {number|null} overrideLevel  - LLM-supplied Bloom level (1-6); null → keyword heuristic
+ * @param {number}  xpMultiplier  - LLM-supplied quality multiplier (0.5–3.0); default 1.0
  */
-async function updateUserScore(userId, query) {
+async function updateUserScore(userId, query, overrideLevel = null, xpMultiplier = 1.0) {
     try {
-        const { level, category } = analyzeQueryDepth(query);
+        const parsedOverride = Number(overrideLevel);
+        const hasValidOverride = Number.isFinite(parsedOverride) && parsedOverride >= 1 && parsedOverride <= 6;
+        const { level, category } = hasValidOverride
+            ? {
+                level: Math.round(parsedOverride),
+                category: getCategoryName(Math.round(parsedOverride))
+            }
+            : analyzeQueryDepth(query);
 
-        // XP Calculation: Base + (Level * Multiplier)
-        const xpReward = 10 + (level * 5);
+        // Clamp multiplier to a safe range (1.0 when not provided)
+        const safeMultiplier = Number.isFinite(Number(xpMultiplier))
+            ? Math.max(0.5, Math.min(3.0, Number(xpMultiplier)))
+            : 1.0;
+
+        // XP Calculation: (Base + Level * 5) * xpMultiplier, rounded to nearest integer
+        const baseXP = 10 + (level * 5);
+        const xpReward = Math.round(baseXP * safeMultiplier);
 
         let userScore = await UserScore.findOne({ userId });
         if (!userScore) {
@@ -64,7 +82,8 @@ async function updateUserScore(userId, query) {
 
         await userScore.save();
 
-        console.log(`[BloomScoring] User ${userId} | Query Level: ${level} (${category}) | +${xpReward} XP`);
+        const source = hasValidOverride ? 'LLM' : 'Heuristic';
+        console.log(`[BloomScoring] User ${userId} | Source: ${source} | Bloom: ${level} (${category}) | Multiplier: ${safeMultiplier}x | +${xpReward} XP`);
         return userScore;
     } catch (error) {
         console.error('[BloomScoring] Failed to update score:', error);

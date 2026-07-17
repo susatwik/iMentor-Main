@@ -17,8 +17,9 @@ import {
     ArrowLeft, GraduationCap, BookOpen, Layers, Hash,
     ChevronDown, ChevronRight, Loader2, AlertTriangle,
     RefreshCw, FileText, MessageSquare, BookMarked,
-    Search, X, Menu
+    Search, X, Menu, Brain
 } from 'lucide-react';
+import CourseQuizModal from './CourseQuizModal.jsx';
 
 // Initialise Mermaid once (dark theme to match UI)
 mermaid.initialize({
@@ -237,7 +238,7 @@ function TopicItem({ topic, activeSubtopic, onSubtopicSelect, defaultOpen }) {
 }
 
 // ─── Module item ───────────────────────────────────────────────────────────────
-function ModuleItem({ module, activeSubtopic, onSubtopicSelect, defaultOpen }) {
+function ModuleItem({ module, activeSubtopic, onSubtopicSelect, defaultOpen, onTakeQuiz }) {
     const [open, setOpen] = useState(defaultOpen || false);
     const hasActive = module.topics?.some(t =>
         t.subtopics?.some(s => s.id === activeSubtopic?.id)
@@ -278,6 +279,18 @@ function ModuleItem({ module, activeSubtopic, onSubtopicSelect, defaultOpen }) {
                             defaultOpen={ti === 0}
                         />
                     ))}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (typeof onTakeQuiz === 'function') {
+                                onTakeQuiz({ moduleId: module.id, moduleName: module.name });
+                            }
+                        }}
+                        className="w-full mt-2 flex items-center justify-center gap-1.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/45 text-indigo-300 rounded-lg text-xs font-semibold transition-all"
+                    >
+                        <Brain size={12} />
+                        Take Module Quiz
+                    </button>
                 </div>
             )}
         </div>
@@ -285,7 +298,7 @@ function ModuleItem({ module, activeSubtopic, onSubtopicSelect, defaultOpen }) {
 }
 
 // ─── Left Sidebar (tree) ───────────────────────────────────────────────────────
-function CourseSidebar({ courseName, structure, activeSubtopic, onSubtopicSelect, onBack, sidebarOpen, setSidebarOpen }) {
+function CourseSidebar({ courseName, structure, activeSubtopic, onSubtopicSelect, onBack, sidebarOpen, setSidebarOpen, onTakeQuiz }) {
     const modules = structure?.modules || [];
     const displayName = stripExt(courseName);
 
@@ -357,6 +370,7 @@ function CourseSidebar({ courseName, structure, activeSubtopic, onSubtopicSelect
                             activeSubtopic={activeSubtopic}
                             onSubtopicSelect={onSubtopicSelect}
                             defaultOpen={mi === 0}
+                            onTakeQuiz={onTakeQuiz}
                         />
                     ))
                 )}
@@ -729,7 +743,7 @@ function StructureLoading() {
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function CourseExplorerPage() {
     const navigate = useNavigate();
-    const { setSelectedSubject, setInitialPromptForNewSession } = useAppState();
+    const { setSelectedSubject, setInitialPromptForNewSession, setTutorMode, setTutorModeType } = useAppState();
 
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [structure, setStructure]           = useState(null);
@@ -737,6 +751,16 @@ export default function CourseExplorerPage() {
     const [structError, setStructError]       = useState(null);
     const [activeSubtopic, setActiveSubtopic] = useState(null);
     const [sidebarOpen, setSidebarOpen]       = useState(true);
+
+    const [quizModalOpen, setQuizModalOpen] = useState(false);
+    const [quizModuleId, setQuizModuleId] = useState(null);
+    const [quizModuleName, setQuizModuleName] = useState(null);
+
+    const handleOpenQuiz = useCallback(({ moduleId = null, moduleName = null }) => {
+        setQuizModuleId(moduleId);
+        setQuizModuleName(moduleName);
+        setQuizModalOpen(true);
+    }, []);
 
     const handleSelectCourse = useCallback((course) => {
         setSelectedCourse(course);
@@ -770,13 +794,15 @@ export default function CourseExplorerPage() {
     }, []);
 
     const handleAskAI = useCallback(() => {
-        // Navigate to chat with prompt pre-filled; RAG is already set via setSelectedSubject
+        // Navigate to tutor mode with prompt pre-filled; RAG is already set via setSelectedSubject
         const prompt = activeSubtopic
             ? `Explain "${activeSubtopic.name}" from ${stripExt(selectedCourse)}`
             : `Teach me about ${stripExt(selectedCourse)}`;
         setInitialPromptForNewSession(prompt);
-        navigate('/');
-    }, [activeSubtopic, selectedCourse, setInitialPromptForNewSession, navigate]);
+        setTutorMode(true);
+        setTutorModeType('structured');
+        navigate('/tutor');
+    }, [activeSubtopic, selectedCourse, setInitialPromptForNewSession, setTutorMode, setTutorModeType, navigate]);
 
     // ── Phase 1: No course selected → grid ──
     if (!selectedCourse) {
@@ -828,6 +854,7 @@ export default function CourseExplorerPage() {
             onBack={handleBack}
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
+            onTakeQuiz={handleOpenQuiz}
         />
     );
 
@@ -900,6 +927,13 @@ export default function CourseExplorerPage() {
                             RAG active
                         </div>
                         <button
+                            onClick={() => handleOpenQuiz({ moduleId: null, moduleName: null })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/30 text-purple-300 rounded-lg text-xs font-semibold transition-all animate-fade-in"
+                        >
+                            <Brain size={12} />
+                            Quiz
+                        </button>
+                        <button
                             onClick={handleAskAI}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/30 text-indigo-300 rounded-lg text-xs font-semibold transition-all"
                         >
@@ -918,6 +952,14 @@ export default function CourseExplorerPage() {
                     setSidebarOpen={setSidebarOpen}
                 />
             </div>
+            
+            <CourseQuizModal
+                isOpen={quizModalOpen}
+                onClose={() => setQuizModalOpen(false)}
+                courseName={selectedCourse}
+                moduleId={quizModuleId}
+                moduleName={quizModuleName}
+            />
         </div>
     );
 }

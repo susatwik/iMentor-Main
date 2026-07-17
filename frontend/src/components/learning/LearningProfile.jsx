@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Brain, Target, Award, AlertTriangle, BookOpen, RefreshCw,
     Download, Trash2, ChevronRight, BarChart3, TrendingUp, History, ArrowLeft,
-    ChevronUp, ChevronDown
+    ChevronUp, ChevronDown, GraduationCap
 } from 'lucide-react';
 import Animate from '../core/Animate.jsx';
 import api from '../../services/api';
@@ -202,6 +202,7 @@ const LearningProfile = () => {
                         <div className="flex border-b border-border-light dark:border-border-dark overflow-x-auto no-scrollbar">
                             <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} label="Overview" icon={BarChart3} />
                             <TabButton active={activeTab === 'concepts'} onClick={() => setActiveTab('concepts')} label="Topics & Mastery" icon={BookOpen} />
+                            <TabButton active={activeTab === 'quiz'} onClick={() => setActiveTab('quiz')} label="Quiz Performance" icon={GraduationCap} />
                             <TabButton active={activeTab === 'insights'} onClick={() => setActiveTab('insights')} label="Learning Insights" icon={Lightbulb} />
                             <TabButton active={activeTab === 'history'} onClick={() => setActiveTab('history')} label="Session History" icon={History} />
                         </div>
@@ -418,7 +419,194 @@ const LearningProfile = () => {
                                     </div>
                                 </Animate>
                             )}
-                    </div>
+
+                            {activeTab === 'quiz' && (
+                                <Animate
+                                    key="quiz"
+                                    animation="slide-up"
+                                    className="space-y-6"
+                                >
+                                    {/* Overall Quiz Stats Cards */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <StatCard
+                                            label="Quizzes Completed"
+                                            value={summary.totalQuizzes || 0}
+                                            icon={History}
+                                            color="blue"
+                                        />
+                                        <StatCard
+                                            label="Average Quiz Score"
+                                            value={`${summary.averageScore || 0}%`}
+                                            icon={Award}
+                                            color="green"
+                                        />
+                                        <StatCard
+                                            label="Learning Stage"
+                                            value={summary.learningStage || 'Beginner'}
+                                            icon={GraduationCap}
+                                            color="amber"
+                                        />
+                                        <StatCard
+                                            label="Most Improved Area"
+                                            value={summary.mostImproved || 'N/A'}
+                                            icon={TrendingUp}
+                                            color="blue"
+                                        />
+                                    </div>
+
+                                    {/* Two Column Breakdown */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        {/* Quiz Attempt Progression (Left / col-span-2) */}
+                                        <div className="lg:col-span-2 space-y-6">
+                                            <Card title="Quiz Attempt Progression" icon={History}>
+                                                <div className="p-6 space-y-6">
+                                                    {/* Course-by-course metrics aggregate (First, Best, Latest) */}
+                                                    <div className="space-y-4">
+                                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Course Performance Summary</h4>
+                                                        {(() => {
+                                                            const coursesGroup = {};
+                                                            (data.quizHistoryTimeline || []).forEach(q => {
+                                                                if (!coursesGroup[q.courseName]) {
+                                                                    coursesGroup[q.courseName] = [];
+                                                                }
+                                                                coursesGroup[q.courseName].push(q);
+                                                            });
+
+                                                            const courseStats = Object.entries(coursesGroup).map(([course, attempts]) => {
+                                                                // Sort chronological ascending to find first, latest, and best
+                                                                const chron = [...attempts].sort((a, b) => new Date(a.date) - new Date(b.date));
+                                                                const scores = attempts.map(a => a.score);
+                                                                return {
+                                                                    course,
+                                                                    attemptsCount: attempts.length,
+                                                                    first: chron[0].score,
+                                                                    latest: chron[chron.length - 1].score,
+                                                                    best: Math.max(...scores)
+                                                                };
+                                                            });
+
+                                                            if (courseStats.length === 0) {
+                                                                return <p className="text-xs text-text-muted-light dark:text-text-muted-dark italic">No course quiz data recorded yet.</p>;
+                                                            }
+
+                                                            return (
+                                                                <div className="grid grid-cols-1 gap-4">
+                                                                    {courseStats.map((cs, i) => (
+                                                                        <div key={i} className="p-4 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl space-y-3">
+                                                                            <div className="flex justify-between items-center">
+                                                                                <h5 className="font-bold text-sm text-text-light dark:text-text-dark">{cs.course}</h5>
+                                                                                <span className="text-[10px] bg-indigo-500/10 text-indigo-400 font-bold px-2 py-0.5 rounded border border-indigo-500/25">
+                                                                                    {cs.attemptsCount} {cs.attemptsCount === 1 ? 'Attempt' : 'Attempts'}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="grid grid-cols-3 gap-2 text-center">
+                                                                                <div className="p-2 bg-gray-100 dark:bg-gray-800/40 rounded-lg">
+                                                                                    <span className="text-[9px] text-text-muted-light dark:text-text-muted-dark uppercase font-semibold block">First Score</span>
+                                                                                    <span className="text-sm font-bold text-text-light dark:text-text-dark">{cs.first}%</span>
+                                                                                </div>
+                                                                                <div className="p-2 bg-gray-100 dark:bg-gray-800/40 rounded-lg border border-primary/20">
+                                                                                    <span className="text-[9px] text-primary dark:text-primary-light uppercase font-semibold block">Latest Score</span>
+                                                                                    <span className="text-sm font-bold text-primary dark:text-primary-light">{cs.latest}%</span>
+                                                                                </div>
+                                                                                <div className="p-2 bg-gray-100 dark:bg-gray-800/40 rounded-lg">
+                                                                                    <span className="text-[9px] text-green-500 uppercase font-semibold block">Best Score</span>
+                                                                                    <span className="text-sm font-bold text-green-500">{cs.best}%</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
+
+                                                    {/* Chronological list of attempts */}
+                                                    <div className="space-y-3">
+                                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Detailed Attempt Timeline</h4>
+                                                        <div className="max-h-[350px] overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+                                                            {data.quizHistoryTimeline && data.quizHistoryTimeline.length > 0 ? (
+                                                                data.quizHistoryTimeline.map((attempt, idx) => (
+                                                                    <div key={idx} className="p-4 bg-gray-50 dark:bg-gray-900/30 border border-border-light dark:border-border-dark rounded-xl space-y-2.5">
+                                                                        <div className="flex justify-between items-start">
+                                                                            <div>
+                                                                                <span className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider block">{attempt.courseName}</span>
+                                                                                <h5 className="font-semibold text-xs text-text-light dark:text-text-dark">{attempt.module}</h5>
+                                                                            </div>
+                                                                            <div className="text-right">
+                                                                                <span className="text-sm font-extrabold text-text-light dark:text-text-dark">{attempt.score}%</span>
+                                                                                <span className="text-[9px] text-text-muted-light dark:text-text-muted-dark block">
+                                                                                    {new Date(attempt.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        {attempt.remediation && (
+                                                                            <div className="p-3 bg-teal-500/5 border border-teal-500/10 rounded-lg space-y-1">
+                                                                                <span className="text-[8px] text-teal-400 font-bold uppercase tracking-widest block">AI Remediation Guide</span>
+                                                                                <p className="text-[11px] text-text-muted-light dark:text-text-muted-dark leading-relaxed">
+                                                                                    <span className="font-semibold text-teal-300">Next Step: </span>
+                                                                                    {attempt.remediation.recommendation}
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark italic py-4">No quiz timeline records found.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        </div>
+
+                                        {/* Subject Focus Breakdown (Right / col-span-1) */}
+                                        <div className="space-y-6">
+                                            <Card title="Subject Focus Breakdown" icon={Brain}>
+                                                <div className="p-6 space-y-6">
+                                                    {/* Strong Topics */}
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2 border-b border-border-light dark:border-border-dark pb-2">
+                                                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Strong Mastery Topics</h4>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {summary.strongTopics && summary.strongTopics.length > 0 ? (
+                                                                summary.strongTopics.map((topic, i) => (
+                                                                    <span key={i} className="px-2.5 py-1 bg-green-500/10 text-green-400 font-semibold border border-green-500/20 text-xs rounded-lg animate-in fade-in">
+                                                                        {topic}
+                                                                    </span>
+                                                                ))
+                                                            ) : (
+                                                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark italic">No strong topics identified yet.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Weak Topics */}
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2 border-b border-border-light dark:border-border-dark pb-2">
+                                                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Remediation Required</h4>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {summary.weakTopics && summary.weakTopics.length > 0 ? (
+                                                                summary.weakTopics.map((topic, i) => (
+                                                                    <span key={i} className="px-2.5 py-1 bg-red-500/10 text-red-400 font-semibold border border-red-500/20 text-xs rounded-lg animate-in fade-in">
+                                                                        {topic}
+                                                                    </span>
+                                                                ))
+                                                            ) : (
+                                                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark italic">No focus topics needing remediation at this stage.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        </div>
+                                    </div>
+                                </Animate>
+                            )}
+                        </div>
                 </div>
             </div>
         </div>

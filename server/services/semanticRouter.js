@@ -15,7 +15,28 @@ const axios = require('axios');
 const log  = require('../utils/logger');
 
 const CACHE_FILE = path.join(__dirname, '../data/semantic_router_cache.json');
-const RAG_EMBED_URL = () => `${(process.env.PYTHON_RAG_SERVICE_URL || 'http://localhost:2001').trim()}/embed`;
+// [Team9] Multi-URL embed with RAG_PORT fallback — resilient against port config mismatch
+function _embedUrls() {
+    const primaryBase = (process.env.PYTHON_RAG_SERVICE_URL || 'http://localhost:2001').trim().replace(/\/+$/, '');
+    const urls = [`${primaryBase}/embed`];
+    const configuredPort = String(process.env.RAG_PORT || '').trim();
+    const primaryPort = (primaryBase.match(/:(\d+)(?:\/|$)/) || [])[1] || '';
+    if (configuredPort && configuredPort !== primaryPort) {
+        urls.push(`http://localhost:${configuredPort}/embed`);
+    }
+    if (primaryPort === '2001') urls.push('http://localhost:2005/embed'); // dev fallback
+    return [...new Set(urls)];
+}
+async function _postEmbed(payload, timeout) {
+    let lastErr;
+    for (const url of _embedUrls()) {
+        try { return await axios.post(url, payload, { timeout }); }
+        catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('All embed endpoints failed');
+}
+// [/Team9]
+const RAG_EMBED_URL = () => _embedUrls()[0]; // kept for backward compat
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INTENT CATEGORIES WITH SEMANTIC EXAMPLES
@@ -534,11 +555,43 @@ _initPromise = initialize().catch(err =>
   log.warn('SEMANTIC_ROUTER', `Background init failed: ${err.message}`)
 );
 
+
+// [Team9] Route decision helpers used by queryClassifierService
+function mapIntentToRoute(intent) {
+    switch (intent) {
+        case 'MATHEMATICAL_REASONING': return 'tot';
+        case 'TECHNICAL_CODING':       return 'tot';
+        case 'CONCEPTUAL_EXPLANATION': return 'tot';
+        case 'MEMORY_RECALL':          return 'direct_answer';
+        case 'ACADEMIC_SEARCH':        return 'academic_search';
+        case 'DEEP_RESEARCH':          return 'deep_research';
+        case 'direct_answer':          return 'direct_answer';
+        default:                       return 'direct_answer';
+    }
+}
+function isDirectAnswer(routeResult, thresholds) {
+    const t = thresholds?.SEMANTIC_DIRECT_ANSWER || 0.75;
+    return routeResult?.route === 'direct_answer' && routeResult?.confidence >= t;
+}
+function isTotRoute(routeResult, complexityScore, thresholds) {
+    const tConf = thresholds?.SEMANTIC_TOT || 0.70;
+    const tComp = thresholds?.TOT_MIN_COMPLEXITY || 85;
+    return routeResult?.route === 'tot' && routeResult?.confidence >= tConf && (complexityScore || 0) >= tComp;
+}
+function isTotRouteUserExplicit(complexityScore, thresholds) {
+    return (complexityScore || 0) >= (thresholds?.TOT_USER_EXPLICIT_MIN_COMPLEXITY || 40);
+}
+// [/Team9]
+
 module.exports = {
   initialize,
   classifyIntent,
   routeQuery,
   selectLLMForIntent,
+  mapIntentToRoute,
+  isDirectAnswer,
+  isTotRoute,
+  isTotRouteUserExplicit,
   INTENT_ROUTES,
 };
 

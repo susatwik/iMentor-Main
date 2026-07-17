@@ -24,44 +24,91 @@ async function fetchExistingGraphCourses(pythonServiceUrl) {
   return [];
 }
 
+function getCourseNameFromPrefix(prefix) {
+  if (prefix.toLowerCase() === 'os') {
+    return 'Operating Systems';
+  }
+  return prefix
+    .replace(/[_-]/g, ' ')
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
 async function readSeedCourseFolders(bootstrapDir) {
-  if (!fs.existsSync(bootstrapDir)) {
-    return [];
+  const courseFolders = [];
+  const processedNames = new Set();
+
+  // 1. Read from bootstrapDir
+  if (fs.existsSync(bootstrapDir)) {
+    const entries = await fs.promises.readdir(bootstrapDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const courseName = entry.name.trim();
+      if (!courseName) continue;
+
+      const courseDir = path.join(bootstrapDir, entry.name);
+      const files = await fs.promises.readdir(courseDir);
+
+      let syllabusCsvPath = path.join(courseDir, 'syllabus.csv');
+      if (!fs.existsSync(syllabusCsvPath)) {
+        const firstCsv = files.find(file => file.toLowerCase().endsWith('.csv'));
+        if (firstCsv) {
+          syllabusCsvPath = path.join(courseDir, firstCsv);
+        }
+      }
+
+      const materialsFolderCandidate = path.join(courseDir, 'materials');
+      const materialsFolder = fs.existsSync(materialsFolderCandidate)
+        ? materialsFolderCandidate
+        : courseDir;
+
+      courseFolders.push({
+        courseName,
+        courseDir,
+        syllabusCsvPath,
+        materialsFolder,
+        hasSyllabus: fs.existsSync(syllabusCsvPath),
+        hasMaterialsDir: fs.existsSync(materialsFolder) && fs.statSync(materialsFolder).isDirectory(),
+      });
+      processedNames.add(courseName.toLowerCase());
+    }
   }
 
-  const entries = await fs.promises.readdir(bootstrapDir, { withFileTypes: true });
-  const courseFolders = [];
+  // 2. Dynamically scan server/rag_service/data/ for extra courses
+  const ragDataDir = path.join(__dirname, '..', 'rag_service', 'data');
+  if (fs.existsSync(ragDataDir)) {
+    try {
+      const ragEntries = await fs.promises.readdir(ragDataDir, { withFileTypes: true });
+      for (const entry of ragEntries) {
+        if (!entry.isFile() || !entry.name.toLowerCase().endsWith('_syllabus.csv')) continue;
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+        const fileName = entry.name;
+        const prefix = fileName.slice(0, -13); // Remove "_syllabus.csv"
+        const courseName = getCourseNameFromPrefix(prefix);
 
-    const courseName = entry.name.trim();
-    if (!courseName) continue;
+        if (processedNames.has(courseName.toLowerCase())) {
+          continue;
+        }
 
-    const courseDir = path.join(bootstrapDir, entry.name);
-    const files = await fs.promises.readdir(courseDir);
+        const syllabusCsvPath = path.join(ragDataDir, fileName);
+        const materialsFolderCandidate = path.join(ragDataDir, `${prefix}_materials`);
+        const materialsFolder = fs.existsSync(materialsFolderCandidate) ? materialsFolderCandidate : ragDataDir;
 
-    let syllabusCsvPath = path.join(courseDir, 'syllabus.csv');
-    if (!fs.existsSync(syllabusCsvPath)) {
-      const firstCsv = files.find(file => file.toLowerCase().endsWith('.csv'));
-      if (firstCsv) {
-        syllabusCsvPath = path.join(courseDir, firstCsv);
+        courseFolders.push({
+          courseName,
+          courseDir: ragDataDir,
+          syllabusCsvPath,
+          materialsFolder,
+          hasSyllabus: fs.existsSync(syllabusCsvPath),
+          hasMaterialsDir: fs.existsSync(materialsFolder) && fs.statSync(materialsFolder).isDirectory(),
+        });
+        processedNames.add(courseName.toLowerCase());
+        log.info('SYSTEM', `Startup bootstrap discovered course '${courseName}' in rag_service/data dynamically.`);
       }
+    } catch (err) {
+      log.error('SYSTEM', `Failed to dynamically scan rag_service/data for courses: ${err.message}`);
     }
-
-    const materialsFolderCandidate = path.join(courseDir, 'materials');
-    const materialsFolder = fs.existsSync(materialsFolderCandidate)
-      ? materialsFolderCandidate
-      : courseDir;
-
-    courseFolders.push({
-      courseName,
-      courseDir,
-      syllabusCsvPath,
-      materialsFolder,
-      hasSyllabus: fs.existsSync(syllabusCsvPath),
-      hasMaterialsDir: fs.existsSync(materialsFolder) && fs.statSync(materialsFolder).isDirectory(),
-    });
   }
 
   return courseFolders;

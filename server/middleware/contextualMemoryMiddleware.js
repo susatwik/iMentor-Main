@@ -19,6 +19,11 @@ async function injectContextualMemory(req, res, next) {
         const userId = req.user?._id || req.user?.id;
         const { query, tutorMode, messageCount } = req.body;
 
+        // Lightweight gating: contextual memory is only worth it for tutor-like flows.
+        // This avoids prompt/token bloat for non-tutor endpoints.
+        const isTutorLikeMode = (tutorMode === 'tutor' || tutorMode === 'tutorMode' || tutorMode === 'quizMode' || tutorMode === 'studyMode' || tutorMode === 'socratic');
+
+
         if (!userId) {
             // No user context, skip memory injection
             // log.warn('SYSTEM', 'No user ID found for memory injection');
@@ -77,6 +82,15 @@ async function injectContextualMemory(req, res, next) {
         }
 
         // Get student's knowledge state context (expensive — only on cache miss / every 5th msg)
+        if (!isTutorLikeMode) {
+            req.contextualMemory = {
+                knowledgeContext: null,
+                systemPrompt: generateTutorSystemPrompt(null, tutorMode),
+                hasMemory: false,
+                optedOut: false
+            };
+            return next();
+        }
         // First check optout status (single DB query, result stored in unified cache)
         const userKnowledgeState = await StudentKnowledgeState.findOne({ userId }).select('memoryOptOut');
         const isOptedOut = userKnowledgeState?.memoryOptOut === true;
@@ -97,23 +111,34 @@ async function injectContextualMemory(req, res, next) {
             return next();
         }
 
+        // Token/prompt budget control: cap the amount of contextual memory we inject.
         const knowledgeContext = await knowledgeStateService.getContextualMemory(userId, query);
+        const MAX_CONTEXT_CHARS = 4500; // rough safety budget before prompt inflation
+        const budgetedKnowledgeContext = typeof knowledgeContext === 'string'
+            ? (knowledgeContext.length > MAX_CONTEXT_CHARS ? knowledgeContext.slice(0, MAX_CONTEXT_CHARS) + '\n...[truncated]' : knowledgeContext)
+            : knowledgeContext;
 
         // NEW: Check user's expertise level for adaptive responses
         const advancedRecognition = require('../services/advancedUserRecognitionService');
         const userExpertise = await advancedRecognition.checkUserExpertiseLevel(userId, query);
 
-        // Persist to Redis cache
+        // Persist to Redis cache (store the budgeted context to reduce prompt inflation on cache hits)
         if (redisClient && redisClient.isOpen) {
             try {
-                await redisClient.setEx(memoryCacheKey, MEMORY_CACHE_TTL, JSON.stringify({ knowledgeContext, userExpertise }));
+                await redisClient.setEx(
+                    memoryCacheKey,
+                    MEMORY_CACHE_TTL,
+                    JSON.stringify({ knowledgeContext: budgetedKnowledgeContext, userExpertise })
+                );
             } catch (cacheSetErr) {
                 log.warn('SYSTEM', `Memory cache write error: ${cacheSetErr.message}`);
             }
         }
 
+
         // Generate system prompt with contextual memory AND expertise awareness
-        let systemPrompt = generateTutorSystemPrompt(knowledgeContext, tutorMode);
+        // (use budgeted/truncated memory to cap prompt size)
+        let systemPrompt = generateTutorSystemPrompt(budgetedKnowledgeContext, tutorMode);
 
         // Enhance system prompt for returning experts
         if (userExpertise.isReturningExpert) {

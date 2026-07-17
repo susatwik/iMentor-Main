@@ -172,7 +172,8 @@ function TopNav({
     onLogout,
     onNewChat,
     orchestratorStatus,
-    isChatProcessing
+    isChatProcessing,
+    xpRefreshCounter = 0
 }) {
     const [isLLMModalOpen, setIsLLMModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -180,7 +181,7 @@ function TopNav({
     const [isXPModalOpen, setIsXPModalOpen] = useState(false);
 
     const navigate = useNavigate();
-    const { level, loading: levelLoading } = useUserLevel();
+    const { level, totalXP, loading: levelLoading } = useUserLevel(null, xpRefreshCounter);
     const { selectedLLM, switchLLM, tutorMode } = useAppState();
 
     const handleEnableTutorMode = () => navigate('/tutor');
@@ -349,12 +350,23 @@ function TopNav({
 
                             {/* XP rank badge (small) */}
                             {!levelLoading && level && (
-                                <RankBadge
-                                    level={level}
-                                    size="md"
-                                    showLabel={false}
-                                    onClick={() => setIsXPModalOpen(true)}
-                                />
+                                <div className="flex items-center gap-1.5" style={{ cursor: 'pointer' }} onClick={() => setIsXPModalOpen(true)}>
+                                    <RankBadge
+                                        level={level}
+                                        size="md"
+                                        showLabel={false}
+                                    />
+                                    <span style={{
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                        color: '#6bcf7f',
+                                        letterSpacing: '0.03em',
+                                        whiteSpace: 'nowrap',
+                                        textShadow: '0 0 8px rgba(107,207,127,0.3)',
+                                    }}>
+                                        {totalXP.toLocaleString()} XP
+                                    </span>
+                                </div>
                             )}
 
                             {/* Product feedback — bug / enhancement report */}
@@ -515,6 +527,7 @@ function TopNav({
                 isOpen={isXPModalOpen}
                 onClose={() => setIsXPModalOpen(false)}
                 level={level}
+                refreshCounter={xpRefreshCounter}
             />
         </>
     );

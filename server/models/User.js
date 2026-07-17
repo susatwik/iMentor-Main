@@ -22,10 +22,57 @@ const ProfileSchema = new mongoose.Schema(
       trim: true,
       maxlength: 500
     },
+    learningLevel: {
+      type: String,
+      enum: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
+      default: 'BEGINNER'
+    },
     performanceMetrics: {
       type: Map,
       of: Number,
       default: () => new Map()
+    },
+    quizAttempts: {
+      type: Number,
+      default: 0
+    },
+    quizScores: [{
+      courseName: String,
+      course: String,
+      module: String,
+      moduleId: String,
+      attemptDate: { type: Date, default: Date.now },
+      date: { type: Date, default: Date.now },
+      score: Number,
+      difficulty: String,
+      weakTopics: [{ type: String }],
+      strongTopics: [{ type: String }],
+      remediation: {
+        strength: String,
+        weakness: String,
+        reason: String,
+        recommendation: String
+      }
+    }],
+    conceptMastery: {
+      type: Map,
+      of: Number,
+      default: () => new Map()
+    },
+    learningStage: {
+      type: String,
+      enum: ['Beginner', 'Intermediate', 'Advanced'],
+      default: 'Beginner'
+    },
+    weakTopics: [{ type: String }],
+    strongTopics: [{ type: String }],
+    confidenceLevel: {
+      type: Number,
+      default: 50
+    },
+    lastQuizDate: {
+      type: Date,
+      default: null
     }
   },
   { _id: false }

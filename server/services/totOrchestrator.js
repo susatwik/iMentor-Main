@@ -8,6 +8,7 @@ const { availableTools } = require('./toolRegistry');
 const { PLANNER_PROMPT_TEMPLATE, EVALUATOR_PROMPT_TEMPLATE, createSynthesizerPrompt, CHAT_MAIN_SYSTEM_PROMPT } = require('../config/promptTemplates');
 const log = require('../utils/logger');
 const ReasoningLog = require('../models/ReasoningLog');
+const { createStreamingManager } = require('./restrictedStreamingService'); // [Team 9 merge]
 const ReasoningTelemetryLog = require('../models/ReasoningTelemetryLog');
 const pruningService = require('./totPruningService');
 const llmStreamingService = require('./llmStreamingService');
@@ -858,8 +859,17 @@ async function processQueryWithToT_Streaming(query, chatHistory, requestContext,
     const allSteps = [];
     const previousToTState = await loadToTState(requestContext?.sessionId);
 
+    // [Team 9 merge] Check if restricted streaming is enabled; create buffered or pass-through manager
+    const isRestrictedStreaming = getFeatureFlagsSnapshot().RESTRICT_TOT_STREAMING;
+    const streamingManager = createStreamingManager(isRestrictedStreaming);
+
+    // [Team 9 merge] Route intermediate step events through the manager during planning/execution
+    const intermediateStreamCallback = isRestrictedStreaming
+        ? streamingManager.streamCallback
+        : streamCallback;
+
     const emitStep = (step) => {
-        streamCallback({ type: 'step_update', content: step });
+        intermediateStreamCallback({ type: 'step_update', content: step }); // [Team 9 merge]
         // Update local history
         const existingIndex = allSteps.findIndex(s => s.stepId === step.stepId);
         if (existingIndex >= 0) {
@@ -870,7 +880,7 @@ async function processQueryWithToT_Streaming(query, chatHistory, requestContext,
     };
 
     const sendStatus = (status) => {
-        streamCallback({ type: 'status_update', content: status });
+        intermediateStreamCallback({ type: 'status_update', content: status }); // [Team 9 merge]
     };
 
     const queryPreview = query.length > 30 ? query.substring(0, 30) + '...' : query;
@@ -1033,6 +1043,13 @@ async function processQueryWithToT_Streaming(query, chatHistory, requestContext,
     // STEP 8: Synthesis
     emitStep({ stepId: 'synthesis', title: 'Final Synthesis', status: 'processing', timestamp: Date.now() });
     sendStatus(`Integrating insights into final explanation…`);
+
+    // [Team 9 merge] Flush all buffered intermediate steps before synthesis begins so the
+    // client receives the full planning/execution trace before the final answer streams
+    if (isRestrictedStreaming) {
+        streamingManager.flushBufferedSteps(streamCallback);
+    }
+
     const synthesisContext = `${finalContext}\n\n[REASONING MODEL]\n${JSON.stringify(reasoningModel)}\n\n[SCENARIOS]\n${JSON.stringify(scenarioBundle.scenarios)}\n\n[SELF-CRITIQUE]\n${JSON.stringify(critique)}\n\n[KEY INSIGHT]\n${keyInsight}\n\n[QUALITY REQUIREMENTS]\n- Convert causes into mechanisms with escalation chains\n- Include sections in this exact order: Core Drivers (Mechanisms), Escalation Chains, Scenario Modeling, Uncertainty Analysis, Key Insight\n- Include at least one conditional statement\n- Use qualitative likelihood only (High likelihood / Moderate likelihood / Low likelihood / high impact)\n- Acknowledge uncertainty explicitly\n- Avoid purely descriptive summaries\n- ${allowRecommendations ? 'Recommendations allowed because user requested solutions.' : 'Do not provide recommendations unless explicitly asked.'}`;
     const finalAnswerWithThinking = await synthesizeFinalAnswer(query, synthesisContext, chatHistory, requestContext, (token) => {
         if (streamCallback) streamCallback({ type: 'token', content: token });

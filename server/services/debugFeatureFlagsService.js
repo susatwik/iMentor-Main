@@ -4,6 +4,7 @@ const FLAG_NAMES = [
   'ENABLE_DYNAMIC_BRANCHING',
   'ENABLE_STEP_CONFIDENCE',
   'ENABLE_PATTERN_ANALYTICS',
+  'RESTRICT_TOT_STREAMING', // [Team 9 merge]
 ];
 
 const runtimeOverrides = new Map();
@@ -11,6 +12,11 @@ const runtimeOverrides = new Map();
 function getDefaultFlagValue(flagName) {
   if (flagName === 'ENABLE_PATTERN_ANALYTICS') {
     return parseBooleanFlag(process.env.ENABLE_PATTERN_ANALYTICS);
+  }
+
+  // [Team 9 merge] RESTRICT_TOT_STREAMING: opt-in flag — defaults false unless explicitly set
+  if (flagName === 'RESTRICT_TOT_STREAMING') {
+    return parseBooleanFlag(process.env.RESTRICT_TOT_STREAMING);
   }
 
   return process.env[flagName] !== 'false';

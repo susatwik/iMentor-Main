@@ -16,7 +16,7 @@ const log = require('../utils/logger');
 const axios = require('axios');
 const geminiService = require('./geminiService');
 const { ensureModel } = require('./ollamaModelManager');
-const { getSemanticRoute } = require('./semanticRouterService');
+const { routeQuery, mapIntentToRoute } = require('./semanticRouter'); // [Team9] upgraded waterfall
 const { routerMethodCounter, routerCacheCounter } = require('../utils/metrics');
 
 const _RAG_SERVICE_URL = () => (process.env.PYTHON_RAG_SERVICE_URL || 'http://localhost:2001').trim();

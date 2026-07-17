@@ -71,10 +71,29 @@ function ChatBubble({ role, text }) {
 // ─── Landing page component ───────────────────────────────
 function LandingPage({ onLoginClick }) {
     const [inputValue, setInputValue] = useState('');
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState(() => {
+        try {
+            const stored = sessionStorage.getItem('guest_messages');
+            const parsed = stored ? JSON.parse(stored) : [];
+            if (!Array.isArray(parsed)) return [];
+            return parsed
+                .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim() !== '')
+                .map(m => ({ role: m.role, text: m.text }));
+        } catch (e) {
+            return [];
+        }
+    });
     const [showAuthHint, setShowAuthHint] = useState(false);
     const [isStreaming, setIsStreaming] = useState(false);
-    const [guestMessageCount, setGuestMessageCount] = useState(0);
+    const [guestMessageCount, setGuestMessageCount] = useState(() => {
+        try {
+            const stored = sessionStorage.getItem('guest_message_count');
+            const parsed = stored ? Number.parseInt(stored, 10) : 0;
+            return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+        } catch (e) {
+            return 0;
+        }
+    });
     const textareaRef = useRef(null);
     const chatEndRef  = useRef(null);
     const abortRef    = useRef(null);
@@ -92,14 +111,38 @@ function LandingPage({ onLoginClick }) {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // Sync messages and count to sessionStorage (RAM-only persistence)
+    useEffect(() => {
+        if (isStreaming) return;
+        try {
+            sessionStorage.setItem('guest_messages', JSON.stringify(messages));
+        } catch (e) {
+            console.error('Failed to sync guest messages', e);
+        }
+    }, [messages, isStreaming]);
+
+    useEffect(() => {
+        try {
+            sessionStorage.setItem('guest_message_count', guestMessageCount.toString());
+        } catch (e) {
+            console.error('Failed to sync guest message count', e);
+        }
+        if (guestMessageCount >= 2) {
+            setShowAuthHint(true);
+        }
+    }, [guestMessageCount]);
+
     const handleSend = useCallback(async () => {
-        if (!inputValue.trim() || isStreaming) return;
+        if (!inputValue.trim() || isStreaming || guestMessageCount >= 3) return;
 
         const userQuery = inputValue.trim();
         const userMsg = { role: 'user', text: userQuery };
         setMessages(prev => [...prev, userMsg]);
         setInputValue('');
         setIsStreaming(true);
+
+        const newCount = guestMessageCount + 1;
+        setGuestMessageCount(newCount);
 
         // Add a placeholder bot message for streaming
         const botIdx = Date.now();
@@ -172,13 +215,6 @@ function LandingPage({ onLoginClick }) {
                 );
             }
 
-            // Show sign-in hint after a few messages
-            const newCount = guestMessageCount + 1;
-            setGuestMessageCount(newCount);
-            if (newCount >= 3) {
-                setShowAuthHint(true);
-            }
-
         } catch (err) {
             if (err.name === 'AbortError') return;
             console.error('Guest chat error:', err);
@@ -194,7 +230,7 @@ function LandingPage({ onLoginClick }) {
     }, [inputValue, isStreaming, guestMessageCount]);
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !isStreaming) {
+        if (e.key === 'Enter' && !e.shiftKey && !isStreaming && guestMessageCount < 3) {
             e.preventDefault();
             handleSend();
         }
@@ -238,7 +274,12 @@ function LandingPage({ onLoginClick }) {
                         {/* Gentle sign-in suggestion after a few messages */}
                         {showAuthHint && (
                             <div className="flex flex-col items-center gap-2 mt-4 p-3 rounded-xl bg-teal-500/10 border border-teal-500/20">
-                                <p className="text-xs text-teal-300/80">Sign in to unlock Tutor Mode, course materials, history saving, and more.</p>
+                                <p className="text-xs text-teal-300/80">
+                                    {guestMessageCount >= 3 
+                                        ? "You have reached the limit of 3 free guest messages. Sign in to save this chat history and continue." 
+                                        : "Sign in to unlock Tutor Mode, course materials, history saving, and more."
+                                    }
+                                </p>
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => onLoginClick(true)}
@@ -269,9 +310,10 @@ function LandingPage({ onLoginClick }) {
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="Ask iMentor anything about your studies..."
+                            placeholder={guestMessageCount >= 3 ? "Message limit reached. Please sign in to continue." : "Ask iMentor anything about your studies..."}
+                            disabled={guestMessageCount >= 3}
                             rows={1}
-                            className="flex-1 bg-transparent text-white text-base leading-relaxed resize-none min-h-[28px] max-h-36 py-1.5 border-none outline-none placeholder:text-gray-500"
+                            className="flex-1 bg-transparent text-white text-base leading-relaxed resize-none min-h-[28px] max-h-36 py-1.5 border-none outline-none placeholder:text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
 
                         {/* Mic — available after sign-in */}
@@ -287,9 +329,9 @@ function LandingPage({ onLoginClick }) {
                         {/* Send button */}
                         <button
                             onClick={handleSend}
-                            disabled={!inputValue.trim() || isStreaming}
+                            disabled={!inputValue.trim() || isStreaming || guestMessageCount >= 3}
                             className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
-                                inputValue.trim() && !isStreaming
+                                inputValue.trim() && !isStreaming && guestMessageCount < 3
                                     ? 'bg-white text-black hover:bg-gray-200'
                                     : 'bg-white/10 text-gray-600 cursor-not-allowed'
                             }`}
@@ -301,7 +343,10 @@ function LandingPage({ onLoginClick }) {
                     </div>
 
                     <p className="text-center text-[11px] text-gray-600 mt-2">
-                        Ask anything — sign in to unlock Tutor Mode, Deep Research, Knowledge Base, and more.
+                        {guestMessageCount >= 3 
+                            ? "You have reached your guest message limit. Please sign in or create an account to continue." 
+                            : `Guest Mode — ${guestMessageCount}/3 messages sent. Sign in to unlock unlimited chat and save history.`
+                        }
                     </p>
                 </div>
             </div>

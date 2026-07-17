@@ -15,11 +15,41 @@ const { redisClient } = require('../config/redisClient');
 // @desc    Finalize previous session + create new one
 // @access  Private
 router.post('/history', async (req, res) => {
-    const { previousSessionId, skipAnalysis } = req.body;
+    const { previousSessionId, skipAnalysis, courseName, courseId, moduleId, title, isTutorMode, tutorModeType, forceNewChat } = req.body;
     const userId = req.user._id;
     const newSessionId = uuidv4();
 
-    log.info('SYSTEM', `New session started: ${newSessionId}`);
+    log.info('SYSTEM', `POST /history requested: course=${courseName}, force=${forceNewChat}`);
+
+    // Date-based check: Reuse today's session for the course if forceNewChat is false
+    if (courseName && !forceNewChat) {
+        try {
+            const existingSession = await ChatHistory.findOne({
+                userId,
+                courseName: courseName,
+                isTutorMode: isTutorMode || false
+            }).sort({ updatedAt: -1 });
+
+            if (existingSession) {
+                const today = new Date();
+                const sessionDate = new Date(existingSession.updatedAt);
+                const isToday = today.getFullYear() === sessionDate.getFullYear() &&
+                                today.getMonth() === sessionDate.getMonth() &&
+                                today.getDate() === sessionDate.getDate();
+
+                if (isToday) {
+                    log.info('CHAT', `Reusing existing session ${existingSession.sessionId} for course ${courseName} updated today`);
+                    return res.status(200).json({
+                        message: 'Reused today\'s session.',
+                        newSessionId: existingSession.sessionId,
+                        studyPlanSuggestion: null
+                    });
+                }
+            }
+        } catch (err) {
+            log.error('SYSTEM', 'Failed checking for existing session', err);
+        }
+    }
 
     const responsePayload = {
         message: 'New session started.',
@@ -102,7 +132,17 @@ router.post('/history', async (req, res) => {
             }
         }
 
-        await ChatHistory.create({ userId, sessionId: newSessionId, messages: [] });
+        await ChatHistory.create({
+            userId,
+            sessionId: newSessionId,
+            messages: [],
+            courseName: courseName || null,
+            courseId: courseId || null,
+            moduleId: moduleId || null,
+            title: title || (courseName ? (moduleId ? `${courseName.replace(/\.[^.]+$/, '')} - ${moduleId}` : `${courseName.replace(/\.[^.]+$/, '')} Chat`) : 'New Chat'),
+            isTutorMode: isTutorMode || false,
+            tutorModeType: tutorModeType || null
+        });
         log.success('CHAT', 'New session initialized instantly');
         res.status(200).json(responsePayload);
 
@@ -110,7 +150,17 @@ router.post('/history', async (req, res) => {
         log.error('SYSTEM', 'Finalize-and-create-new failed', error);
         if (!res.headersSent) {
             try {
-                await ChatHistory.create({ userId, sessionId: newSessionId, messages: [] });
+                await ChatHistory.create({
+                    userId,
+                    sessionId: newSessionId,
+                    messages: [],
+                    courseName: courseName || null,
+                    courseId: courseId || null,
+                    moduleId: moduleId || null,
+                    title: title || (courseName ? (moduleId ? `${courseName.replace(/\.[^.]+$/, '')} - ${moduleId}` : `${courseName.replace(/\.[^.]+$/, '')} Chat`) : 'New Chat'),
+                    isTutorMode: isTutorMode || false,
+                    tutorModeType: tutorModeType || null
+                });
                 responsePayload.message = 'New session started, but analysis of previous session failed.';
                 res.status(200).json(responsePayload);
             } catch (fallbackError) {
@@ -132,6 +182,7 @@ router.get('/sessions', async (req, res) => {
                 sessionId: 1,
                 createdAt: 1,
                 updatedAt: 1,
+                title: { $ifNull: ['$title', null] },
                 isTutorMode: { $ifNull: ['$isTutorMode', false] },
                 tutorModeType: { $ifNull: ['$tutorModeType', null] },
                 courseName: { $ifNull: ['$courseName', null] },
@@ -142,8 +193,11 @@ router.get('/sessions', async (req, res) => {
 
         const sessionSummaries = sessions.map(session => {
             const firstUserMessage = session.firstMessages?.find(m => m.role === 'user');
-            let preview = firstUserMessage?.parts?.[0]?.text?.substring(0, 75) || 'Chat Session';
-            if (preview.length === 75) preview += '...';
+            let preview = session.title;
+            if (!preview) {
+                preview = firstUserMessage?.parts?.[0]?.text?.substring(0, 75) || 'Chat Session';
+                if (preview.length === 75) preview += '...';
+            }
             return {
                 sessionId: session.sessionId,
                 createdAt: session.createdAt,

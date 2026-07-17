@@ -18,10 +18,178 @@ const { auditLog } = require('../utils/logger');
 router.get('/', async (req, res) => {
     try {
         const userId = req.user._id;
+        const User = require('../models/User');
+        const TutorSession = require('../models/TutorSession');
+        const GamificationProfile = require('../models/GamificationProfile');
+        
+        const user = await User.findById(userId);
         const knowledgeState = await knowledgeStateService.getOrCreateKnowledgeState(userId);
+        const tutorSessions = await TutorSession.find({ userId });
+        const gamificationProfile = await GamificationProfile.findOne({ userId });
 
         // Generate a user-friendly summary
         const summary = knowledgeState.generateQuickSummary();
+
+        // Calculate overall metrics on the fly and merge them into summary
+        const totalQuizzes = user?.profile?.quizScores?.length || 0;
+        const averageScore = totalQuizzes > 0 
+            ? Math.round(user.profile.quizScores.reduce((sum, q) => sum + q.score, 0) / totalQuizzes)
+            : 0;
+
+        let mostImproved = 'N/A';
+        let maxImprovement = 0;
+        knowledgeState.concepts.forEach(c => {
+            if (c.learningVelocity > maxImprovement) {
+                maxImprovement = c.learningVelocity;
+                mostImproved = c.conceptName;
+            }
+        });
+
+        summary.totalQuizzes = totalQuizzes;
+        summary.averageScore = averageScore;
+        summary.mostImproved = mostImproved;
+        summary.learningStage = user?.profile?.learningStage || 'Beginner';
+        summary.strongTopics = user?.profile?.strongTopics || [];
+        summary.weakTopics = user?.profile?.weakTopics || [];
+
+        // Compute a quizHistoryTimeline (aggregating attempt history course-by-course)
+        const quizHistoryTimeline = (user?.profile?.quizScores || []).map(q => ({
+            courseName: q.courseName || q.course,
+            module: q.module || 'all',
+            moduleId: q.moduleId || 'all',
+            score: q.score,
+            difficulty: q.difficulty || 'Beginner',
+            date: q.attemptDate || q.date,
+            remediation: q.remediation
+        })).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // 1. Dynamic Timeline compilation (merging sessionInsights, tutorSessions, quizScores, and skillTree completions)
+        let timelineEvents = [];
+
+        // Add pre-existing sessionInsights from DB
+        if (knowledgeState.sessionInsights) {
+            knowledgeState.sessionInsights.forEach(insight => {
+                timelineEvents.push({
+                    sessionId: insight.sessionId || `insight-${insight._id}`,
+                    date: insight.date || insight.createdAt,
+                    type: 'tutor-insight',
+                    conceptsCovered: insight.conceptsCovered || [],
+                    keyObservations: insight.keyObservations || [],
+                    struggledWith: insight.struggledWith || [],
+                    breakthroughMoments: insight.breakthroughMoments || []
+                });
+            });
+        }
+
+        // Add actual TutorSessions
+        if (tutorSessions && tutorSessions.length > 0) {
+            tutorSessions.forEach(session => {
+                const concepts = session.progressTracking?.conceptsUnderstood || [session.topic].filter(Boolean);
+                timelineEvents.push({
+                    sessionId: session.sessionId,
+                    date: session.createdAt || session.updatedAt,
+                    type: 'tutor',
+                    conceptsCovered: concepts,
+                    keyObservations: [
+                        `Completed tutor session in ${session.course || 'General'} on topic "${session.topic || 'General'}"`,
+                        `Total interactions: ${session.progressTracking?.totalInteractions || 0}`,
+                        `Emotional State: ${session.emotionalState || 'CURIOUS'}`
+                    ],
+                    struggledWith: session.progressTracking?.conceptsStruggling || [],
+                    breakthroughMoments: session.masteryScore >= 3 ? ['Demonstrated solid mastery in discussions'] : []
+                });
+            });
+        }
+
+        // Add Quiz scores
+        if (user?.profile?.quizScores && user.profile.quizScores.length > 0) {
+            user.profile.quizScores.forEach((quiz, index) => {
+                timelineEvents.push({
+                    sessionId: `quiz-${quiz._id || index}-${new Date(quiz.date).getTime()}`,
+                    date: quiz.attemptDate || quiz.date || new Date(),
+                    type: 'quiz',
+                    conceptsCovered: [quiz.module || 'Overview'].filter(Boolean),
+                    keyObservations: [
+                        `Completed quiz for ${quiz.courseName || quiz.course || 'course'}`,
+                        `Module: ${quiz.module || 'Overview'}`,
+                        `Scored ${quiz.score}% (${quiz.difficulty || 'standard'} difficulty)`
+                    ].concat(quiz.remediation?.recommendation ? [`Recommendation: ${quiz.remediation.recommendation}`] : []),
+                    struggledWith: quiz.weakTopics || [],
+                    breakthroughMoments: quiz.score >= 80 ? [`Achieved ${quiz.score}% score on quiz`] : []
+                });
+            });
+        }
+
+        // Add Skill tree completions
+        if (gamificationProfile && gamificationProfile.skillTreeProgress) {
+            Object.entries(gamificationProfile.skillTreeProgress).forEach(([topic, topicData]) => {
+                if (topicData && topicData.levels) {
+                    Object.entries(topicData.levels).forEach(([levelId, levelData]) => {
+                        timelineEvents.push({
+                            sessionId: `skilltree-${topic}-${levelId}-${new Date(levelData.completedAt).getTime()}`,
+                            date: levelData.completedAt || new Date(),
+                            type: 'skill-tree',
+                            conceptsCovered: [topic],
+                            keyObservations: [
+                                `Completed Skill Tree Level ${levelId} for topic "${topic}"`,
+                                `Earned ${levelData.stars} stars with score ${levelData.score}/${levelData.totalQuestions || 6}`
+                            ],
+                            struggledWith: [],
+                            breakthroughMoments: levelData.stars === 3 ? [`Perfect 3-star completion on level ${levelId}`] : []
+                        });
+                    });
+                }
+            });
+        }
+
+        // Sort chronological descending
+        timelineEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // 2. Dynamic Insights & Struggles Generation
+        const compiledStruggles = [...(knowledgeState.recurringStruggles || [])];
+        
+        // Add dynamic struggles from quiz scores
+        if (quizHistoryTimeline.length > 0) {
+            const lowScoreQuizzes = quizHistoryTimeline.filter(q => q.score < 50);
+            if (lowScoreQuizzes.length > 0) {
+                const pattern = "Struggles with quiz assessments under timed or structured conditions";
+                if (!compiledStruggles.some(s => s.pattern === pattern)) {
+                    compiledStruggles.push({
+                        pattern,
+                        occurrences: lowScoreQuizzes.length,
+                        firstDetected: new Date(),
+                        lastDetected: new Date(),
+                        examples: lowScoreQuizzes.map(q => q.module)
+                    });
+                }
+            }
+        }
+
+        // Add dynamic struggles from tutor hints/struggles
+        if (tutorSessions && tutorSessions.length > 0) {
+            let totalHints = 0;
+            let totalSessionsWithHints = 0;
+            tutorSessions.forEach(s => {
+                const hintsCount = s.previousHints?.length || s.progressTracking?.hintUsage || 0;
+                if (hintsCount > 0) {
+                    totalHints += hintsCount;
+                    totalSessionsWithHints++;
+                }
+            });
+            const avgHints = totalHints / tutorSessions.length;
+            if (avgHints > 2) {
+                const pattern = "Needs frequent tutor hints to solve conceptual problems";
+                if (!compiledStruggles.some(s => s.pattern === pattern)) {
+                    compiledStruggles.push({
+                        pattern,
+                        occurrences: totalSessionsWithHints,
+                        firstDetected: new Date(),
+                        lastDetected: new Date(),
+                        examples: tutorSessions.filter(s => (s.previousHints?.length || 0) > 0).map(s => s.topic).filter(Boolean)
+                    });
+                }
+            }
+        }
 
         res.status(200).json({
             profile: {
@@ -39,11 +207,12 @@ router.get('/', async (req, res) => {
                 lastPracticed: c.lastInteractionDate,
                 learningVelocity: c.learningVelocity
             })),
-            sessionInsights: knowledgeState.sessionInsights || [],
+            sessionInsights: timelineEvents,
             currentFocusAreas: knowledgeState.currentFocusAreas || [],
-            recurringStruggles: knowledgeState.recurringStruggles || [],
+            recurringStruggles: compiledStruggles,
             engagementMetrics: knowledgeState.engagementMetrics,
-            lastUpdated: knowledgeState.lastUpdated
+            lastUpdated: knowledgeState.lastUpdated,
+            quizHistoryTimeline
         });
 
         auditLog(req, 'KNOWLEDGE_STATE_VIEWED', { userId: userId.toString() });
@@ -99,10 +268,26 @@ router.delete('/reset', async (req, res) => {
         // Delete existing knowledge state
         await StudentKnowledgeState.deleteOne({ userId });
 
+        // Reset user profile stats
+        const User = require('../models/User');
+        await User.findByIdAndUpdate(userId, {
+            $set: {
+                'profile.quizAttempts': 0,
+                'profile.quizScores': [],
+                'profile.conceptMastery': {},
+                'profile.strongTopics': [],
+                'profile.weakTopics': [],
+                'profile.learningStage': 'Beginner',
+                'profile.learningLevel': 'BEGINNER',
+                'profile.confidenceLevel': 50,
+                'profile.lastQuizDate': null
+            }
+        });
+
         // Create a fresh knowledge state
         const newKnowledgeState = await knowledgeStateService.getOrCreateKnowledgeState(userId);
 
-        log.info('DB', `User ${userId} reset knowledge state`);
+        log.info('DB', `User ${userId} reset knowledge state and user profile metrics`);
         auditLog(req, 'KNOWLEDGE_STATE_RESET', { userId: userId.toString() });
 
         res.status(200).json({

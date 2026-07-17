@@ -1,4 +1,12 @@
+/**
+ * socraticTutorService.js — UNIFIED MERGE
+ * Base:   iMentor-Team2 (groundTruth, usedQuestions, offline Q-bank, Bloom grading)
+ * +Team8: priorKnowledge keyword fast-path in assessStudentResponse()
+ * +Team3: socraticTutorStrictFormatter applied to final followUpQuestion
+ */
 const log = require('../utils/logger');
+const { formatSocraticStrict } = require('./socraticTutorStrictFormatter'); // [Team3]
+
 const { redisClient } = require('../config/redisClient');
 const geminiService = require('./geminiService');
 const ollamaService = require('./ollamaService');
@@ -15,6 +23,7 @@ const {
 } = require('../config/promptTemplates');
 const reactOrchestrator = require('./reactOrchestrator');
 const llmStreamingService = require('./llmStreamingService');
+const bloomScoringService = require('./bloomScoringService');
 const { decideTeachingAction } = require('./teachingPolicyService');
 const { reflectOnTeaching } = require('./teachingReflectionService');
 const { safe, sanitizeGeneratedText } = require('../utils/promptSanitizer');
@@ -122,8 +131,8 @@ function generateLearningProfile(masteredTopics = []) {
  * Tries preferred provider first, then falls back through all available providers.
  */
 async function generateWithFallback(chatHistory, currentQuery, systemPrompt, llmConfig, additionalOptions = {}) {
-    const preferredProvider = llmConfig?.llmProvider || 'gemini';
-    const allProviders = ['sglang', 'gemini', 'groq', 'claude', 'openai', 'ollama'];
+    const preferredProvider = llmConfig?.llmProvider || 'sglang';
+    const allProviders = ['sglang', 'groq', 'gemini', 'claude', 'openai', 'ollama'];
     const providers = [
         preferredProvider,
         ...allProviders.filter(p => p !== preferredProvider)
@@ -208,12 +217,51 @@ async function generateWithFallback(chatHistory, currentQuery, systemPrompt, llm
  * Multi-dimensional assessment of student response with emotional state detection.
  * Ported from Team1-6's assessStudentResponse — produces richer signals for the FSM.
  */
-async function assessStudentResponse(studentResponse, moduleTitle, lastQuestion, llmConfig, conversationHistory = []) {
+async function assessStudentResponse(studentResponse, moduleTitle, lastQuestion, llmConfig, conversationHistory = [], groundTruth = "") {
+    const BLOOM_NAME_TO_LEVEL = {
+        remember: 1,
+        understand: 2,
+        apply: 3,
+        analyze: 4,
+        evaluate: 5,
+        create: 6
+    };
+    const BLOOM_LEVEL_TO_NAME = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
+    const normalizeBloom = (rawBloom) => {
+        if (typeof rawBloom === 'number' && rawBloom >= 1 && rawBloom <= 6) {
+            const level = Math.round(rawBloom);
+            return { level, category: BLOOM_LEVEL_TO_NAME[level - 1] };
+        }
+        const normalized = String(rawBloom || '').trim().toLowerCase();
+        const level = BLOOM_NAME_TO_LEVEL[normalized] || 1;
+        return { level, category: BLOOM_LEVEL_TO_NAME[level - 1] };
+    };
+    const safeQuality = (rawQuality, fallbackUnderstanding) => {
+        const allowed = ['CORRECT', 'PARTIAL', 'MISCONCEPTION'];
+        if (allowed.includes(rawQuality)) return rawQuality;
+        if (allowed.includes(fallbackUnderstanding)) return fallbackUnderstanding;
+        return 'PARTIAL';
+    };
+    const defaultMultiplier = (level, quality) => {
+        const base = [1.0, 1.1, 1.25, 1.4, 1.6, 1.8][Math.max(0, Math.min(5, level - 1))];
+        const qualityModifier = quality === 'CORRECT' ? 1 : quality === 'MISCONCEPTION' ? 0.6 : 0.8;
+        return Number((base * qualityModifier).toFixed(2));
+    };
+
+    const recentHistory = Array.isArray(conversationHistory)
+        ? conversationHistory.slice(-3).map(h => `${h.status || 'UNKNOWN'}: ${h.response || ''}`).join('\n')
+        : '';
+
     const prompt = `You are an expert educational assessor evaluating a student's response during an AI tutoring session.
 
 Topic: ${moduleTitle}
 Tutor's Last Question: ${lastQuestion}
 Student's Response: ${studentResponse}
+Current Cognitive Level: ${llmConfig?.currentCognitiveLevel || 'UNKNOWN'}
+STN Context (ground truth reference):
+${groundTruth || llmConfig?.stnContext || 'No additional STN context provided.'}
+Recent Interaction Signals:
+${recentHistory || 'No recent history provided.'}
 
 Classification guide (be GENEROUS — reward genuine understanding):
 - CORRECT: Student demonstrates clear understanding of the concept with correct information. Does NOT need to be perfect — covering the key idea counts as CORRECT.
@@ -223,6 +271,18 @@ Classification guide (be GENEROUS — reward genuine understanding):
 - NO_FOUNDATION: Student has no idea or says "I don't know".
 
 IMPORTANT: If the student correctly identifies the main concept and gives a reasonable explanation or example — even if incomplete — classify as CORRECT. Only use PARTIAL if there is a SPECIFIC identifiable gap that matters.
+Evaluate the student's response strictly and directly against the "STN Context (ground truth reference)" above to detect accuracy, identify gaps, and prevent hallucinations. If the student makes assertions contradicting the ground truth context, categorize the response as a MISCONCEPTION.
+
+Bloom's Taxonomy mapping rule:
+- Evaluate the student's demonstrated understanding (not keyword overlap).
+- Map to exactly one level: remember, understand, apply, analyze, evaluate, or create.
+- Return both the Bloom level name and numeric level (1-6).
+
+Quality rule:
+- quality must be one of CORRECT, PARTIAL, MISCONCEPTION.
+
+XP multiplier rule:
+- Return xpMultiplier as a number between 0.5 and 3.0 based on Bloom depth and answer quality.
 
 Return ONLY valid JSON:
 {
@@ -230,6 +290,10 @@ Return ONLY valid JSON:
   "confidence": "HIGH|MEDIUM|LOW",
   "emotionalState": "CURIOUS|CONFIDENT|UNCERTAIN|FRUSTRATED|BORED",
   "effortLevel": "HIGH|MEDIUM|LOW",
+    "bloom_level": "remember|understand|apply|analyze|evaluate|create",
+    "bloomLevel": 1,
+    "quality": "CORRECT|PARTIAL|MISCONCEPTION",
+    "xpMultiplier": 1.0,
   "specificGaps": [],
   "priorKnowledge": false,
   "reasoning": "Brief one-sentence explanation of your classification"
@@ -238,6 +302,30 @@ Return ONLY valid JSON:
 PRIOR KNOWLEDGE RULE: If the student's response shows they already know this topic well
 (confident explanation, correct examples, asks to skip), set "priorKnowledge": true
 AND set "understanding": "CORRECT" and "confidence": "HIGH".`;
+
+
+    // [Team8] Prior knowledge keyword fast-path — detects self-reported mastery before LLM call
+    const priorKnowledgeKeywords = [
+        /i (already |do |)(know|knew|understand|learned|studied)/i,
+        /i have (knowledge|experience|worked on)/i,
+        /i'?ve (implemented|used|built|written|done|solved|practiced)/i,
+        /i (am|'?m) (familiar|comfortable|confident) with/i,
+        /skip this|already covered|already know/i,
+        /more than \d+ (problems|projects)/i
+    ];
+    const hasPriorKnowledgeFastPath = priorKnowledgeKeywords.some(rx => rx.test(studentResponse));
+    if (hasPriorKnowledgeFastPath) {
+        log.info('TUTOR', 'Prior knowledge fast-path: ' + studentResponse.substring(0, 60));
+        return {
+            understanding: 'CORRECT', confidence: 'HIGH',
+            emotionalState: 'CONFIDENT', effortLevel: 'HIGH',
+            bloom_level: 'apply', bloomLevel: 3,
+            quality: 'CORRECT', xpMultiplier: 1.25,
+            specificGaps: [], priorKnowledge: true,
+            reasoning: 'Student stated prior knowledge — fast-path'
+        };
+    }
+    // [/Team8 fast-path]
 
     try {
 
@@ -281,6 +369,27 @@ AND set "understanding": "CORRECT" and "confidence": "HIGH".`;
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
+            const { level, category } = normalizeBloom(parsed.bloomLevel ?? parsed.bloom_level);
+            const quality = safeQuality(parsed.quality, parsed.understanding);
+            const rawMultiplier = Number(parsed.xpMultiplier);
+            const xpMultiplier = Number.isFinite(rawMultiplier)
+                ? Number(Math.max(0.5, Math.min(3.0, rawMultiplier)).toFixed(2))
+                : defaultMultiplier(level, quality);
+
+            return {
+                ...parsed,
+                bloom_level: category,
+                bloomLevel: level,
+                quality,
+                xpMultiplier,
+                understanding: parsed.understanding || 'VAGUE',
+                confidence: parsed.confidence || 'MEDIUM',
+                emotionalState: parsed.emotionalState || 'UNCERTAIN',
+                effortLevel: parsed.effortLevel || 'MEDIUM',
+                specificGaps: Array.isArray(parsed.specificGaps) ? parsed.specificGaps : [],
+                reasoning: parsed.reasoning || 'Assessment parsed with defaults'
+            };
+            const parsed = JSON.parse(jsonMatch[0]);
             if (parsed.priorKnowledge) {
                 parsed.understanding = 'CORRECT';
                 parsed.confidence = 'HIGH';
@@ -297,6 +406,10 @@ AND set "understanding": "CORRECT" and "confidence": "HIGH".`;
             confidence: 'MEDIUM',
             emotionalState: 'UNCERTAIN',
             effortLevel: 'MEDIUM',
+            bloom_level: 'remember',
+            bloomLevel: 1,
+            quality: 'PARTIAL',
+            xpMultiplier: 1.0,
             specificGaps: [],
             reasoning: 'Fallback assessment due to provider error'
         };
@@ -659,6 +772,8 @@ async function processTutorResponse(studentResponse, sessionId, llmConfig, onPro
     const remainingSteps = Math.max(0, learningSteps.length - 1 - currentStep);
 
     const position = {
+        courseName: state.courseName,
+        course: state.courseName,
         moduleName: state.moduleName || state.moduleTitle,
         topicName: state.topicName || moduleTitle,
         subtopicName: state.subtopicName || state.teachingUnit || moduleTitle,
@@ -700,13 +815,21 @@ async function processTutorResponse(studentResponse, sessionId, llmConfig, onPro
                 turnCount,
                 position,
                 onProgress,
+                groundTruth: unitContext,
                 context: unitContext,
-                onToken
+                onToken,
+                usedQuestions: state.usedQuestions || []
             });
+
+            const updatedUsedQuestions = [...(state.usedQuestions || [])];
+            if (reactResult.followUpQuestion && !updatedUsedQuestions.includes(reactResult.followUpQuestion)) {
+                updatedUsedQuestions.push(reactResult.followUpQuestion);
+            }
 
             const newState = {
                 ...state,
                 lastQuestion: reactResult.followUpQuestion,
+                usedQuestions: updatedUsedQuestions,
                 turnCount: turnCount + 1,
                 masteryScore: Math.max(0, reactResult.masteryScore || masteryScore),
                 cognitiveLevel: reactResult.nextLevel || state.cognitiveLevel || COGNITIVE_LEVELS.L1_CONCEPT,
@@ -749,8 +872,13 @@ async function processTutorResponse(studentResponse, sessionId, llmConfig, onPro
         studentResponse,
         topic,
         lastQuestion,
-        llmConfig,
-        history.slice(-5)
+        {
+            ...llmConfig,
+            currentCognitiveLevel: state.cognitiveLevel || COGNITIVE_LEVELS.L1_CONCEPT,
+            stnContext: unitContext || topic
+        },
+        history,
+        unitContext.slice(-5)
     );
 
     const supportLevel = determineSupportLevel(state, assessment, responseTime);
@@ -770,8 +898,27 @@ async function processTutorResponse(studentResponse, sessionId, llmConfig, onPro
         action: assessment.understanding === 'CORRECT' ? 'Deepen topic' : 'Clarify concept',
         emotionalState: assessment.emotionalState || EMOTIONAL_STATES.UNCERTAIN,
         confidence: assessment.confidence || CONFIDENCE_LEVELS.MEDIUM,
-        specificGaps: assessment.specificGaps || []
+        specificGaps: assessment.specificGaps || [],
+        bloomLevel: assessment.bloomLevel || 1,
+        quality: assessment.quality || 'PARTIAL',
+        xpMultiplier: assessment.xpMultiplier || 1.0
     };
+
+    // LLM-based Bloom XP (non-blocking — do not impact tutoring response latency)
+    if (state.userId && assessment.bloomLevel) {
+        setImmediate(async () => {
+            try {
+                await bloomScoringService.updateUserScore(
+                    state.userId,
+                    studentResponse,
+                    assessment.bloomLevel,
+                    assessment.xpMultiplier   // LLM-computed quality multiplier
+                );
+            } catch (e) {
+                log.warn('TUTOR', `Bloom XP award non-fatal: ${e.message}`);
+            }
+        });
+    }
 
     // MANDATORY CLEAN LOGGING
     console.log(`\n\n[STUDENT INPUT]\nTopic: ${topic}\nInput: ${studentResponse}\n`);
@@ -950,6 +1097,18 @@ CRITICAL RULES:
 
     const prompt = `Please respond to the student focusing on ${safe(topic)}.`;
 
+    let nextCognitiveLevel = state.cognitiveLevel || COGNITIVE_LEVELS.L1_CONCEPT;
+    if (reflectionAction === 'SIMPLIFY_PROBLEM') {
+        try {
+            if (tutorSM?.downgradeCognitiveLevel) {
+                const downgraded = await tutorSM.downgradeCognitiveLevel(sessionId);
+                nextCognitiveLevel = downgraded?.cognitiveLevelName || downgraded?.cognitiveLevel || nextCognitiveLevel;
+            }
+        } catch (reflectionErr) {
+            log.warn('TUTOR_REFLECTION', `Cognitive downgrade failed (non-fatal): ${reflectionErr.message}`);
+        }
+    }
+
     // ── Inject precomputed hint when student is struggling ─────────────────────
     // If consecutive wrong answers ≥ 1, append expected_answer_nature as a hint
     let precomputedHint = '';
@@ -969,42 +1128,83 @@ CRITICAL RULES:
     }
 
     let followUpQuestion = "";
-    try {
-        if (onToken && (llmConfig.llmProvider === 'gemini' || llmConfig.llmProvider === 'groq')) {
-            followUpQuestion = await llmStreamingService.streamCompletion({
-                messages: [{ role: 'user', content: prompt }],
-                provider: llmConfig.llmProvider,
-                model: llmOptions.geminiModel || llmOptions.model,
-                apiKey: llmOptions.apiKey,
-                systemPrompt: systemPrompt,
-                onToken,
-                options: llmOptions
-            });
-        } else {
-            // Use generateWithFallback (tries all configured providers with automatic fallback)
-            // instead of single-provider llmService which has no retry mechanism.
-            followUpQuestion = await generateWithFallback(
-                [],
-                prompt,
-                systemPrompt,
-                llmConfig,
-                { maxOutputTokens: 600 }
+    let usedCached = false;
+
+    // Check Redis-backed offline question bank first
+    const course = state.courseName;
+    const lookupId = state.topicId || state.subtopicId;
+    if (course && lookupId) {
+        try {
+            const pc = await getPrecomputedContent(course, lookupId);
+            if (pc) {
+                const levelMap = {
+                    L1_CONCEPT: 'easy',
+                    L2_APPLICATION: 'medium',
+                    L3_CRITICAL: 'hard',
+                    L4_EVALUATION: 'expert'
+                };
+                const bucket = levelMap[nextCognitiveLevel] || 'easy';
+                const questions = pc.questions?.[bucket];
+                if (Array.isArray(questions) && questions.length > 0) {
+                    const used = state.usedQuestions || [];
+                    const unusedQ = questions.find(q => q && q.question && !used.includes(q.question));
+                    if (unusedQ) {
+                        followUpQuestion = unusedQ.question;
+                        usedCached = true;
+                        if (!state.usedQuestions) {
+                            state.usedQuestions = [];
+                        }
+                        state.usedQuestions.push(unusedQ.question);
+                        log.info('TUTOR', `processTutorResponse: using cached question at level ${nextCognitiveLevel} for ${course}/${lookupId}`);
+                    }
+                }
+            }
+        } catch (err) {
+            log.warn('TUTOR', `Failed to fetch precomputed follow-up question: ${err.message}`);
+        }
+    }
+
+    if (!usedCached) {
+        try {
+            if (onToken && (llmConfig.llmProvider === 'gemini' || llmConfig.llmProvider === 'groq')) {
+                followUpQuestion = await llmStreamingService.streamCompletion({
+                    messages: [{ role: 'user', content: prompt }],
+                    provider: llmConfig.llmProvider,
+                    model: llmOptions.geminiModel || llmOptions.model,
+                    apiKey: llmOptions.apiKey,
+                    systemPrompt: systemPrompt,
+                    onToken,
+                    options: llmOptions
+                });
+            } else {
+                // Use generateWithFallback (tries all configured providers with automatic fallback)
+                // instead of single-provider llmService which has no retry mechanism.
+                followUpQuestion = await generateWithFallback(
+                    [],
+                    prompt,
+                    systemPrompt,
+                    llmConfig,
+                    { maxOutputTokens: 600 }
+                );
+            }
+            followUpQuestion = sanitizeGeneratedText(cleanResponse(followUpQuestion));
+        } catch (e) {
+            // Log to aid debugging — if this still triggers the LLM call is failing
+            log.warn('TUTOR', `Question generation FAILED (provider=${llmConfig?.llmProvider}): ${e.message}`);
+            // Fallback must be topic-specific, never the generic "rethink" phrase
+            const topicSafe = safe(topic) || 'this concept';
+            followUpQuestion = sanitizeGeneratedText(
+                `Let me approach **${topicSafe}** from a different angle.\n\nThink about it this way: what would happen in a simple real-world scenario where ${topicSafe} is involved? Start with what you already know and describe it in your own words.`
             );
         }
-        followUpQuestion = sanitizeGeneratedText(cleanResponse(followUpQuestion));
-        // Prepend encouragement prefix when student is struggling (non-correct)
-        if (struggleEncouragement && classification.status !== 'CORRECT' && followUpQuestion) {
-            followUpQuestion = struggleEncouragement + followUpQuestion;
-        }
-        if (precomputedHint) followUpQuestion += precomputedHint;
-    } catch (e) {
-        // Log to aid debugging — if this still triggers the LLM call is failing
-        log.warn('TUTOR', `Question generation FAILED (provider=${llmConfig?.llmProvider}): ${e.message}`);
-        // Fallback must be topic-specific, never the generic "rethink" phrase
-        const topicSafe = safe(topic) || 'this concept';
-        followUpQuestion = sanitizeGeneratedText(
-            `${struggleEncouragement}Let me approach **${topicSafe}** from a different angle.\n\nThink about it this way: what would happen in a simple real-world scenario where ${topicSafe} is involved? Start with what you already know and describe it in your own words.`
-        );
+    }
+
+    // Apply struggle encouragement and precomputed hint if applicable
+    if (struggleEncouragement && classification.status !== 'CORRECT' && followUpQuestion) {
+        followUpQuestion = struggleEncouragement + followUpQuestion;
+    }
+    if (precomputedHint) {
+        followUpQuestion += precomputedHint;
     }
 
     console.log(`[SOCRATIC RESPONSE GENERATED]\n${followUpQuestion}\n`);
@@ -1137,24 +1337,26 @@ What do you know about ${nextTopic}?`
         });
     }
 
-    let nextCognitiveLevel = state.cognitiveLevel || COGNITIVE_LEVELS.L1_CONCEPT;
-    if (reflectionAction === 'SIMPLIFY_PROBLEM') {
-        try {
-            if (tutorSM?.downgradeCognitiveLevel) {
-                const downgraded = await tutorSM.downgradeCognitiveLevel(sessionId);
-                nextCognitiveLevel = downgraded?.cognitiveLevelName || downgraded?.cognitiveLevel || nextCognitiveLevel;
-            }
-        } catch (reflectionErr) {
-            log.warn('TUTOR_REFLECTION', `Cognitive downgrade failed (non-fatal): ${reflectionErr.message}`);
-        }
-    }
-
     const keepSameStep = reflectionAction === 'RETEACH_CONCEPT';
     const stepIncrement = keepSameStep ? 0 : (isMastered ? 1 : 0);
+
+    const updatedUsedQuestions = [...(state.usedQuestions || [])];
+    if (followUpQuestion && !updatedUsedQuestions.includes(followUpQuestion)) {
+        updatedUsedQuestions.push(followUpQuestion);
+    }
+
+    // [Team3] Apply Socratic strict formatter: ensures followUpQuestion is clean prose
+    // (no bullet lists, no code fences, no headings, no <thinking> tags shown to student)
+    if (followUpQuestion && typeof formatSocraticStrict === 'function') {
+        try { followUpQuestion = formatSocraticStrict(followUpQuestion); }
+        catch (fmtErr) { log.warn('TUTOR', 'Socratic formatter error: ' + fmtErr.message); }
+    }
+    // [/Team3]
 
     const newState = {
         ...state,
         lastQuestion: followUpQuestion,
+        usedQuestions: updatedUsedQuestions,
         turnCount: turnCount + 1,
         consecutiveCorrect,
         consecutiveWrong: (classification.status === 'WRONG' || classification.status === 'UNKNOWN')
@@ -1317,7 +1519,7 @@ async function getSubtopicContext(course, subtopicId, topicId) {
     try {
         const url = `${pythonServiceUrl}/course/${encodeURIComponent(course)}/topic/${encodeURIComponent(topicId)}/context`;
         log.info('TUTOR', `STN miss — falling back to Qdrant for ${topicId}`);
-        const response = await axios.get(url, { timeout: 15000 });
+        const response = await axios.get(url, { timeout: 45000 });
         return response.data;
     } catch (error) {
         log.warn('TUTOR', `Context fetch failed: ${error.message}`);
@@ -1399,6 +1601,8 @@ async function resolveCurrentPosition(courseName, completedSubtopics = [], compl
                 for (const sub of prerequisites) {
                     if (!completedSubtopics.includes(sub.id)) {
                         return {
+                            courseName: courseName,
+                            course: courseName,
                             moduleName: module.name,
                             topicName: topic.name,
                             subtopicName: sub.name,

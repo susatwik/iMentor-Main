@@ -71,6 +71,7 @@ export const getLearningProfiles = ({ page = 1, limit = 25, search = '' } = {}) 
     makeAdminApiRequest('get', `/learning-profiles?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}&search=${encodeURIComponent(search)}`);
 export const getLearningProfileDetails = (userId) =>
     makeAdminApiRequest('get', `/learning-profiles/${encodeURIComponent(userId)}`);
+export const getCohortAnalytics = () => makeAdminApiRequest('get', '/cohort-analytics');
 
 export const uploadAdminDocument = (formData) => makeAdminApiRequest('post', '/documents/upload', formData);
 export const getAdminDocuments = () => makeAdminApiRequest('get', '/documents');

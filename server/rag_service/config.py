@@ -184,7 +184,7 @@ if QUERY_VECTOR_DIMENSION != QDRANT_COLLECTION_VECTOR_DIM:
 
 # --- Embedding Provider (sentence_transformers — Ollama removed) ---
 # Uses mxbai-embed-large-v1 via SentenceTransformers — CPU-efficient, no Ollama dependency.
-EMBED_PROVIDER      = os.getenv('EMBED_PROVIDER', 'sentence_transformers')  # 'fastembed' | 'sentence_transformers'
+EMBED_PROVIDER      = os.getenv('EMBED_PROVIDER', 'fastembed')  # 'fastembed' | 'sentence_transformers'
 FASTEMBED_MODEL     = os.getenv('FASTEMBED_MODEL', 'mixedbread-ai/mxbai-embed-large-v1')
 # Legacy Ollama embed vars — Ollama removed, kept as empty for backward compat
 OLLAMA_EMBED_URL    = ''

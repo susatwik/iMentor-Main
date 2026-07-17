@@ -19,6 +19,7 @@ const {
 } = require('../config/promptTemplates');
 const llmStreamingService = require('./llmStreamingService');
 const { determineTeachingAction, validateTutorOutput, TEACHING_ACTIONS } = require('./pedagogicalEngine');
+const { redisClient } = require('../config/redisClient');
 
 // ============================================================================
 // CONSTANTS - Cognitive Framework
@@ -62,9 +63,9 @@ const MIN_COGNITIVE_LEVELS_COVERED = 2; // Minimum number of unique levels touch
  * @param {Object} llmConfig - LLM configuration
  * @returns {Object} - { classification, reasoning, score, recommendedAction }
  */
-async function classifyStudentUnderstanding(studentResponse, moduleTitle, lastQuestion, llmConfig, context = "") {
+async function classifyStudentUnderstanding(studentResponse, moduleTitle, lastQuestion, llmConfig, groundTruth = "") {
     const { llmService, llmOptions } = getLLMService(llmConfig);
-    const prompt = SOCRATIC_CLASSIFICATION_PROMPT(moduleTitle, lastQuestion, studentResponse, context);
+    const prompt = SOCRATIC_CLASSIFICATION_PROMPT(moduleTitle, lastQuestion, studentResponse, groundTruth);
 
     try {
         const response = await llmService.generateContentWithHistory([], prompt, "Return only raw JSON output as specified in the instruction.", llmOptions);
@@ -187,7 +188,37 @@ function calculateNextLevel(currentLevel, pedagogicalMove) {
 /**
  * Generate a Socratic follow-up question based on assessment.
  */
-async function generateSocraticFollowUp(assessment, pedagogicalMove, moduleTitle, lastQuestion, studentResponse, turnCount, llmConfig, position, currentLevel, currentScore, context = "", onToken = null) {
+async function generateSocraticFollowUp(assessment, pedagogicalMove, moduleTitle, lastQuestion, studentResponse, turnCount, llmConfig, position, currentLevel, currentScore, context = "", onToken = null, usedQuestions = []) {
+    // Check Redis-backed offline question bank first
+    const course = position?.courseName || position?.course;
+    const lookupId = position?.topicId || position?.subtopicId;
+    if (course && lookupId) {
+        try {
+            const key = `im_cache:socratic_precompute:${course.toLowerCase()}:${lookupId.toLowerCase()}`;
+            const cached = await redisClient.get(key);
+            if (cached) {
+                const pc = JSON.parse(cached);
+                const levelMap = {
+                    L1_CONCEPT: 'easy',
+                    L2_APPLICATION: 'medium',
+                    L3_CRITICAL: 'hard',
+                    L4_EVALUATION: 'expert'
+                };
+                const bucket = levelMap[currentLevel] || 'easy';
+                const questions = pc.questions?.[bucket];
+                if (Array.isArray(questions) && questions.length > 0) {
+                    const unusedQ = questions.find(q => q && q.question && !usedQuestions.includes(q.question));
+                    if (unusedQ) {
+                        log.info('TUTOR', `ReAct: using cached question at level ${currentLevel} for ${course}/${lookupId}`);
+                        return unusedQ.question;
+                    }
+                }
+            }
+        } catch (err) {
+            log.warn('TUTOR', `Failed to fetch precomputed follow-up in ReAct: ${err.message}`);
+        }
+    }
+
     const { llmService, llmOptions } = getLLMService(llmConfig);
     
     // Prepare classification string for prompt
@@ -277,10 +308,13 @@ async function executeReActCycle({
     turnCount = 0,
     position = null,
     onProgress,
+    groundTruth = "",
     context = "",
-    onToken = null
+    onToken = null,
+    usedQuestions = []
 }) {
     const cycleStartTime = Date.now();
+    const activeGroundTruth = groundTruth || context;
 
     // ========================================================================
     // STEP 1: CLASSIFY - Analyze student understanding
@@ -293,7 +327,7 @@ async function executeReActCycle({
         moduleTitle,
         lastQuestion,
         llmConfig,
-        context
+        activeGroundTruth
     );
     const classifyTime = Date.now() - classifyStart;
 
@@ -382,7 +416,8 @@ async function executeReActCycle({
         nextLevel,
         newMasteryScore,
         context,
-        onToken
+        onToken,
+        usedQuestions
     );
     const generateTime = Date.now() - generateStart;
 

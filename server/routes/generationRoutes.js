@@ -222,4 +222,47 @@ router.post('/document/from-topic', async (req, res) => {
     }
 });
 
+// [Team2] 4-agent RAG report generation — Planner → Writer → Critic → Expander
+// Generates structured, hallucination-proof course reports grounded in STN teaching notes
+router.post('/report', async (req, res) => {
+    const { courseName, userIntent, llmConfig } = req.body;
+    const userId = req.user._id;
+
+    if (!courseName || !userIntent) {
+        return res.status(400).json({ message: 'courseName and userIntent are required.' });
+    }
+
+    try {
+        const user = await User.findById(userId).select('+encryptedApiKey');
+        let config = llmConfig || {};
+        if (!config.apiKey && !config.llmProvider) {
+            const userGroqKey = user?.encryptedApiKey ? decrypt(user.encryptedApiKey) : null;
+            config = {
+                llmProvider: 'groq',
+                groqModel: 'llama-3.1-8b-instant',
+                apiKey: userGroqKey || process.env.GROQ_API_KEY
+            };
+        }
+
+        log.info('REPORT', `User ${userId} requesting report for course "${courseName}" — intent: "${userIntent.substring(0, 80)}"`);
+        const { generateReport } = require('../services/reportOrchestrator');
+
+        const report = await generateReport(
+            userIntent,
+            courseName,
+            config,
+            (progressMsg) => {
+                log.info('REPORT', `[Progress]: ${progressMsg}`);
+            }
+        );
+
+        res.json({ success: true, report });
+    } catch (error) {
+        log.error('REPORT', `Report generation failed: ${error.message}`);
+        if (!res.headersSent) {
+            res.status(500).json({ message: error.message });
+        }
+    }
+});
+
 module.exports = router;

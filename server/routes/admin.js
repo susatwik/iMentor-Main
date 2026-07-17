@@ -21,6 +21,9 @@ const { auditLog } = require('../utils/logger');
 const LLMPerformanceLog = require('../models/LLMPerformanceLog');
 const CourseAdapterMapping = require('../models/CourseAdapterMapping');
 const StudentKnowledgeState = require('../models/StudentKnowledgeState');
+const TutorSession = require('../models/TutorSession');
+const SkillTreeGame = require('../models/SkillTreeGame');
+const GamificationProfile = require('../models/GamificationProfile');
 const { safeCascadeDeleteCourse } = require('../services/courseCascadeDeletionService');
 
 const router = express.Router();
@@ -333,18 +336,62 @@ router.get('/learning-profiles', async (req, res) => {
     }
 
     const users = await User.find(userFilter)
-      .select('_id email username profile.name createdAt')
+      .select('_id email username profile.name profile.quizScores profile.quizAttempts profile.learningStage curriculumProgress createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
     const userIds = users.map(user => user._id);
-    const states = await StudentKnowledgeState.find({ userId: { $in: userIds } })
-      .select('userId learningProfile knowledgeSummary concepts recurringStruggles sessionInsights engagementMetrics lastUpdated')
-      .lean();
+    const [states, sessionCounts, skillTreeGames, gamificationProfiles] = await Promise.all([
+      StudentKnowledgeState.find({ userId: { $in: userIds } }).lean(),
+      TutorSession.aggregate([
+        { $match: { userId: { $in: userIds } } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } }
+      ]),
+      SkillTreeGame.find({ userId: { $in: userIds } }).lean(),
+      GamificationProfile.find({ userId: { $in: userIds } }).lean()
+    ]);
 
     const stateByUserId = new Map(states.map(state => [state.userId.toString(), state]));
+    const sessionCountsMap = new Map(sessionCounts.map(item => [item._id?.toString(), item.count]));
+    
+    const skillTreeByUserId = new Map();
+    skillTreeGames.forEach(g => {
+      const uid = g.userId.toString();
+      if (!skillTreeByUserId.has(uid)) skillTreeByUserId.set(uid, []);
+      skillTreeByUserId.get(uid).push(g);
+    });
+
+    // Helper function to extract all quiz scores (nested and in Maps)
+    const getQuizScoresHelper = (user) => {
+      const scores = [];
+      if (user.profile && Array.isArray(user.profile.quizScores)) {
+        user.profile.quizScores.forEach(q => {
+          if (typeof q.score === 'number') scores.push(q.score);
+        });
+      }
+      if (user.curriculumProgress) {
+        const entries = user.curriculumProgress instanceof Map
+          ? Array.from(user.curriculumProgress.values())
+          : Object.values(user.curriculumProgress);
+        entries.forEach(progress => {
+          if (progress && progress.quizResults) {
+            const results = progress.quizResults instanceof Map
+              ? Array.from(progress.quizResults.values())
+              : Object.values(progress.quizResults);
+            results.forEach(val => {
+              try {
+                const parsed = typeof val === 'string' && (val.startsWith('{') || val.startsWith('"')) ? JSON.parse(val) : val;
+                const score = typeof parsed === 'object' ? parsed.score : parseFloat(parsed);
+                if (!isNaN(score)) scores.push(score);
+              } catch (e) {}
+            });
+          }
+        });
+      }
+      return scores;
+    };
 
     const profiles = users.map((user) => {
       const state = stateByUserId.get(user._id.toString());
@@ -352,17 +399,41 @@ router.get('/learning-profiles', async (req, res) => {
       const masteredCount = concepts.filter(c => c.masteryScore >= 85 || c.understandingLevel === 'mastered').length;
       const strugglingCount = concepts.filter(c => c.masteryScore < 70 || c.difficulty === 'high').length;
 
+      const allQuizScores = getQuizScoresHelper(user);
+      const averageQuizScore = allQuizScores.length
+        ? Math.round(allQuizScores.reduce((acc, curr) => acc + curr, 0) / allQuizScores.length)
+        : null;
+
+      const totalTutorSessions = sessionCountsMap.get(user._id.toString()) || 0;
+
+      let activeCourse = 'None';
+      if (user.curriculumProgress) {
+        const courses = Object.keys(user.curriculumProgress);
+        if (courses.length > 0) {
+          activeCourse = courses[0];
+        }
+      }
+
+      // Skill Tree completions
+      const studentGames = skillTreeByUserId.get(user._id.toString()) || [];
+      const completedLevels = studentGames.reduce((sum, g) => sum + (g.completedLevels || 0), 0);
+      const totalStars = studentGames.reduce((sum, g) => sum + (g.totalStars || 0), 0);
+
       return {
         user: {
           id: user._id,
           email: user.email,
           username: user.username,
           name: user.profile?.name || '',
-          joinedAt: user.createdAt
+          joinedAt: user.createdAt,
+          learningStage: user.profile?.learningStage || 'Beginner'
         },
         hasProfile: !!state,
         learningProfile: state?.learningProfile || null,
         knowledgeSummary: state?.knowledgeSummary || '',
+        averageQuizScore,
+        totalTutorSessions,
+        activeCourse,
         summary: {
           totalConcepts: concepts.length,
           mastered: masteredCount,
@@ -371,6 +442,11 @@ router.get('/learning-profiles', async (req, res) => {
           sessionInsights: Array.isArray(state?.sessionInsights) ? state.sessionInsights.length : 0
         },
         engagementMetrics: state?.engagementMetrics || null,
+        skillTreeProgress: {
+          completedLevels,
+          totalStars,
+          gamesCount: studentGames.length
+        },
         lastUpdated: state?.lastUpdated || null
       };
     });
@@ -400,14 +476,192 @@ router.get('/learning-profiles/:userId', async (req, res) => {
     }
 
     const user = await User.findOne({ _id: userId, isAdmin: { $ne: true } })
-      .select('_id email username profile.name createdAt')
+      .select('_id email username profile curriculumProgress createdAt')
       .lean();
 
     if (!user) {
       return res.status(404).json({ message: 'Student not found.' });
     }
 
-    const knowledgeState = await StudentKnowledgeState.findOne({ userId: user._id }).lean();
+    const [knowledgeState, tutorSessions, skillTreeGames, gamificationProfile] = await Promise.all([
+      StudentKnowledgeState.findOne({ userId: user._id }).lean(),
+      TutorSession.find({ userId: user._id }).sort({ updatedAt: -1 }).lean(),
+      SkillTreeGame.find({ userId: user._id }).lean(),
+      GamificationProfile.findOne({ userId: user._id }).lean()
+    ]);
+
+    // Helper function to extract all quiz scores (nested and in Maps)
+    const getQuizScoresHelper = (userObj) => {
+      const scores = [];
+      if (userObj.profile && Array.isArray(userObj.profile.quizScores)) {
+        userObj.profile.quizScores.forEach(q => {
+          if (typeof q.score === 'number') scores.push(q.score);
+        });
+      }
+      if (userObj.curriculumProgress) {
+        const entries = userObj.curriculumProgress instanceof Map
+          ? Array.from(userObj.curriculumProgress.values())
+          : Object.values(userObj.curriculumProgress);
+        entries.forEach(progress => {
+          if (progress && progress.quizResults) {
+            const results = progress.quizResults instanceof Map
+              ? Array.from(progress.quizResults.values())
+              : Object.values(progress.quizResults);
+            results.forEach(val => {
+              try {
+                const parsed = typeof val === 'string' && (val.startsWith('{') || val.startsWith('"')) ? JSON.parse(val) : val;
+                const score = typeof parsed === 'object' ? parsed.score : parseFloat(parsed);
+                if (!isNaN(score)) scores.push(score);
+              } catch (e) {}
+            });
+          }
+        });
+      }
+      return scores;
+    };
+
+    const allScores = getQuizScoresHelper(user);
+    const averageQuizScore = allScores.length
+      ? Math.round(allScores.reduce((acc, curr) => acc + curr, 0) / allScores.length)
+      : null;
+    const totalQuizAttempts = allScores.length;
+    const bestQuizScore = allScores.length ? Math.max(...allScores) : null;
+    const latestQuizScore = Array.isArray(user.profile?.quizScores) && user.profile.quizScores.length
+      ? user.profile.quizScores[user.profile.quizScores.length - 1].score
+      : (allScores.length ? allScores[allScores.length - 1] : null);
+
+    // Tutor session calculations
+    let totalSessionDuration = 0;
+    const sessionsTimeline = tutorSessions.map(session => {
+      let duration = 0;
+      if (session.conversationContext && session.conversationContext.length >= 2) {
+        const first = new Date(session.conversationContext[0].timestamp);
+        const last = new Date(session.conversationContext[session.conversationContext.length - 1].timestamp);
+        duration = Math.round((last - first) / 60000);
+      } else {
+        duration = Math.round((new Date(session.updatedAt) - new Date(session.createdAt)) / 60000);
+      }
+      duration = Math.max(1, duration);
+      totalSessionDuration += duration;
+
+      return {
+        sessionId: session.sessionId,
+        topic: session.topic || session.subject || 'General Socratic Chat',
+        duration,
+        interactions: session.progressTracking?.totalInteractions || 0,
+        cognitiveLevel: session.cognitiveLevel || 'L1_CONCEPT',
+        masteryScore: session.masteryScore || 0,
+        status: session.status || 'active',
+        date: session.updatedAt
+      };
+    });
+
+    // Course curriculum progress calculations
+    const courseProgress = [];
+    if (user.curriculumProgress) {
+      const curriculumEntries = user.curriculumProgress instanceof Map
+        ? Array.from(user.curriculumProgress.entries())
+        : Object.entries(user.curriculumProgress);
+      for (const [courseName, progress] of curriculumEntries) {
+        const completedSubtopics = progress.completedSubtopics || [];
+        const completedTopics = progress.completedTopics || [];
+        const completedModules = progress.completedModules || [];
+        
+        // Est. total module/topic count fallbacks
+        const totalModules = completedModules.length > 0 ? completedModules.length + 2 : 4;
+        const totalTopics = completedTopics.length > 0 ? completedTopics.length + 4 : 8;
+        const totalSubtopics = completedSubtopics.length > 0 ? completedSubtopics.length + 8 : 16;
+        
+        const completionPercent = totalSubtopics > 0
+          ? Math.round((completedSubtopics.length / totalSubtopics) * 100)
+          : 0;
+
+        courseProgress.push({
+          courseName,
+          completedSubtopicsCount: completedSubtopics.length,
+          totalSubtopics,
+          completedTopicsCount: completedTopics.length,
+          totalTopics,
+          completedModulesCount: completedModules.length,
+          totalModules,
+          completionPercent,
+          lastActiveDate: progress.lastActiveDate
+        });
+      }
+    }
+
+    // Skill Tree Progress
+    let totalCompletedLevels = 0;
+    let totalStarsEarned = 0;
+    const skillTreeData = skillTreeGames.map(game => {
+      totalCompletedLevels += (game.completedLevels || 0);
+      totalStarsEarned += (game.totalStars || 0);
+      return {
+        topic: game.topic,
+        completedLevels: game.completedLevels,
+        totalLevels: game.levels?.length || 0,
+        totalStars: game.totalStars,
+        assessmentLevel: game.assessmentResult?.level || 'Beginner'
+      };
+    });
+
+    // Gamification profile data
+    const gamification = gamificationProfile ? {
+      totalLearningCredits: gamificationProfile.totalLearningCredits || 0,
+      level: gamificationProfile.level || 1,
+      currentStreak: gamificationProfile.currentStreak || 0,
+      longestStreak: gamificationProfile.longestStreak || 0,
+      currentEnergy: gamificationProfile.currentEnergy || 100,
+      badges: gamificationProfile.badges || []
+    } : {
+      totalLearningCredits: 0,
+      level: 1,
+      currentStreak: 0,
+      longestStreak: 0,
+      currentEnergy: 100,
+      badges: []
+    };
+
+    // Combined learning timeline
+    const timelineEvents = [];
+    const quizScoresArray = user.profile?.quizScores || [];
+    quizScoresArray.forEach(q => {
+      timelineEvents.push({
+        type: 'quiz',
+        title: `Quiz in ${q.course || q.courseName || 'General'}`,
+        detail: `Score: ${q.score}% - Module: ${q.module || 'All'}`,
+        score: q.score,
+        date: q.date || q.attemptDate || new Date()
+      });
+    });
+
+    tutorSessions.forEach(session => {
+      timelineEvents.push({
+        type: 'tutor',
+        title: `Socratic Tutoring in ${session.topic || session.subject || 'General'}`,
+        detail: `${session.progressTracking?.totalInteractions || 0} interactions, Cognitive Level: ${session.cognitiveLevel || 'L1_CONCEPT'}`,
+        score: Math.round(session.masteryScore * 20),
+        date: session.updatedAt || session.createdAt
+      });
+    });
+
+    skillTreeGames.forEach(game => {
+      if (game.levels) {
+        game.levels.forEach(lvl => {
+          if (lvl.status === 'completed' && lvl.completedAt) {
+            timelineEvents.push({
+              type: 'skill',
+              title: `Skill Level Completed: ${lvl.name}`,
+              detail: `Topic: ${game.topic} - Stars: ${lvl.stars || 0}/3`,
+              score: lvl.score,
+              date: lvl.completedAt
+            });
+          }
+        });
+      }
+    });
+
+    timelineEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (!knowledgeState) {
       return res.status(200).json({
@@ -416,10 +670,16 @@ router.get('/learning-profiles/:userId', async (req, res) => {
           email: user.email,
           username: user.username,
           name: user.profile?.name || '',
-          joinedAt: user.createdAt
+          quizScores: user.profile?.quizScores || [],
+          averageQuizScore,
+          totalQuizAttempts,
+          bestQuizScore,
+          latestQuizScore,
+          joinedAt: user.createdAt,
+          learningStage: user.profile?.learningStage || 'Beginner'
         },
         profile: {
-          dominantLearningStyle: 'unknown',
+          dominantLearningStyle: user.profile?.learningStyle || 'unknown',
           learningPace: 'moderate',
           preferredDepth: 'balanced',
           challengeResponse: 'needs_encouragement',
@@ -432,17 +692,30 @@ router.get('/learning-profiles/:userId', async (req, res) => {
           struggling: 0,
           notExposed: 0,
           recentFocus: [],
-          topStruggles: []
+          topStruggles: [],
+          avgLearningVelocity: 0
         },
         concepts: [],
         currentFocusAreas: [],
         recurringStruggles: [],
         sessionInsights: [],
-        engagementMetrics: {},
+        engagementMetrics: {
+          totalSessions: tutorSessions.length,
+          totalSessionDuration
+        },
         masteredTopics: [],
-        courseCurriculumProgress: [],
+        courseCurriculumProgress: courseProgress,
+        recommendations: [],
         textSummary: '',
-        lastUpdated: null
+        lastUpdated: null,
+        gamification,
+        skillTree: {
+          completedLevels: totalCompletedLevels,
+          totalStars: totalStarsEarned,
+          games: skillTreeData
+        },
+        tutorSessionsList: sessionsTimeline,
+        timeline: timelineEvents
       });
     }
 
@@ -452,16 +725,26 @@ router.get('/learning-profiles/:userId', async (req, res) => {
     const struggling = concepts.filter(c => c.masteryScore < 70 || c.understandingLevel === 'struggling' || c.difficulty === 'high').length;
     const notExposed = concepts.filter(c => c.understandingLevel === 'not_exposed').length;
 
+    const avgLearningVelocity = concepts.length
+      ? parseFloat((concepts.reduce((acc, curr) => acc + (curr.learningVelocity || 0), 0) / concepts.length).toFixed(3))
+      : 0;
+
     res.status(200).json({
       user: {
         id: user._id,
         email: user.email,
         username: user.username,
         name: user.profile?.name || '',
-        joinedAt: user.createdAt
+        quizScores: user.profile?.quizScores || [],
+        averageQuizScore,
+        totalQuizAttempts,
+        bestQuizScore,
+        latestQuizScore,
+        joinedAt: user.createdAt,
+        learningStage: user.profile?.learningStage || 'Beginner'
       },
       profile: {
-        dominantLearningStyle: knowledgeState.learningProfile?.dominantLearningStyle || 'unknown',
+        dominantLearningStyle: knowledgeState.learningProfile?.dominantLearningStyle || user.profile?.learningStyle || 'unknown',
         learningPace: knowledgeState.learningProfile?.learningPace || 'moderate',
         preferredDepth: knowledgeState.learningProfile?.preferredDepth || 'balanced',
         challengeResponse: knowledgeState.learningProfile?.challengeResponse || 'needs_encouragement',
@@ -474,7 +757,8 @@ router.get('/learning-profiles/:userId', async (req, res) => {
         struggling,
         notExposed,
         recentFocus: (knowledgeState.currentFocusAreas || []).slice(0, 5).map(f => f.topic),
-        topStruggles: (knowledgeState.recurringStruggles || []).slice(0, 5).map(s => s.pattern)
+        topStruggles: (knowledgeState.recurringStruggles || []).slice(0, 5).map(s => s.pattern),
+        avgLearningVelocity
       },
       concepts: concepts.map(c => ({
         name: c.conceptName,
@@ -493,15 +777,203 @@ router.get('/learning-profiles/:userId', async (req, res) => {
       currentFocusAreas: knowledgeState.currentFocusAreas || [],
       recurringStruggles: knowledgeState.recurringStruggles || [],
       sessionInsights: knowledgeState.sessionInsights || [],
-      engagementMetrics: knowledgeState.engagementMetrics || {},
+      engagementMetrics: {
+        ...knowledgeState.engagementMetrics,
+        totalSessions: Math.max(tutorSessions.length, knowledgeState.engagementMetrics?.totalSessions || 0),
+        totalSessionDuration
+      },
       masteredTopics: knowledgeState.masteredTopics || [],
-      courseCurriculumProgress: knowledgeState.courseCurriculumProgress || [],
+      courseCurriculumProgress: courseProgress,
+      recommendations: knowledgeState.recommendations || [],
       textSummary: knowledgeState.knowledgeSummary || '',
-      lastUpdated: knowledgeState.lastUpdated || null
+      lastUpdated: knowledgeState.lastUpdated || null,
+      gamification,
+      skillTree: {
+        completedLevels: totalCompletedLevels,
+        totalStars: totalStarsEarned,
+        games: skillTreeData
+      },
+      tutorSessionsList: sessionsTimeline,
+      timeline: timelineEvents
     });
   } catch (error) {
     log.error('SYSTEM', `Failed to fetch student learning profile detail: ${error.message}`);
     res.status(500).json({ message: 'Server error while fetching learning profile details.' });
+  }
+});
+
+// @route   GET /api/admin/cohort-analytics
+// @desc    Get cohort-wide performance analytics
+router.get('/cohort-analytics', async (req, res) => {
+  try {
+    const students = await User.find({ isAdmin: { $ne: true } })
+      .select('_id email username profile curriculumProgress')
+      .lean();
+
+    const knowledgeStates = await StudentKnowledgeState.find({}).lean();
+    const tutorSessions = await TutorSession.find({ userId: { $ne: null } })
+      .select('userId progressTracking.totalInteractions updatedAt createdAt')
+      .lean();
+
+    const skillTreeGames = await SkillTreeGame.find({}).lean();
+    const gamificationProfiles = await GamificationProfile.find({}).lean();
+
+    // Helper to calculate quiz scores
+    const getQuizScoresHelper = (userObj) => {
+      const scores = [];
+      if (userObj.profile && Array.isArray(userObj.profile.quizScores)) {
+        userObj.profile.quizScores.forEach(q => {
+          if (typeof q.score === 'number') scores.push(q.score);
+        });
+      }
+      if (userObj.curriculumProgress) {
+        const entries = userObj.curriculumProgress instanceof Map
+          ? Array.from(userObj.curriculumProgress.values())
+          : Object.values(userObj.curriculumProgress);
+        entries.forEach(progress => {
+          if (progress && progress.quizResults) {
+            const results = progress.quizResults instanceof Map
+              ? Array.from(progress.quizResults.values())
+              : Object.values(progress.quizResults);
+            results.forEach(val => {
+              try {
+                const parsed = typeof val === 'string' && (val.startsWith('{') || val.startsWith('"')) ? JSON.parse(val) : val;
+                const score = typeof parsed === 'object' ? parsed.score : parseFloat(parsed);
+                if (!isNaN(score)) scores.push(score);
+              } catch (e) {}
+            });
+          }
+        });
+      }
+      return scores;
+    };
+
+    // 1. Student counts per course & Average course-wide quiz score + completion %
+    const courseData = {};
+    students.forEach(student => {
+      const activeCourses = student.curriculumProgress ? Object.keys(student.curriculumProgress) : [];
+      activeCourses.forEach(course => {
+        if (!courseData[course]) {
+          courseData[course] = { studentCount: 0, quizScoresSum: 0, quizScoresCount: 0, completionPercentSum: 0 };
+        }
+        courseData[course].studentCount++;
+        
+        const prog = student.curriculumProgress[course] || {};
+        const completedSub = prog.completedSubtopics || [];
+        const totalSub = completedSub.length > 0 ? completedSub.length + 8 : 16;
+        const completion = totalSub > 0 ? (completedSub.length / totalSub) * 100 : 0;
+        courseData[course].completionPercentSum += completion;
+      });
+
+      const quizzes = getQuizScoresHelper(student);
+      quizzes.forEach(score => {
+        // Fallback to active course name or 'General'
+        const course = activeCourses[0] || 'General';
+        if (!courseData[course]) {
+          courseData[course] = { studentCount: 0, quizScoresSum: 0, quizScoresCount: 0, completionPercentSum: 0 };
+        }
+        courseData[course].quizScoresSum += score;
+        courseData[course].quizScoresCount++;
+      });
+    });
+
+    const courseAnalytics = Object.keys(courseData).map(course => {
+      const data = courseData[course];
+      return {
+        course,
+        studentCount: data.studentCount,
+        averageQuizScore: data.quizScoresCount > 0 ? Math.round(data.quizScoresSum / data.quizScoresCount) : null,
+        averageCompletionPercent: data.studentCount > 0 ? Math.round(data.completionPercentSum / data.studentCount) : 0
+      };
+    });
+
+    // 2. Most Difficult and Most Mastered Topics
+    const conceptMasteryMap = {};
+    knowledgeStates.forEach(ks => {
+      const concepts = ks.concepts || [];
+      concepts.forEach(c => {
+        if (!c.conceptName) return;
+        if (!conceptMasteryMap[c.conceptName]) {
+          conceptMasteryMap[c.conceptName] = { sum: 0, count: 0 };
+        }
+        conceptMasteryMap[c.conceptName].sum += (c.masteryScore || 0);
+        conceptMasteryMap[c.conceptName].count++;
+      });
+    });
+
+    const conceptAverages = Object.keys(conceptMasteryMap).map(name => {
+      const data = conceptMasteryMap[name];
+      return {
+        conceptName: name,
+        averageMastery: Math.round(data.sum / data.count),
+        studentCount: data.count
+      };
+    });
+
+    const mostDifficult = [...conceptAverages]
+      .sort((a, b) => a.averageMastery - b.averageMastery)
+      .slice(0, 5);
+
+    const mostMastered = [...conceptAverages]
+      .sort((a, b) => b.averageMastery - a.averageMastery)
+      .slice(0, 5);
+
+    // 3. Struggling Students (average score < 50% OR low concept count with high struggles)
+    const strugglingStudents = [];
+    students.forEach(student => {
+      const quizzes = getQuizScoresHelper(student);
+      if (quizzes.length > 0) {
+        const avg = quizzes.reduce((sum, q) => sum + q, 0) / quizzes.length;
+        if (avg < 50) {
+          strugglingStudents.push({
+            userId: student._id,
+            username: student.username,
+            name: student.profile?.name || '',
+            email: student.email,
+            averageQuizScore: Math.round(avg),
+            quizAttemptsCount: quizzes.length
+          });
+        }
+      }
+    });
+
+    // 4. Most Active Students (sorted by tutor session count + interactions)
+    const studentActivity = {};
+    tutorSessions.forEach(session => {
+      const userIdStr = session.userId?.toString();
+      if (!userIdStr) return;
+      if (!studentActivity[userIdStr]) {
+        studentActivity[userIdStr] = { sessionCount: 0, totalInteractions: 0 };
+      }
+      studentActivity[userIdStr].sessionCount++;
+      studentActivity[userIdStr].totalInteractions += (session.progressTracking?.totalInteractions || 0);
+    });
+
+    const activeStudents = students.map(student => {
+      const activity = studentActivity[student._id.toString()] || { sessionCount: 0, totalInteractions: 0 };
+      return {
+        userId: student._id,
+        username: student.username,
+        name: student.profile?.name || '',
+        email: student.email,
+        sessionCount: activity.sessionCount,
+        totalInteractions: activity.totalInteractions
+      };
+    })
+    .sort((a, b) => (b.sessionCount + b.totalInteractions) - (a.sessionCount + a.totalInteractions))
+    .slice(0, 5);
+
+    res.status(200).json({
+      totalStudentsCount: students.length,
+      courseAnalytics,
+      mostDifficultTopics: mostDifficult,
+      mostMasteredTopics: mostMastered,
+      strugglingStudents,
+      mostActiveStudents: activeStudents
+    });
+  } catch (error) {
+    log.error('SYSTEM', `Failed to fetch cohort-analytics: ${error.message}`);
+    res.status(500).json({ message: 'Server error while fetching cohort-analytics.' });
   }
 });
 

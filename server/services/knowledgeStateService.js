@@ -24,6 +24,100 @@ class KnowledgeStateService {
     }
 
     /**
+     * Synchronize the user profile's conceptMastery map to StudentKnowledgeState and Neo4j
+     * @param {ObjectId} userId 
+     * @param {StudentKnowledgeState} knowledgeState 
+     */
+    async syncUserConceptMastery(userId, knowledgeState) {
+        try {
+            const User = require('../models/User'); // Import dynamically to avoid circular dependencies
+            const user = await User.findById(userId);
+            if (!user || !user.profile) return;
+
+            const conceptMastery = user.profile.conceptMastery;
+            if (!conceptMastery || !(conceptMastery instanceof Map || typeof conceptMastery === 'object')) {
+                return;
+            }
+
+            const masteryEntries = conceptMastery instanceof Map 
+                ? Array.from(conceptMastery.entries()) 
+                : Object.entries(conceptMastery);
+
+            let changed = false;
+            const now = new Date();
+
+            for (const [rawTopic, score] of masteryEntries) {
+                // Topic name from DB map might have '-' instead of '.' (since dot notation is safe key)
+                const topic = rawTopic.replace(/-/g, '.');
+                
+                // Map score to difficulty and understandingLevel
+                let difficulty = 'medium';
+                if (score >= 80) difficulty = 'low';
+                else if (score < 50) difficulty = 'high';
+
+                let understandingLevel = 'learning';
+                if (score >= 90) understandingLevel = 'mastered';
+                else if (score >= 70) understandingLevel = 'comfortable';
+                else if (score < 40) understandingLevel = 'struggling';
+
+                const existingConcept = knowledgeState.getConcept(topic);
+                const conceptData = {
+                    conceptName: topic,
+                    masteryScore: score,
+                    masteryScoreNormalized: score / 100,
+                    difficulty,
+                    understandingLevel,
+                    lastInteractionDate: now
+                };
+
+                if (existingConcept) {
+                    if (existingConcept.masteryScore !== score) {
+                        conceptData.totalInteractions = (existingConcept.totalInteractions || 0) + 1;
+                        knowledgeState.updateConcept(conceptData);
+                        changed = true;
+                    }
+                } else {
+                    conceptData.firstExposureDate = now;
+                    conceptData.totalInteractions = 1;
+                    knowledgeState.updateConcept(conceptData);
+                    changed = true;
+                }
+
+                // Sync topic mastery to Neo4j
+                await this.syncConceptToNeo4j(userId, {
+                    name: topic,
+                    mastery: score,
+                    difficulty
+                });
+            }
+
+            // Sync learning style and total sessions count
+            if (user.profile.learningStyle && user.profile.learningStyle !== 'Not Specified') {
+                const mappedStyle = user.profile.learningStyle.toLowerCase().replace('/', '_');
+                if (knowledgeState.learningProfile.dominantLearningStyle !== mappedStyle) {
+                    knowledgeState.learningProfile.dominantLearningStyle = mappedStyle;
+                    changed = true;
+                }
+            }
+
+            if (user.profile.quizAttempts !== undefined && knowledgeState.engagementMetrics.totalSessions < user.profile.quizAttempts) {
+                knowledgeState.engagementMetrics.totalSessions = user.profile.quizAttempts;
+                changed = true;
+            }
+
+            if (changed) {
+                knowledgeState.markModified('concepts');
+                knowledgeState.markModified('learningProfile');
+                knowledgeState.markModified('engagementMetrics');
+                await knowledgeState.save();
+                log.info('SYSTEM', `Successfully synced user concept masteries for ${userId}`);
+            }
+        } catch (error) {
+            log.error('SYSTEM', `Error syncing concept masteries for user ${userId}`, error);
+        }
+    }
+
+    /**
      * Get or create student knowledge state
      * @param {ObjectId} userId - Student's user ID
      * @returns {Promise<StudentKnowledgeState>}
@@ -53,6 +147,9 @@ class KnowledgeStateService {
                     log.warn('SYSTEM', `Neo4j init failed for ${userId}: ${e.message}`);
                 }
             }
+
+            // Sync user profile stats on retrieve
+            await this.syncUserConceptMastery(userId, knowledgeState);
 
             return knowledgeState;
         } catch (error) {
@@ -120,29 +217,19 @@ Respond with a JSON object in this exact format (NO deviations):
   "overallEngagement": "low|medium|high"
 }`;
 
-            let response;
-            if (llmConfig.llmProvider === 'ollama') {
-                response = await ollamaService.generateContentWithHistory(
-                    [],
-                    analysisPrompt,
-                    null,
-                    { model: llmConfig.ollamaModel, ollamaUrl: llmConfig.ollamaUrl }
-                );
-            } else if (llmConfig.llmProvider === 'groq') {
-                response = await groqService.generateContentWithHistory(
-                    [],
-                    analysisPrompt,
-                    null,
-                    { model: llmConfig.groqModel || 'llama-3.1-8b-instant', apiKey: llmConfig.apiKey }
-                );
-            } else {
-                response = await geminiService.generateContentWithHistory(
-                    [],
-                    analysisPrompt,
-                    null,
-                    { apiKey: llmConfig.apiKey, model: llmConfig.geminiModel || 'gemini-2.0-flash-exp' }
-                );
-            }
+            const { callWithFallback } = require('./llmFallbackService');
+            const fallbackResult = await callWithFallback({
+                userQuery: analysisPrompt,
+                preferredProvider: llmConfig.llmProvider || 'sglang',
+                preferLocalFirst: true,
+                userApiKeys: { gemini: llmConfig.apiKey, groq: llmConfig.apiKey },
+                ollamaUrl: llmConfig.ollamaUrl,
+                options: {
+                    model: llmConfig.sglangModel || llmConfig.ollamaModel || llmConfig.groqModel || llmConfig.geminiModel,
+                    geminiModel: llmConfig.geminiModel
+                }
+            });
+            response = fallbackResult.text;
 
             // Parse JSON response
             const insights = this.parseJSON(response);
@@ -572,63 +659,63 @@ Respond with a JSON object in this exact format (NO deviations):
      */
     async getContextualMemory(userId) {
         try {
+            const User = require('../models/User');
+            const user = await User.findById(userId);
             const knowledgeState = await StudentKnowledgeState.findOne({ userId });
 
-            if (!knowledgeState || knowledgeState.concepts.length === 0) {
+            if (!knowledgeState && !user) {
                 return null;
             }
 
-            const struggling = knowledgeState.concepts.filter(c => c.difficulty === 'high' || c.masteryScore < 70);
-            const mastered = knowledgeState.concepts.filter(c => c.masteryScore >= 85);
-            const learningPace = knowledgeState.learningProfile.learningPace;
+            const struggling = knowledgeState ? knowledgeState.concepts.filter(c => c.difficulty === 'high' || c.masteryScore < 70) : [];
+            const mastered = knowledgeState ? knowledgeState.concepts.filter(c => c.masteryScore >= 85) : [];
+            const dominantStyle = knowledgeState ? knowledgeState.learningProfile.dominantLearningStyle : 'unknown';
+            const velocity = knowledgeState ? knowledgeState.engagementMetrics.learningVelocity : 0;
 
             let context = `=== STUDENT CONTEXTUAL MEMORY ===\n`;
-            context += `Overall Learning Velocity: ${knowledgeState.engagementMetrics.learningVelocity.toFixed(2)} pts/session\n`;
-            context += `Preferred Style: ${knowledgeState.learningProfile.dominantLearningStyle}\n\n`;
+            context += `Overall Learning Velocity: ${velocity.toFixed(2)} pts/session\n`;
+            context += `Preferred Style: ${dominantStyle}\n\n`;
 
-            if (mastered.length > 0) {
-                context += `STRENGTHS (Skip basics, move faster):\n`;
-                mastered.slice(0, 5).forEach(c => {
-                    context += `- ${c.conceptName} (Mastered)\n`;
+            // Read from user profile global lists
+            const globalStrongTopics = user?.profile?.strongTopics || [];
+            const globalWeakTopics = user?.profile?.weakTopics || [];
+
+            if (globalStrongTopics.length > 0 || mastered.length > 0) {
+                const combinedStrongs = Array.from(new Set([
+                    ...globalStrongTopics,
+                    ...mastered.map(c => c.conceptName)
+                ]));
+
+                context += `STRENGTHS (Mastered or highly accurate concepts):\n`;
+                combinedStrongs.slice(0, 8).forEach(t => {
+                    context += `- ${t} (Strong Mastery)\n`;
                 });
                 context += '\n';
 
-                // Add explicit acknowledgment instruction for mastered topics
-                context += `IMPORTANT INSTRUCTION FOR MASTERED TOPICS:\n`;
-                context += `If the student asks about any of these topics (${mastered.slice(0, 3).map(c => c.conceptName).join(', ')}), \n`;
-                context += `START your response by acknowledging their competence. Examples:\n`;
-                context += `- "Since you're already comfortable with ${mastered[0]?.conceptName}, let me give you a quick refresher and then we can explore advanced concepts..."\n`;
-                context += `- "I know you understand ${mastered[0]?.conceptName} well, so I'll keep this brief and focus on more complex applications..."\n`;
-                context += `Keep the acknowledgment brief (1 sentence), then provide a concise explanation or move to advanced topics.\n\n`;
+                context += `IMPORTANT INSTRUCTIONS FOR STRONG/MASTERED TOPICS:\n`;
+                context += `- If the student asks about any of these topics, briefly acknowledge their competence and immediately direct them towards advanced applications, structural design trade-offs, or complex edge cases.\n`;
+                context += `- Ask challenging, high-level questions that require deep technical reasoning. Reduce assistance and hints.\n\n`;
             }
 
-            if (struggling.length > 0) {
-                context += `WEAKNESSES (Slow down, use simpler analogies, check understanding early):\n`;
-                struggling.slice(0, 5).forEach(c => {
-                    context += `- ${c.conceptName} (Difficulty: ${c.difficulty}, Mastery: ${c.masteryScore}%)\n`;
-                    if (c.misconceptions.filter(m => m.stillPresent).length > 0) {
-                        context += `  Misconception: ${c.misconceptions.find(m => m.stillPresent).description}\n`;
-                    }
+            if (globalWeakTopics.length > 0 || struggling.length > 0) {
+                const combinedWeaks = Array.from(new Set([
+                    ...globalWeakTopics,
+                    ...struggling.map(c => c.conceptName)
+                ]));
+
+                context += `WEAKNESSES (Concepts requiring simplified analogies, step-by-step guidance):\n`;
+                combinedWeaks.slice(0, 8).forEach(t => {
+                    context += `- ${t} (Needs Remediation)\n`;
                 });
                 context += '\n';
 
-                // Add explicit acknowledgment instruction
-                context += `\n=== CRITICAL INSTRUCTION - MUST FOLLOW ===\n`;
-                context += `STRUGGLING TOPICS: ${struggling.slice(0, 5).map(c => c.conceptName).join(', ')}\n\n`;
-                context += `MANDATORY RULE: If the student's question is about ANY of these topics, you MUST:\n`;
-                context += `1. START your response with ONE of these acknowledgment patterns:\n`;
-                context += `   - "I remember you found [topic] challenging before, so let me explain it differently..."\n`;
-                context += `   - "Since [topic] was confusing in our previous conversations, let me break it down more simply..."\n`;
-                context += `   - "I know [topic] has been difficult for you, so let's approach it step-by-step..."\n\n`;
-                context += `2. Then provide a SIMPLER, MORE DETAILED explanation than usual.\n`;
-                context += `3. Use MORE EXAMPLES and SIMPLER LANGUAGE.\n\n`;
-                context += `Example for "${struggling[0]?.conceptName}":\n`;
-                context += `"I remember you found ${struggling[0]?.conceptName} challenging before, so let me explain it differently...\n\n`;
-                context += `[Then provide simple explanation with examples]"\n`;
-                context += `=== END CRITICAL INSTRUCTION ===\n\n`;
+                context += `MANDATORY INSTRUCTIONS FOR WEAK/STRUGGLING TOPICS:\n`;
+                context += `- If the student asks about any of these topics, you MUST slow down and break down the concepts into simpler subtopics.\n`;
+                context += `- Use clear real-world analogies and step-by-step walk-throughs.\n`;
+                context += `- Check understanding frequently and provide helpful hints. Do not skip straight to code or complex setups.\n\n`;
             }
 
-            if (knowledgeState.recurringStruggles.length > 0) {
+            if (knowledgeState && knowledgeState.recurringStruggles.length > 0) {
                 const topStruggle = knowledgeState.recurringStruggles.sort((a, b) => b.occurrences - a.occurrences)[0];
                 context += `CRITICAL PATTERN: Student frequently ${topStruggle.pattern}\n\n`;
             }
@@ -726,6 +813,9 @@ Respond with a JSON object in this exact format (NO deviations):
      * Parse JSON from LLM response
      */
     parseJSON(response) {
+        if (!response || typeof response !== 'string') {
+            throw new Error('Invalid JSON input: response is empty or not a string');
+        }
         try {
             return JSON.parse(response);
         } catch {

@@ -4,7 +4,7 @@ import { useAppState } from '../../contexts/AppStateContext.jsx';
 import {
     PanelLeftClose, ChevronDown, ChevronUp, FilePlus,
     Library, History, GraduationCap, Zap,
-    BookMarked, Loader2, MessageSquareText
+    BookMarked, Loader2, MessageSquareText, Plus
 } from 'lucide-react';
 import Animate from '../core/Animate.jsx';
 import IconButton from '../core/IconButton.jsx';
@@ -24,7 +24,46 @@ const formatDate = (dateString) => {
     }
 };
 
-function LeftPanel({ isChatProcessing, currentSessionId, handleSelectSessionFromHistory }) {
+const stripExt = (name = '') => name.replace(/\.[^.]+$/, '');
+
+const getRelativeDateGroup = (dateString) => {
+    if (!dateString) return 'Older';
+    const date = new Date(dateString);
+    const today = new Date();
+    
+    // Clear times
+    const dDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const dToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const diffTime = dToday.getTime() - dDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays <= 7) return 'Previous 7 Days';
+    return 'Older';
+};
+
+const groupSessions = (sessionsList) => {
+    const grouped = {};
+    sessionsList.forEach(session => {
+        const course = session.courseName ? stripExt(session.courseName) : 'General Chat';
+        const dateGroup = getRelativeDateGroup(session.updatedAt);
+        
+        if (!grouped[course]) {
+            grouped[course] = {};
+        }
+        if (!grouped[course][dateGroup]) {
+            grouped[course][dateGroup] = [];
+        }
+        grouped[course][dateGroup].push(session);
+    });
+    return grouped;
+};
+
+const DATE_GROUPS_ORDER = ['Today', 'Yesterday', 'Previous 7 Days', 'Older'];
+
+function LeftPanel({ isChatProcessing, currentSessionId, handleSelectSessionFromHistory, handleNewChat }) {
     const navigate = useNavigate();
     const location = useLocation();
     const {
@@ -90,6 +129,7 @@ function LeftPanel({ isChatProcessing, currentSessionId, handleSelectSessionFrom
                     className="text-text-muted-light dark:text-text-muted-dark hover:text-black dark:hover:text-white"
                 />
             </div>
+
 
             {/* Admin Subjects — opens dedicated Course Explorer page */}
             <div className="mb-4">
@@ -183,45 +223,76 @@ function LeftPanel({ isChatProcessing, currentSessionId, handleSelectSessionFrom
                             </div>
                         )}
 
-                        {!loadingSessions && sessions.map(session => {
-                            const isActive = currentSessionId === session.sessionId;
-                            const preview = session.preview || `Session ${String(session.sessionId).slice(0, 8)}`;
-                            const isTutor = !!session.isTutorMode;
-                            const tutorType = session.tutorModeType;
-                            const tutorBadgeText = tutorType === 'structured' ? 'Tutor · Course' : 'Tutor · General';
+                        {!loadingSessions && sessions.length > 0 && (() => {
+                            const grouped = groupSessions(sessions);
+                            const courses = Object.keys(grouped).sort((a, b) => {
+                                if (a === 'General Chat') return -1;
+                                if (b === 'General Chat') return 1;
+                                return a.localeCompare(b);
+                            });
 
-                            return (
-                                <button
-                                    key={session.sessionId}
-                                    onClick={() => handleSelectSessionFromHistory(session.sessionId, {
-                                        isTutorMode: session.isTutorMode || false,
-                                        tutorModeType: session.tutorModeType || null,
-                                        courseName: session.courseName || null
-                                    })}
-                                    className={`w-full text-left rounded-lg px-3 py-2 mb-1.5 transition-all duration-200 border ${isActive
-                                        ? 'border-primary/50 bg-primary/10 shadow-sm'
-                                        : 'border-border-light dark:border-gray-800 bg-background-light dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'
-                                        }`}
-                                    title={preview}
-                                >
-                                    <div className="flex flex-col gap-1 min-w-0">
-                                        <div className={`truncate text-xs font-medium ${isActive ? 'text-primary dark:text-primary-light' : 'text-text-light dark:text-text-dark'}`}>
-                                            {preview}
-                                        </div>
-                                        <div className="flex items-center justify-between mt-1">
-                                            {isTutor && (
-                                                <span className="flex-shrink-0 rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">
-                                                    {tutorBadgeText}
-                                                </span>
-                                            )}
-                                            <div className={`text-[10px] ${isActive ? 'text-primary/70' : 'text-text-muted-light dark:text-text-muted-dark'} ml-auto`}>
-                                                {formatDate(session.updatedAt)}
-                                            </div>
-                                        </div>
+                            return courses.map(course => (
+                                <div key={course} className="mb-4 last:mb-1">
+                                    <div className="text-[10px] font-bold text-indigo-400 dark:text-indigo-300/80 uppercase tracking-wider mb-2 px-1 border-b border-indigo-500/10 pb-1">
+                                        {course}
                                     </div>
-                                </button>
-                            );
-                        })}
+                                    
+                                    {DATE_GROUPS_ORDER.map(dateGroup => {
+                                        const groupSessionsList = grouped[course][dateGroup] || [];
+                                        if (groupSessionsList.length === 0) return null;
+
+                                        return (
+                                            <div key={dateGroup} className="mb-2 last:mb-0">
+                                                <div className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 px-2 mb-1.5 uppercase tracking-wide">
+                                                    {dateGroup}
+                                                </div>
+                                                <div className="space-y-1 pl-1">
+                                                    {groupSessionsList.map(session => {
+                                                        const isActive = currentSessionId === session.sessionId;
+                                                        const preview = session.preview || `Session ${String(session.sessionId).slice(0, 8)}`;
+                                                        const isTutor = !!session.isTutorMode;
+                                                        const tutorType = session.tutorModeType;
+                                                        const tutorBadgeText = tutorType === 'structured' ? 'Tutor · Course' : 'Tutor · General';
+
+                                                        return (
+                                                            <button
+                                                                key={session.sessionId}
+                                                                onClick={() => handleSelectSessionFromHistory(session.sessionId, {
+                                                                    isTutorMode: session.isTutorMode || false,
+                                                                    tutorModeType: session.tutorModeType || null,
+                                                                    courseName: session.courseName || null
+                                                                })}
+                                                                className={`w-full text-left rounded-lg px-2.5 py-1.5 transition-all duration-200 border ${isActive
+                                                                    ? 'border-primary/50 bg-primary/10 shadow-sm'
+                                                                    : 'border-border-light dark:border-gray-800 bg-background-light dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                                                    }`}
+                                                                title={preview}
+                                                            >
+                                                                <div className="flex flex-col gap-0.5 min-w-0">
+                                                                    <div className={`truncate text-xs font-medium ${isActive ? 'text-primary dark:text-primary-light' : 'text-text-light dark:text-text-dark'}`}>
+                                                                        {preview}
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between mt-0.5">
+                                                                        {isTutor && (
+                                                                            <span className="flex-shrink-0 rounded border border-primary/30 bg-primary/10 px-1 py-0.2 text-[8px] text-primary">
+                                                                                {tutorBadgeText}
+                                                                            </span>
+                                                                        )}
+                                                                        <div className={`text-[9px] ${isActive ? 'text-primary/70' : 'text-text-muted-light dark:text-text-muted-dark'} ml-auto`}>
+                                                                            {formatDate(session.updatedAt)}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ));
+                        })()}
                     </div>
                 </Animate>
             </div>

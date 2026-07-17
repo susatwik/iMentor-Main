@@ -6,7 +6,28 @@ const cacheMiddleware = (durationInSeconds) => async (req, res, next) => {
         return next();
     }
 
-    const key = `__express__${req.originalUrl || req.url}`;
+    // Normalize URL for better cache hit-rate:
+    // - include path
+    // - include only stable query params
+    // - ignore volatile params (timestamps, ids, message counters, etc.)
+    const stableParams = [];
+
+    const volatileParamRe = /^(sessionId|messageCount|t|timestamp|nonce|tracking|utm_|cacheBuster)$/i;
+
+
+    for (const [k, v] of Object.entries(req.query || {})) {
+        if (volatileParamRe.test(k)) continue;
+        // Skip empty/undefined
+        if (v === undefined || v === null || v === '') continue;
+        stableParams.push([k, Array.isArray(v) ? v.join(',') : String(v)]);
+    }
+
+    stableParams.sort((a, b) => a[0].localeCompare(b[0]));
+    const queryPart = stableParams.map(([k, v]) => `${k}=${v}`).join('&');
+
+    // Prevent cross-user cache bleed for authenticated endpoints
+    const userPart = req.user?.id || req.user?._id || 'anon';
+    const key = `__express__${req.path}?${queryPart}|user:${userPart}`;
     try {
         const cachedResponse = await redisClient.get(key);
         if (cachedResponse) {

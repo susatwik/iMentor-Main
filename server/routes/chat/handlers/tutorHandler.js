@@ -26,13 +26,15 @@ const { triggerPeriodicAnalysis } = require('../../../middleware/contextualMemor
 const log = require('../../../utils/logger');
 const { streamEvent, TUTOR_MODE_TYPES, emitTutorKnowledgeEvents } = require('../helpers');
 const { computeTurnXp, awardTurnXpAsync, scheduleQualityBonusAsync } = require('../../../services/tutorXpService');
-const tutorEnhancementService = require('../../../services/tutorEnhancementService');
-const priorKnowledgeDetector = require('../../../services/priorKnowledgeDetector');
- 
+
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
- 
+
+/**
+ * Build the $each array for ChatHistory push.
+ * When isAutoGreeting is true we skip the phantom user message so history stays clean.
+ */
 function buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting) {
     return isAutoGreeting ? [aiMessageForDb] : [userMessageForDb, aiMessageForDb];
 }
@@ -374,10 +376,7 @@ async function handleGeneral(res, ctx) {
         res.end();
         return true;
     }
- 
-    // ── Normal flow: generate intro via LLM ───────────────────────────────────
-    const contextForIntro = socraticService.buildPersonalizationContext(contextualMemory, query);
- 
+
     let initialResponse = '';
     try {
         initialResponse = await startSocraticSession(

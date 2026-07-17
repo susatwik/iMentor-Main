@@ -62,23 +62,33 @@ router.post('/chat', guestLimiter, async (req, res) => {
         if (sglangEnabled) {
             try {
                 const sglangService = require('../services/sglangService');
-                streamEvent({ type: 'status_update', content: 'Thinking...' });
-
-                const result = await sglangService.streamChat(
-                    [],              // no history
-                    trimmedQuery,
-                    GUEST_SYSTEM_PROMPT,
-                    { endpoint: 'chat', maxTokens: 2048, temperature: 0.7 },
-                    (evt) => streamEvent(evt) // stream tokens as they arrive
-                );
-                responseText = result.finalAnswer || '';
+                const cb = require('../utils/circuitBreaker'); // [Team4]
+                if (cb.isOpen('sglang')) {
+                    log.warn('GUEST', 'SGLang circuit open — skipping to Gemini');
+                } else {
+                    streamEvent({ type: 'status_update', content: 'Thinking...' });
+                    try {
+                        const result = await sglangService.streamChat(
+                            [],              // no history
+                            trimmedQuery,
+                            GUEST_SYSTEM_PROMPT,
+                            { endpoint: 'chat', maxTokens: 2048, temperature: 0.7 },
+                            (evt) => streamEvent(evt) // stream tokens as they arrive
+                        );
+                        responseText = result.finalAnswer || '';
+                        cb.onSuccess('sglang');
+                    } catch (sglangErr) {
+                        cb.onFailure('sglang');
+                        throw sglangErr;
+                    }
+                }
             } catch (sglangErr) {
                 log.warn('GUEST', `SGLang failed: ${sglangErr.message} — trying Gemini`);
                 responseText = ''; // reset to trigger Gemini fallback
             }
         }
 
-        // ── Gemini fallback (non-streaming, returned as final_answer) ─────
+        // ── Gemini fallback (non-streaming) ──────────────────────────────
         if (!responseText) {
             try {
                 const geminiService = require('../services/geminiService');
@@ -91,10 +101,34 @@ router.post('/chat', guestLimiter, async (req, res) => {
                     { maxOutputTokens: 2048, temperature: 0.7 }
                 );
             } catch (geminiErr) {
-                log.warn('GUEST', `Gemini fallback also failed: ${geminiErr.message}`);
-                responseText = "I'm having trouble connecting right now. Please try again in a moment, or sign in for the full experience!";
+                log.warn('GUEST', `Gemini fallback failed: ${geminiErr.message}`);
+                responseText = "";
             }
         }
+
+        // ── Groq fallback (non-streaming) ────────────────────────────────
+        if (!responseText && process.env.GROQ_API_KEY && !process.env.GROQ_API_KEY.startsWith('your_')) {
+            try {
+                const groqService = require('../services/groqService');
+                streamEvent({ type: 'status_update', content: 'Thinking...' });
+
+                responseText = await groqService.generateContentWithHistory(
+                    [],
+                    trimmedQuery,
+                    GUEST_SYSTEM_PROMPT,
+                    { maxOutputTokens: 2048, temperature: 0.7 }
+                );
+            } catch (groqErr) {
+                log.warn('GUEST', `Groq fallback failed: ${groqErr.message}`);
+                responseText = "";
+            }
+        }
+
+        // ── Final fallback message if all failed ──────────────────────────
+        if (!responseText) {
+            responseText = "I'm having trouble connecting right now. Please try again in a moment, or sign in for the full experience!";
+        }
+
 
         // ── Send final answer ─────────────────────────────────────────────
         streamEvent({

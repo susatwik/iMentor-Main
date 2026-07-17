@@ -65,6 +65,47 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       console.error("API Interceptor: Received 401 Unauthorized. Token might be invalid or expired.");
+      
+      const isAuthEndpoint = error.config && error.config.url && (
+        error.config.url.includes("/auth/signin") ||
+        error.config.url.includes("/auth/signup") ||
+        error.config.url.includes("/auth/send-otp") ||
+        error.config.url.includes("/auth/verify-otp") ||
+        error.config.url.includes("/auth/verify-forgot-otp") ||
+        error.config.url.includes("/auth/reset-password") ||
+        error.config.url.includes("/auth/validate-llm-key")
+      );
+      
+      if (!isAuthEndpoint) {
+        localStorage.removeItem("authToken");
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (
+            key && (
+              key.startsWith('tutorProgress_') ||
+              key.startsWith('quizResults_') ||
+              key.startsWith('quizIndex_') ||
+              key.startsWith('tutorSession_') ||
+              key === 'aiTutorSessionId' ||
+              key === 'aiTutorSelectedSubject' ||
+              key === 'aiTutorSystemPrompt' ||
+              key === 'lastGeneralSessionId' ||
+              key === 'lastTutorSessionId' ||
+              key.startsWith('mentor:tutor_onboarding_seen') ||
+              key.startsWith('deepResearchIntroSeen') ||
+              key.includes('.featureIntroSeen.')
+            )
+          ) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+
+        if (typeof window !== "undefined") {
+          window.location.href = "/";
+        }
+      }
     }
     return Promise.reject(error);
   }
@@ -196,10 +237,14 @@ const api = {
     const response = await apiClient.get("/chat/sessions");
     return response.data;
   },
-  startNewSession: async (previousSessionId, skipAnalysis = false) => {
+  startNewSession: async (previousSessionId, skipAnalysis = false, courseName = null, forceNewChat = false, isTutorMode = false, tutorModeType = null) => {
     const response = await apiClient.post("/chat/history", {
       previousSessionId,
-      skipAnalysis
+      skipAnalysis,
+      courseName,
+      forceNewChat,
+      isTutorMode,
+      tutorModeType
     });
     return response.data;
   },
@@ -796,6 +841,26 @@ const api = {
     });
     return response.data; // { text: string, language: string }
   },
+  // ===== Socratic Quiz Engine =====
+  generateSocraticQuiz: async (courseName, moduleId = null, moduleName = null) => {
+    const response = await apiClient.get('/quiz/generate', {
+      params: { courseName, moduleId, moduleName }
+    });
+    return response.data;
+  },
+  submitSocraticQuiz: async (courseName, answers, moduleId = null, moduleName = null) => {
+    const response = await apiClient.post('/quiz/submit', {
+      courseName,
+      moduleId,
+      moduleName,
+      answers
+    });
+    return response.data;
+  },
+  getQuizAnalytics: async () => {
+    const response = await apiClient.get('/quiz/analytics');
+    return response.data;
+  }
 };
 
 

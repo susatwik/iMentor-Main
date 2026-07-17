@@ -64,29 +64,60 @@ async function generateContentWithHistory(
         // Add current query
         messages.push({ role: 'user', content: currentUserQuery });
 
-        const completion = await groq.chat.completions.create({
-            messages: messages,
-            model: modelToUse,
-            temperature: options.temperature || 0.7,
-            max_tokens: options.maxOutputTokens || 4096,
-            top_p: 1,
-            stream: false,
-            stop: null
-        });
+        let completion;
+        let attempts = 0;
+        const maxAttempts = 12;
+        while (attempts < maxAttempts) {
+            try {
+                attempts++;
+                completion = await groq.chat.completions.create({
+                    messages: messages,
+                    model: modelToUse,
+                    temperature: options.temperature || 0.7,
+                    max_tokens: options.maxOutputTokens || 4096,
+                    top_p: 1,
+                    stream: false,
+                    stop: null
+                });
+                break; // success!
+            } catch (error) {
+                const status = error.status || error.response?.status || 500;
+                const errMsg = error.message || '';
+                const isRateLimit = status === 429 || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('rate_limit') || errMsg.toLowerCase().includes('quota');
+                
+                if (isRateLimit && attempts < maxAttempts) {
+                    let waitMs = 5000;
+                    const match = errMsg.match(/try again in (\d+(\.\d+)?)s/i);
+                    if (match) {
+                        waitMs = Math.ceil(parseFloat(match[1]) * 1000) + 1500; // add 1.5s buffer
+                    } else {
+                        const msMatch = errMsg.match(/try again in (\d+)ms/i);
+                        if (msMatch) {
+                            waitMs = parseInt(msMatch[1], 10) + 500;
+                        } else {
+                            waitMs = attempts * 5000;
+                        }
+                    }
+                    log.warn('AI', `Groq rate limit hit. Attempt ${attempts}/${maxAttempts}. Waiting ${waitMs}ms before retrying...`);
+                    await new Promise(resolve => setTimeout(resolve, waitMs));
+                } else {
+                    const msg = error.message?.toLowerCase() || '';
+                    const reason =
+                        (status === 401 || msg.includes('invalid api key') || msg.includes('unauthorized')) ? 'API key is invalid or unauthorized' :
+                            (status === 429 || msg.includes('rate limit') || msg.includes('quota')) ? 'API quota exceeded or rate limit reached' :
+                                (status === 403) ? 'Access denied — API key lacks permissions' :
+                                    (status === 503 || msg.includes('overloaded')) ? 'Service temporarily overloaded' :
+                                        'Unexpected error';
+                    log.warn('AI', `Groq failure: ${reason}`);
+                    throw new Error(`Groq API failure: ${error.message}`);
+                }
+            }
+        }
 
-        // log.success('AI', `Groq response: ${completion.choices[0]?.message?.content?.length || 0} chars`);
         return completion.choices[0]?.message?.content || "";
     } catch (error) {
-        const status = error.status || error.response?.status || 500;
-        const msg = error.message?.toLowerCase() || '';
-        const reason =
-            (status === 401 || msg.includes('invalid api key') || msg.includes('unauthorized')) ? 'API key is invalid or unauthorized' :
-                (status === 429 || msg.includes('rate limit') || msg.includes('quota')) ? 'API quota exceeded or rate limit reached' :
-                    (status === 403) ? 'Access denied — API key lacks permissions' :
-                        (status === 503 || msg.includes('overloaded')) ? 'Service temporarily overloaded' :
-                            'Unexpected error';
-        log.warn('AI', `Groq failure: ${reason}`);
-        throw new Error(`Groq API failure: ${error.message}`);
+        log.error('AI', `Groq outer failure: ${error.message}`);
+        throw error;
     }
 }
 

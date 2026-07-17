@@ -1,5 +1,5 @@
 // frontend/src/hooks/useBadgeSocket.js
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './useAuth';
 import toast from 'react-hot-toast';
@@ -10,6 +10,13 @@ const SOCKET_URL = typeof window !== 'undefined' ? window.location.origin : 'htt
 export const useBadgeSocket = () => {
     const { user } = useAuth();
     const [newBadge, setNewBadge] = useState(null);
+    const [xpData, setXpData] = useState(null);       // latest { amount, newTotal, reason, topic }
+    const [refreshCounter, setRefreshCounter] = useState(0); // bumped on every XP update
+
+    // Force any consumers (useUserLevel, XPProgressModal) to re-fetch
+    const triggerRefresh = useCallback(() => {
+        setRefreshCounter(prev => prev + 1);
+    }, []);
 
     useEffect(() => {
         if (!user || !user.id) return;
@@ -61,6 +68,30 @@ export const useBadgeSocket = () => {
                     color: '#fff',
                 },
             });
+            // Quality bonus also updates total XP
+            triggerRefresh();
+        });
+
+        socket.on('xp_awarded', (data) => {
+            if (isDev) {
+                console.log('[Socket] ⚡ XP awarded:', data);
+            }
+            if (data) {
+                setXpData(data);
+                triggerRefresh();
+
+                if (data.amount > 0) {
+                    toast(`⚡ +${data.amount} XP earned!  Total: ${data.newTotal || '—'}`, {
+                        duration: 3500,
+                        style: {
+                            background: 'rgba(107, 207, 127, 0.15)',
+                            border: '1px solid rgba(107, 207, 127, 0.4)',
+                            color: '#6bcf7f',
+                            fontWeight: '600',
+                        },
+                    });
+                }
+            }
         });
 
         socket.on('connect_error', (err) => {
@@ -76,9 +107,9 @@ export const useBadgeSocket = () => {
         return () => {
             socket.disconnect();
         };
-    }, [user]);
+    }, [user, triggerRefresh]);
 
     const clearBadge = () => setNewBadge(null);
 
-    return { newBadge, clearBadge };
+    return { newBadge, clearBadge, xpData, refreshCounter };
 };

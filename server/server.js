@@ -67,6 +67,8 @@ const deepResearchRoutes = require('./routes/deepResearch'); // [Team1-6] Deep r
 const tutorRoutes = require('./routes/tutor'); // [Team1-6] Socratic tutor
 const socraticRoutes = require('./routes/socratic'); // [Team1-6] Socratic sessions
 const studyModeRoutes = require('./routes/studyMode'); // Study questions + skill tree
+const quizRoutes = require('./routes/quiz'); // [Team1] Quiz system with knowledge gap analysis
+const adaptiveProfileRoutes = require('./routes/adaptiveProfile'); // [Team8] Adaptive learning profiles
 const { setupAdmin } = require('./scripts/setupAdmin');
 
 // --- Course Material File Watcher ---
@@ -297,6 +299,8 @@ app.use('/api/study-mode', authMiddleware, studyModeRoutes); // Study questions 
 app.use('/api/debug', authMiddleware, debugRoutes);
 app.use('/api/progress', authMiddleware, require('./routes/progress'));
 app.use('/api/jobs', authMiddleware, require('./routes/jobs'));
+app.use('/api/quiz', authMiddleware, quizRoutes); // [Team1] Quiz generation, submission & grading
+app.use('/api/adaptive-profile', authMiddleware, adaptiveProfileRoutes); // [Team8] Student adaptive learning profiles
 
 // --- Sentry Error Handler ---
 Sentry.setupExpressErrorHandler(app);

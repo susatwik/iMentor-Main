@@ -1,6 +1,25 @@
 // server/services/teachingReflectionService.js
 // Post-turn reflection: analyses what happened, produces a learning adjustment.
 
+const MASTERY_SCORE_MAX = 5.0;
+
+/**
+ * Normalize mastery to 0–1 whether caller passes 0–1 or 0–5 scale.
+ */
+function normalizeMasteryScore(masteryScore = 0, max = MASTERY_SCORE_MAX) {
+    const n = Number(masteryScore) || 0;
+    if (n <= 1) return Math.max(0, Math.min(1, n));
+    return Math.max(0, Math.min(1, n / max));
+}
+
+function normalizeCognitiveLevel(level) {
+    const aliases = {
+        L2_COMPREHENSION: 'L2_APPLICATION',
+        L3_APPLICATION: 'L3_CRITICAL'
+    };
+    return aliases[level] || level || 'L1_CONCEPT';
+}
+
 /**
  * After each student turn, reflect on the teaching outcome and produce:
  *  - An adjustment action (or null if nothing needs changing)
@@ -23,6 +42,8 @@ function reflectOnTeaching(state = {}) {
     } = state;
 
     const results = [];
+    const masteryNorm = normalizeMasteryScore(masteryScore);
+    const normalizedLevel = normalizeCognitiveLevel(cognitiveLevel);
 
     // ── 1. Persistent confusion detection ─────────────────────────────────────
     if (consecutiveWrong >= 3) {
@@ -44,12 +65,17 @@ function reflectOnTeaching(state = {}) {
         });
     }
 
-    // ── 3. Ready to skip ahead ─────────────────────────────────────────────────
-    if (masteryScore >= 0.9 && consecutiveWrong === 0 && turnCount >= 2) {
+    // ── 3. Ready to skip ahead (strict: high normalized mastery + L4 + no struggles) ──
+    if (
+        masteryNorm >= 0.85 &&
+        consecutiveWrong === 0 &&
+        turnCount >= 4 &&
+        normalizedLevel === 'L4_EVALUATION'
+    ) {
         results.push({
             action: 'SKIP_AHEAD',
-            note: `High mastery (${Math.round(masteryScore * 100)}%). Student ready for next sub-topic.`,
-            promptPatch: 'The student has demonstrated strong understanding. Acknowledge this clearly, then introduce the next concept.',
+            note: `High mastery (${Math.round(masteryNorm * 100)}%) at L4. Student ready for next sub-topic.`,
+            promptPatch: 'The student has demonstrated strong understanding at the evaluation level. Acknowledge this clearly, then introduce the next concept.',
             priority: 7,
         });
     }
@@ -65,7 +91,8 @@ function reflectOnTeaching(state = {}) {
     }
 
     // ── 5. Emotional state: frustration / anxiety ─────────────────────────────
-    if (emotionalState === 'FRUSTRATION' || emotionalState === 'ANXIETY') {
+    const isFrustrated = emotionalState === 'FRUSTRATION' || emotionalState === 'FRUSTRATED' || emotionalState === 'ANXIETY';
+    if (isFrustrated) {
         results.push({
             action: 'ENCOURAGE',
             note: `Emotional state detected: ${emotionalState}. Inserting encouragement.`,
@@ -112,7 +139,7 @@ function reflectOnTeaching(state = {}) {
  */
 function buildSessionQualitySummary(state = {}) {
     const { masteryScore = 0, turnCount = 0, hintsGiven = 0, consecutiveWrong = 0 } = state;
-    const mastery = Math.round((masteryScore || 0) * 100);
+    const mastery = Math.round(normalizeMasteryScore(masteryScore) * 100);
     const engagement = turnCount > 10 ? 'high' : turnCount > 4 ? 'medium' : 'low';
     const difficulty = consecutiveWrong >= 3 ? 'over-challenged' : hintsGiven >= 3 ? 'challenged' : 'appropriate';
     return `mastery=${mastery}% | turns=${turnCount} | engagement=${engagement} | difficulty=${difficulty}`;
@@ -121,4 +148,5 @@ function buildSessionQualitySummary(state = {}) {
 module.exports = {
     reflectOnTeaching,
     buildSessionQualitySummary,
+    normalizeMasteryScore,
 };
