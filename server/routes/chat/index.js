@@ -10,6 +10,8 @@ const { buildOptimalContext } = require('../../services/contextManager');
 const { createPerformanceTracker, logPerformance } = require('../../services/performanceDiagnosticsService');
 const { calculateComplexityScore } = require('../../services/smartModelRouterService');
 const { injectContextualMemory } = require('../../middleware/contextualMemoryMiddleware');
+const { buildMemoryAwareSystemPrompt } = require('../../services/socraticService');
+const contextService = require('../../services/contextService');
 const { validateChatMessage } = require('../../middleware/requestValidation');
 const { sttLimiter } = require('../../middleware/rateLimitMiddleware');
 const { authMiddleware } = require('../../middleware/authMiddleware');
@@ -535,7 +537,17 @@ router.post('/message', validateChatMessage, injectContextualMemory, async (req,
             ).catch(e => log.warn('SYSTEM', `Failed to persist summary: ${e.message}`));
         }
 
-        let finalSystemPrompt = req.contextualMemory?.systemPrompt || clientProvidedSystemInstruction;
+        // Load formatted conversation context (non-blocking — degrade gracefully)
+        let formattedContext = '';
+        try {
+            formattedContext = await contextService.getFormattedContextForPrompt(userId, sessionId);
+        } catch (err) {
+            log.warn('CONTEXT', `Failed to assemble formatted context: ${err.message}`);
+            formattedContext = '';
+        }
+
+        let finalSystemPrompt = buildMemoryAwareSystemPrompt(req.contextualMemory, clientProvidedSystemInstruction, tutorMode, query);
+        if (formattedContext) finalSystemPrompt = `${finalSystemPrompt}\n\n${formattedContext}`;
 
         if (tutorMode && tutorModeType === TUTOR_MODE_TYPES.ASSISTANT) {
             finalSystemPrompt = `You are iMentor, an academic AI tutor assistant. Your ONLY purpose is to help students with academic subjects: Mathematics, Physics, Chemistry, Biology, Computer Science, Engineering, History, Geography, Economics, Literature, and any other formal educational topic.
@@ -662,18 +674,33 @@ Output style:
         }
 
         let clientMessage = error.response?.data?.error || error.message || 'An internal error occurred while processing your message.';
+        let providerDetail = null;
 
         if (isAIServiceError) {
-            clientMessage = 'It seems like the AI service is not working right now or is temporarily overwhelmed. Please wait a few moments and try again! 📚';
+            // Prefer a concise user-facing message; optionally include provider details in dev/debug mode
+            providerDetail = (error.providerErrors && error.providerErrors.length)
+                ? error.providerErrors.map(e => `${e.provider}:${e.model} -> ${e.message}`).join(' | ')
+                : (error.lastError?.message || error.originalError?.message || error.message);
+
+            if (process.env.SHOW_AI_ERRORS === 'true') {
+                clientMessage = `AI provider error: ${providerDetail}`;
+            } else {
+                clientMessage = 'It seems like the AI service is not working right now or is temporarily overwhelmed. Please wait a few moments and try again! 📚';
+            }
         }
 
         if (res.headersSent && !res.writableEnded) {
-            streamEvent(res, { type: 'error', content: clientMessage });
+            // Stream a structured error so the frontend can optionally show provider details
+            const payload = (process.env.SHOW_AI_ERRORS === 'true')
+                ? { userMessage: clientMessage, providerDetail }
+                : { userMessage: clientMessage };
+            streamEvent(res, { type: 'error', content: payload });
             res.end();
         } else if (!res.headersSent) {
             res.status(status).json({
                 message: clientMessage,
-                error: (process.env.NODE_ENV === 'development' && !isAIServiceError) ? error.stack : undefined
+                error: (process.env.NODE_ENV === 'development' && !isAIServiceError) ? error.stack : undefined,
+                aiError: (process.env.SHOW_AI_ERRORS === 'true') ? providerDetail : undefined
             });
         }
     }

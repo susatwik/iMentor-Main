@@ -14,7 +14,10 @@ const connectDB = async (mongoUri) => {
     return conn;
   } catch (error) {
     log.error('DB', 'MongoDB Connection Error', error);
-    process.exit(1);
+    log.warn('DB', 'Continuing startup without MongoDB connection (read-only/degraded mode).');
+    // Don't crash the entire server for missing MongoDB in local/dev setups.
+    // Return null so callers can handle degraded behavior gracefully.
+    return null;
   }
 };
 

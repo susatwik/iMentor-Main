@@ -328,6 +328,10 @@ async function startServer() {
     await checkRagService(pythonRagUrl);
     await connectRedis();
     
+    // Check optional services (non-blocking, won't crash server if unavailable)
+    const { checkOptionalServices } = require('./utils/startupServices');
+    const serviceStatus = await checkOptionalServices();
+    
     // Bootstrap and integrity checks moved to offline jobs for faster server startup
     // Run scripts/maintenanceJobs.js for full course integrity verification
     // Courses are expected to be pre-configured via offline jobs

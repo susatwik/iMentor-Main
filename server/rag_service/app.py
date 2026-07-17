@@ -84,7 +84,7 @@ try:
     import knowledge_engine
     import media_processor
     import aiohttp
-    # fine_tuner imported lazily in /finetune route
+    import fine_tuner
     import pdf_processor
     import socratic_precompute
     import subtopic_notes_generator
@@ -325,13 +325,12 @@ _MEM_LIMIT_BYTES = 256 * 1024 * 1024
 _CPU_LIMIT_SECS  = 3
 
 def _sandbox_preexec():
-    if _resource is None:
-        return
     try:
         _resource.setrlimit(_resource.RLIMIT_AS,  (_MEM_LIMIT_BYTES, _MEM_LIMIT_BYTES))
-        _resource.setrlimit(_resource.RLIMIT_CPU, (_CPU_LIMIT_SECS,  _CPU_LIMIT_SECS))
+        _resource.setrlimit(_resource.RLIMIT_CPU, (_CPU_LIMIT_SECS, _CPU_LIMIT_SECS))
     except Exception:
-        pass
+        # Any failure when setting limits should not crash the sandbox helper.
+        return
 
 LANGUAGE_CONFIG = {
     "python": {"filename": "main.py",  "compile_cmd": None, "run_cmd": [sys.executable, "main.py"]},
@@ -523,12 +522,23 @@ async def execute_code(body: ExecuteCodeRequest):
                 exe = run_command[0] + (".exe" if os.name == "nt" else "")
                 run_command[0] = os.path.join(temp_dir, exe)
             try:
+                # Build kwargs for subprocess.run. Windows does not support
+                # `preexec_fn`, so only include it on POSIX systems.
+                run_kwargs = dict(
+                    cwd=temp_dir,
+                    input=case_input,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    encoding="utf-8",
+                )
+                if os.name != 'nt':
+                    run_kwargs['preexec_fn'] = _sandbox_preexec
+
                 proc = await asyncio.to_thread(
                     subprocess.run,
                     run_command,
-                    cwd=temp_dir, input=case_input,
-                    capture_output=True, text=True, timeout=5, encoding="utf-8",
-                    preexec_fn=_sandbox_preexec,
+                    **run_kwargs,
                 )
                 stdout = proc.stdout.strip().replace("\r\n", "\n")
                 stderr = proc.stderr.strip()
@@ -1680,6 +1690,18 @@ async def get_turnitin_report_route(body: TurnitinReportRequest):
 @app.post("/finetune")
 async def finetune_route(body: FinetuneRequest):
     logger.info(f"Received fine-tuning request. Job ID: {body.jobId}. Model: {body.model_name_to_update}.")
+    # Lazy-import the fine_tuner module so the app can start without
+    # training dependencies (trl/peft/torch/etc.). If the import fails,
+    # return a clear 503 response explaining how to enable it.
+    try:
+        import importlib
+        fine_tuner = importlib.import_module("fine_tuner")
+    except Exception as e:
+        logger.warning(f"Fine-tuner unavailable: {e}")
+        return JSONResponse({
+            "error": "Fine-tuner unavailable: training dependencies not installed or failed to import.",
+            "details": "Install optional training packages (trl, peft, transformers, torch) and restart the service to enable fine-tuning.",
+        }, status_code=503)
 
     def fine_tuning_task():
         try:

@@ -159,10 +159,13 @@ const SkillTreeLanding = () => {
         const answerToSubmit = selectedAnswer || currentAnswer;
         if (!answerToSubmit || (typeof answerToSubmit === 'string' && !answerToSubmit.trim())) return;
 
+        const currentQ = questions[currentQuestionIndex];
         const newAnswers = [...answers, {
-            question: questions[currentQuestionIndex].question,
+            question: currentQ.question,
             answer: typeof answerToSubmit === 'string' ? answerToSubmit.trim() : answerToSubmit,
-            skillId: questions[currentQuestionIndex].skillId // Include skillId for backend MCQ verification
+            skillId: currentQ.skillId || null, // null for LLM-generated (custom topic) questions
+            correctAnswer: currentQ.correctAnswer || null, // For custom topic grading on backend
+            explanation: currentQ.explanation || ''
         }];
         setAnswers(newAnswers);
         setCurrentAnswer('');

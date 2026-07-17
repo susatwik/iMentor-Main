@@ -596,3 +596,4 @@ Re-run bootstrap for each course to repopulate STN notes. Qdrant and disk backup
 ---
 
 *Generated 2026-03-28. Update this file when architecture changes.*
+ 

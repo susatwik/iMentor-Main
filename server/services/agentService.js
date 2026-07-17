@@ -49,7 +49,8 @@ async function fastLlmCall(prompt, systemPrompt, chatHistory, llmService, llmOpt
         prompt,
         systemPrompt,
         userApiKeys: {
-              gemini: llmOptions.apiKey && llmOptions.geminiModel ? llmOptions.apiKey : process.env.GEMINI_API_KEY,
+          gemini: llmOptions.apiKey && llmOptions.geminiModel ? llmOptions.apiKey : process.env.GEMINI_API_KEY,
+          groq:   process.env.GROQ_API_KEY,
         },
         ollamaUrl: llmOptions.ollamaUrl || process.env.OLLAMA_API_BASE_URL,
         options: { maxOutputTokens: 2048, temperature: 0.3 },

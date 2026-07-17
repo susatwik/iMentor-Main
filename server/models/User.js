@@ -173,6 +173,10 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     select: false,
   },
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

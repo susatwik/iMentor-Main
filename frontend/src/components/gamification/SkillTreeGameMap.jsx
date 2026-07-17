@@ -3,7 +3,7 @@ import Animate from '../core/Animate.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Lock, Star, CheckCircle2, Play, Trophy, Zap,
-    ArrowLeft, Target, Crown, Sparkles, Flame, Gift, Check, Loader2
+    ArrowLeft, ArrowRight, Target, Crown, Sparkles, Flame, Gift, Check, X, Loader2
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -254,26 +254,30 @@ const SkillTreeGameMap = () => {
         }
     };
 
-    const handleAnswerSelect = (index) => {
+const handleAnswerSelect = (index) => {
         if (selectedAnswer !== null) return;
         setSelectedAnswer(index);
-        
+
         const currentQuestion = levelQuestions[currentQuestionIndex];
         const isCorrect = index === currentQuestion.correctIndex;
         const newScore = isCorrect ? score + 1 : score;
-        
+
         if (isCorrect) {
             setScore(newScore);
         }
+    };
 
-        setTimeout(() => {
-            if (currentQuestionIndex < levelQuestions.length - 1) {
-                setCurrentQuestionIndex(prev => prev + 1);
-                setSelectedAnswer(null);
-            } else {
-                completeLevel(newScore);
-            }
-        }, 1500);
+    const handleNextQuestion = () => {
+        const currentQuestion = levelQuestions[currentQuestionIndex];
+        const isCorrect = selectedAnswer === currentQuestion.correctIndex;
+        const newScore = isCorrect ? score + 1 : score;
+
+        if (currentQuestionIndex < levelQuestions.length - 1) {
+            setCurrentQuestionIndex(prev => prev + 1);
+            setSelectedAnswer(null);
+        } else {
+            completeLevel(newScore);
+        }
     };
 
     const completeLevel = async (completedScore) => {
@@ -485,7 +489,8 @@ const SkillTreeGameMap = () => {
     const renderStars = (count, size = 'sm') => {
         const sizeClass = size === 'lg' ? 'w-6 h-6' : 'w-4 h-4';
         return (
-            <div className="flex gap-0.5">
+            <div className="f
+            lex gap-0.5">
                 {[1, 2, 3].map(star => (
                     <Star
                         key={star}
@@ -754,7 +759,6 @@ const SkillTreeGameMap = () => {
                             <h2 className="text-xl font-semibold text-white mb-6 leading-relaxed">
                                 {currentQuestion.question}
                             </h2>
-
                             <div className="space-y-3">
                                 {currentQuestion.options.map((option, idx) => {
                                     const isSelected = selectedAnswer === idx;
@@ -769,28 +773,59 @@ const SkillTreeGameMap = () => {
                                             className={`w-full p-4 rounded-xl text-left transition-all ${
                                                 showResult
                                                     ? isCorrect
-                                                        ? 'bg-slate-200/20 border-2 border-slate-300 text-slate-200'
+                                                        ? 'bg-green-500/20 border-2 border-green-400 text-green-200'
                                                         : isSelected
-                                                            ? 'bg-slate-500/20 border-2 border-red-500 text-red-300'
+                                                            ? 'bg-red-500/20 border-2 border-red-500 text-red-300'
                                                             : 'bg-slate-700/50 border border-slate-600 text-slate-400'
                                                     : 'bg-slate-700/50 border border-slate-600 text-white hover:bg-slate-700 hover:border-slate-500'
                                             }`}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                                                    showResult && isCorrect ? 'bg-slate-400 text-white' :
-                                                    showResult && isSelected ? 'bg-slate-600 text-white' :
+                                                    showResult && isCorrect ? 'bg-green-500 text-white' :
+                                                    showResult && isSelected ? 'bg-red-600 text-white' :
                                                     'bg-slate-600 text-slate-300'
                                                 }`}>
                                                     {String.fromCharCode(65 + idx)}
                                                 </span>
                                                 <span className="flex-1">{option}</span>
-                                                {showResult && isCorrect && <Check className="w-5 h-5 text-white" />}
+                                                {showResult && isCorrect && <Check className="w-5 h-5 text-green-400" />}
+                                                {showResult && isSelected && !isCorrect && <X className="w-5 h-5 text-red-400" />}
                                             </div>
                                         </button>
                                     );
                                 })}
                             </div>
+
+                            {/* Explanation + Next Button */}
+                            {selectedAnswer !== null && (
+                                <div className={`mt-4 p-4 rounded-xl border ${
+                                    selectedAnswer === currentQuestion.correctIndex
+                                        ? 'bg-green-500/10 border-green-500/30'
+                                        : 'bg-red-500/10 border-red-500/30'
+                                }`}>
+                                    <p className={`text-sm font-semibold mb-1 ${
+                                        selectedAnswer === currentQuestion.correctIndex
+                                            ? 'text-green-400'
+                                            : 'text-red-400'
+                                    }`}>
+                                        {selectedAnswer === currentQuestion.correctIndex ? '✓ Correct!' : '✗ Incorrect!'}
+                                    </p>
+                                    {currentQuestion.explanation && (
+                                        <p className="text-sm text-slate-300 mb-3">{currentQuestion.explanation}</p>
+                                    )}
+                                    <button
+                                        onClick={handleNextQuestion}
+                                        className="w-full mt-2 py-2 px-4 bg-white text-black font-bold rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {currentQuestionIndex < levelQuestions.length - 1 ? (
+                                            <>Next Question <ArrowRight className="w-4 h-4" /></>
+                                        ) : (
+                                            <>Complete Level <Check className="w-4 h-4" /></>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

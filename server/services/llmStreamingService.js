@@ -5,6 +5,7 @@ const axios = require('axios');
 const log = require('../utils/logger');
 const sglangService = require('./sglangService');
 const sglangCaps    = require('./sglangCapabilities');
+const SGLANG_ENABLED = process.env.SGLANG_ENABLED === 'true';
 
 /**
  * Unified streaming service for ALL LLM providers.
@@ -82,7 +83,12 @@ async function streamCompletion({
         } else if (provider === 'ollama') {
             result = await streamOllama({ messages, model, systemPrompt, onToken: finalOnToken, options });
         } else if (provider === 'sglang') {
-            result = await streamSGLang({ messages, model, systemPrompt, onToken: finalOnToken, options });
+            if (!SGLANG_ENABLED) {
+                log.warn('AI', 'SGLang requested but SGLANG_ENABLED=false — routing to Groq');
+                result = await streamGroq({ messages, model: model || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile', apiKey: process.env.GROQ_API_KEY, systemPrompt, onToken: finalOnToken, options });
+            } else {
+                result = await streamSGLang({ messages, model, systemPrompt, onToken: finalOnToken, options });
+            }
         } else {
             throw new Error(`Streaming not implemented for provider: ${provider}`);
         }
@@ -158,7 +164,7 @@ async function streamGemini({ messages, model, apiKey, systemPrompt, onToken, op
  * Groq Streaming Implementation
  */
 async function streamGroq({ messages, model, apiKey, systemPrompt, onToken, options }) {
-    const groq = new Groq({ apiKey });
+    const groq = new Groq({ apiKey, baseUrl: process.env.GROQ_API_BASE_URL || 'https://api.groq.com/openai/v1' });
 
     const formattedMessages = [];
     if (systemPrompt) {
@@ -174,7 +180,7 @@ async function streamGroq({ messages, model, apiKey, systemPrompt, onToken, opti
 
     const stream = await groq.chat.completions.create({
         messages: formattedMessages,
-        model: model || 'llama-3.1-8b-instant',
+        model: model || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
         temperature: options.temperature || 0.7,
         max_tokens: options.maxOutputTokens || 4096,
         stream: true,
