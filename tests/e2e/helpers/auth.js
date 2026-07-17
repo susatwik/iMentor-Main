@@ -1,13 +1,15 @@
 // tests/e2e/helpers/auth.js
 // Shared login helper for all E2E tests
 
+const BASE_API = 'http://localhost:5001/api';
+
 /**
- * Login as the test user and return the authenticated page
+ * Login as the test user and return the authenticated page.
+ * Auto-creates the user via the signup API if login fails.
  */
 export async function loginAs(page, email = 'ultra.boy7@gmail.com', password = '123456') {
   await page.goto('/');
 
-  // We land on LandingPage when not authenticated
   // Click the hero 'Sign In' or 'Login' button in the nav
   const loginBtn = page.getByRole('button', { name: /sign.?in|login/i }).first();
   await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
@@ -17,8 +19,61 @@ export async function loginAs(page, email = 'ultra.boy7@gmail.com', password = '
   await page.getByPlaceholder(/email/i).fill(email);
   await page.getByPlaceholder(/password/i).fill(password);
 
-  // Click the submit button (Sign In / Login) — inside the form to avoid strict-mode
+  // Click the submit button (Sign In / Login)
   await page.locator('form').getByRole('button', { name: /sign.?in|login/i }).click();
+
+  // If login fails (error shown), create the user via API and retry
+  const loginFailed = await page.getByText(/invalid email|already exists/i).isVisible({ timeout: 5000 }).catch(() => false);
+
+  if (loginFailed) {
+    console.log(`[auth.js] User ${email} not found, signing up via API...`);
+
+    // Step 1: send-otp (dev mode creates PendingRegistration with OTP 123456)
+    const otpResp = await page.request.post(`${BASE_API}/auth/send-otp`, {
+      data: { email, password },
+    });
+    if (!otpResp.ok() && (await otpResp.json()).message?.includes('already exists')) {
+      console.log(`[auth.js] User ${email} already exists, retrying login...`);
+    } else if (!otpResp.ok()) {
+      throw new Error(`send-otp failed: ${await otpResp.text()}`);
+    } else {
+      // Step 2: signup with full profile (dev mode skips verify-otp)
+      const signupResp = await page.request.post(`${BASE_API}/auth/signup`, {
+        data: {
+          email, otp: '123456', password,
+          name: 'Test User',
+          college: 'Test University',
+          universityNumber: 'TEST001',
+          degreeType: "Bachelor's",
+          branch: 'Computer Science',
+          year: '1st Year',
+          learningStyle: 'Reading/Writing',
+          currentGoals: 'E2E testing',
+          preferredLlmProvider: 'local_llm',
+        },
+      });
+      if (signupResp.ok()) {
+        console.log(`[auth.js] User ${email} created successfully`);
+      } else {
+        const body = await signupResp.json();
+        console.log(`[auth.js] Signup note: ${body.message}`);
+      }
+    }
+
+    // Close the failed login modal
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    // Re-open sign-in modal and login again
+    const retryBtn = page.getByRole('button', { name: /sign.?in|login/i }).first();
+    await retryBtn.waitFor({ state: 'visible', timeout: 10000 });
+    await retryBtn.click();
+    await page.waitForTimeout(300);
+
+    await page.getByPlaceholder(/email/i).fill(email);
+    await page.getByPlaceholder(/password/i).fill(password);
+    await page.locator('form').getByRole('button', { name: /sign.?in|login/i }).click();
+  }
 
   // Wait for auth modal to close: the email input inside the modal disappears
   await page.waitForSelector('input[placeholder*="Email Address"]', { state: 'hidden', timeout: 25000 });

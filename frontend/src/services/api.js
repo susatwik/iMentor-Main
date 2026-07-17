@@ -318,7 +318,17 @@ const api = {
   },
   getSubjects: async () => {
     const response = await apiClient.get("/subjects");
-    return response.data;
+    const raw = response.data;
+    if (raw && Array.isArray(raw.subjects)) {
+      raw.subjects = raw.subjects.map(c => {
+        if (typeof c === 'object' && c !== null && !Array.isArray(c)) {
+          return { code: c.code || '', name: c.name || c.code || '', semester: c.semester || null, credits: c.credits != null ? c.credits : null };
+        }
+        const s = String(c || '');
+        return { code: s, name: s, semester: null, credits: null };
+      }).filter(c => c.code);
+    }
+    return raw;
   },
   getCourseStructure: async (courseName) => {
     const response = await apiClient.get(`/courses/${encodeURIComponent(courseName)}/structure`);
@@ -848,11 +858,36 @@ const api = {
       moduleId,
       moduleName,
       answers
-    });
+    }, { timeout: 20000 });
     return response.data;
   },
   getQuizAnalytics: async () => {
     const response = await apiClient.get('/quiz/analytics');
+    return response.data;
+  },
+
+  // ===== Knowledge Assessment Engine =====
+  generateAssessment: async ({ course, module, topic }) => {
+    const response = await apiClient.post('/assessment/generate', { course, module, topic });
+    return response.data;
+  },
+  submitAssessment: async ({ responses, topic, course }) => {
+    const response = await apiClient.post('/assessment/submit', { responses, topic, course });
+    return response.data;
+  },
+  getAssessmentProfile: async (topic) => {
+    const params = topic ? { topic } : {};
+    const response = await apiClient.get('/assessment/profile', { params });
+    return response.data;
+  },
+  getAssessmentHistory: async (topic) => {
+    const params = topic ? { topic } : {};
+    const response = await apiClient.get('/assessment/history', { params });
+    return response.data;
+  },
+  getBloomTaxonomy: async (topic) => {
+    const params = topic ? { topic } : {};
+    const response = await apiClient.get('/assessment/blooms-taxonomy', { params });
     return response.data;
   }
 };

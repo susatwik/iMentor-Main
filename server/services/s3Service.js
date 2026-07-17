@@ -6,6 +6,16 @@ const AWS_REGION = process.env.AWS_REGION;
 const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 
+// Validate AWS region to prevent SDK vulnerability (GHSA-j965-2qgj-vjmq)
+const VALID_AWS_REGIONS = new Set([
+  'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
+  'af-south-1', 'ap-east-1', 'ap-south-1', 'ap-northeast-1', 'ap-northeast-2', 'ap-northeast-3', 'ap-southeast-1', 'ap-southeast-2',
+  'ca-central-1', 'eu-central-1', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1', 'eu-south-1',
+  'me-south-1', 'sa-east-1'
+]);
+
+const validatedRegion = VALID_AWS_REGIONS.has(AWS_REGION) ? AWS_REGION : 'us-east-1';
+
 // Check if AWS is configured properly (not placeholders/empty)
 const isAwsConfigured = 
     ACCESS_KEY_ID && 
@@ -22,7 +32,7 @@ if (isAwsConfigured) {
         AWS = require('aws-sdk');
         
         AWS.config.update({
-            region: AWS_REGION,
+            region: validatedRegion,
             accessKeyId: ACCESS_KEY_ID,
             secretAccessKey: SECRET_ACCESS_KEY,
         });

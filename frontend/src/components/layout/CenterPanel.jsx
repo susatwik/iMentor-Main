@@ -799,10 +799,11 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
     //   • no messages yet (empty chat)
     //   • a session ID exists (auth + session resolved)
     //   • not already waiting on a request
+    //   • If initialPromptForNewSession is set (from 'Ask AI' or bounty),
+    //     auto-send it so the tutor session starts on the right topic.
     useEffect(() => {
         if (!tutorMode || !currentSessionId || isActuallySendingAPI) return;
         if (messages.length > 0) {
-            // Real messages arrived — mark as greeted so we never re-fire
             hasAutoGreetedRef.current = true;
             return;
         }
@@ -811,11 +812,17 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
         hasAutoGreetedRef.current = true;
 
         const t = setTimeout(() => {
-            handleSendMessage('__tutor_init__', { isAutoGreeting: true });
+            if (initialPromptForNewSession && initialPromptForNewSession.trim()) {
+                const p = initialPromptForNewSession;
+                setInitialPromptForNewSession(null);
+                handleSendMessage(p, { isAutoGreeting: true });
+            } else {
+                handleSendMessage('__tutor_init__', { isAutoGreeting: true });
+            }
         }, 400);
 
         return () => clearTimeout(t);
-    }, [tutorMode, currentSessionId, messages.length, isActuallySendingAPI, handleSendMessage]);
+    }, [tutorMode, currentSessionId, messages.length, isActuallySendingAPI, handleSendMessage, initialPromptForNewSession, setInitialPromptForNewSession]);
 
     // Reset the auto-greet flag whenever the user starts a new session
     useEffect(() => {

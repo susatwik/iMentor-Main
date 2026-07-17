@@ -48,9 +48,9 @@ function NoteViewer({ courseName, subtopic, onChat }) {
     );
     if (!notes.length) return (
         <div className="flex flex-col items-center justify-center py-10 text-gray-600 text-xs gap-2">
-            <BookOpen size={18} className="opacity-40" />
-            <p>No notes generated for this subtopic yet.</p>
-            <p className="text-[10px] text-gray-700">Run the course bootstrap to generate content.</p>
+            <Loader2 size={18} className="animate-spin text-indigo-400 opacity-40" />
+            <p>Auto-generating content…</p>
+            <p className="text-[10px] text-gray-700">Content will be created on first access.</p>
         </div>
     );
 

@@ -424,7 +424,7 @@ function TutorModePage({
 Evaluate the student's answer strictly against the PROVIDED DOCUMENT ANSWER.
 
 Question ${index + 1} of ${total}:
-QUESTION: "${question.instruction}"
+QUESTION: "${question.instruction || question.question || ''}"
 DOCUMENT ANSWER: "${question.output}"
 
 STRICT OUTPUT FORMAT:
@@ -456,7 +456,6 @@ RULES:
             let response = await api.getSubjects();
             let subjects = Array.isArray(response.subjects) ? response.subjects : [];
 
-            // One lightweight retry when first fetch returns empty (handles transient backend timeout)
             if (subjects.length === 0) {
                 await new Promise(resolve => setTimeout(resolve, 400));
                 response = await api.getSubjects();
@@ -664,7 +663,10 @@ RULES:
                             {selectedSubject && (
                                 <>
                                     <span className="text-gray-500">·</span>
-                                    <span className="text-sm text-gray-400">{selectedSubject}</span>
+                                    <span className="text-sm text-gray-400">{(() => {
+                                        const match = availableSubjects.find(s => (s.code || s) === selectedSubject);
+                                        return match ? (match.name || match.code || selectedSubject) : selectedSubject;
+                                    })()}</span>
                                 </>
                             )}
                         </div>
@@ -701,11 +703,15 @@ RULES:
                             ) : (
                                 <>
                                     <option value="" className="bg-gray-800">General</option>
-                                    {availableSubjects.map((subject) => (
-                                        <option key={subject} value={subject} className="bg-gray-800">
-                                            {subject}
-                                        </option>
-                                    ))}
+                                    {availableSubjects.map((subject) => {
+                                        const code = subject.code || subject;
+                                        const name = subject.name || code;
+                                        return (
+                                            <option key={code} value={code} className="bg-gray-800">
+                                                {name}
+                                            </option>
+                                        );
+                                    })}
                                 </>
                             )}
                         </select>

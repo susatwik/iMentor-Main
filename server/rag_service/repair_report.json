@@ -1,0 +1,316 @@
+{
+  "timestamp": "2026-07-11T12:52:25",
+  "category_a_orphan_fix": [],
+  "category_b_course_creation": [
+    {
+      "CS2102": [
+        "module:module1_cs2102",
+        "topic:cs2102___data_structures_and_applications_lab",
+        "subtopics:10"
+      ]
+    },
+    {
+      "EE1611": [
+        "module:module1_ee1611",
+        "topic:ee1611___basics_of_electrical_engineering__for_civil_engineering",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE1621": [
+        "module:module1_ee1621",
+        "topic:ee1621___introduction_to_electrical___electronics_engineering__for_mechanical_engg",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE2010": [
+        "module:module1_ee2010",
+        "topic:ee2010___minor_project__audit_course____i",
+        "subtopics:8"
+      ]
+    },
+    {
+      "EE2012": [
+        "module:module1_ee2012",
+        "topic:ee2012___analog_and_digital_circuits_lab",
+        "subtopics:10"
+      ]
+    },
+    {
+      "EE2022": [
+        "module:module1_ee2022",
+        "topic:ee2022___circuits_and_measurements_lab",
+        "subtopics:10"
+      ]
+    },
+    {
+      "EE2042": [
+        "module:module1_ee2042",
+        "topic:ee2042___control_systems_lab",
+        "subtopics:10"
+      ]
+    },
+    {
+      "EE2052": [
+        "module:module1_ee2052",
+        "topic:ee2052___ac_rotating_machines_lab",
+        "subtopics:10"
+      ]
+    },
+    {
+      "EE2062": [
+        "module:module1_ee2062",
+        "topic:ee2062___power_systems___renewable_energy_lab",
+        "subtopics:10"
+      ]
+    },
+    {
+      "EE2601": [
+        "module:module1_ee2601",
+        "topic:ee2601___basics_of_internet_of_things",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE2621": [
+        "module:module1_ee2621",
+        "topic:ee2621___introduction_to_machine_learning",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3010": [
+        "module:module1_ee3010",
+        "topic:ee3010___minor_project__audit_course__ii",
+        "subtopics:8"
+      ]
+    },
+    {
+      "EE3012": [
+        "module:module1_ee3012",
+        "topic:ee3012___power_electronics_lab",
+        "subtopics:10"
+      ]
+    },
+    {
+      "EE3022": [
+        "module:module1_ee3022",
+        "topic:ee3022___embedded_systems_lab",
+        "subtopics:10"
+      ]
+    },
+    {
+      "EE3601": [
+        "module:module1_ee3601",
+        "topic:ee3601___advanced_control_systems",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3611": [
+        "module:module1_ee3611",
+        "topic:ee3611___wind_and_solar_electrical_systems",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3621": [
+        "module:module1_ee3621",
+        "topic:ee3621___digital_signal_processing",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3631": [
+        "module:module1_ee3631",
+        "topic:ee3631___soft_computing_techniques",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3641": [
+        "module:module1_ee3641",
+        "topic:ee3641___introduction_to_electric_vehicles",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3651": [
+        "module:module1_ee3651",
+        "topic:ee3651___advanced_computer_methods_in_power_systems",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3661": [
+        "module:module1_ee3661",
+        "topic:ee3661___advanced_power_electronics",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3671": [
+        "module:module1_ee3671",
+        "topic:ee3671___industrial_instrumentation_and_automation",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3681": [
+        "module:module1_ee3681",
+        "topic:ee3681___converters_for_renewable_energy_systems",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3691": [
+        "module:module1_ee3691",
+        "topic:ee3691___deep_learning_algorithms",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3701": [
+        "module:module1_ee3701",
+        "topic:ee3701___electrical_machine_design",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3721": [
+        "module:module1_ee3721",
+        "topic:ee3721___battery_energy_storage_and_ev_charging_systems",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3731": [
+        "module:module1_ee3731",
+        "topic:ee3731___power_system_security_and_reliability",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE3741": [
+        "module:module1_ee3741",
+        "topic:ee3741___switched_mode_power_supplies",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE4014": [
+        "module:module1_ee4014",
+        "topic:ee4014___professional_major_work",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE4024": [
+        "module:module1_ee4024",
+        "topic:ee4024___semester_long_internship",
+        "subtopics:7"
+      ]
+    },
+    {
+      "EE4601": [
+        "module:module1_ee4601",
+        "topic:ee4601___energy_management_and_audit",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE4611": [
+        "module:module1_ee4611",
+        "topic:ee4611___power_quality_improvement",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE4621": [
+        "module:module1_ee4621",
+        "topic:ee4621___distribution_system_planning_and_automation",
+        "subtopics:6"
+      ]
+    },
+    {
+      "EE4631": [
+        "module:module1_ee4631",
+        "topic:ee4631___special_machines",
+        "subtopics:6"
+      ]
+    },
+    {
+      "HS2011": [
+        "module:module1_hs2011",
+        "topic:hs2011___personality_development",
+        "subtopics:2"
+      ]
+    },
+    {
+      "HS2012": [
+        "module:module1_hs2012",
+        "topic:hs2012___ncc_social_services",
+        "subtopics:8"
+      ]
+    },
+    {
+      "HS3011": [
+        "module:module1_hs3011",
+        "topic:hs3011___english_for_engineers_ii",
+        "subtopics:2"
+      ]
+    },
+    {
+      "HS3021": [
+        "module:module1_hs3021",
+        "topic:hs3021___german_other_foreign_languages",
+        "subtopics:3"
+      ]
+    },
+    {
+      "HS3081": [
+        "module:module1_hs3081",
+        "topic:hs3081___vedic_maths",
+        "subtopics:2"
+      ]
+    },
+    {
+      "MA2092": [
+        "module:module1_ma2092",
+        "topic:ma2092___numerical_methods_lab",
+        "subtopics:8"
+      ]
+    },
+    {
+      "ME1013": [
+        "module:module1_me1013",
+        "topic:me1013___engineering_graphics_with_cad",
+        "subtopics:6"
+      ]
+    },
+    {
+      "PE1022": [
+        "module:module1_pe1022",
+        "topic:pe1022___physical_education_ii",
+        "subtopics:8"
+      ]
+    },
+    {
+      "PE2012": [
+        "module:module1_pe2012",
+        "topic:pe2012___yoga",
+        "subtopics:8"
+      ]
+    },
+    {
+      "SM3021": [
+        "module:module1_sm3021",
+        "topic:sm3021___design_thinking",
+        "subtopics:2"
+      ]
+    }
+  ],
+  "category_c_subtopics_fix": [],
+  "errors": []
+}

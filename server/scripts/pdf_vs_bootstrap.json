@@ -1,0 +1,704 @@
+{
+  "pdf_courses": {
+    "CS1031": {
+      "code": "CS1031",
+      "title": "Problem Solving through Computer Programming",
+      "credits": 3,
+      "category": "ESC"
+    },
+    "CS1032": {
+      "code": "CS1032",
+      "title": "Problem Solving through Computer Programming Lab",
+      "credits": 2,
+      "category": "ESC"
+    },
+    "CS2101": {
+      "code": "CS2101",
+      "title": "Data Structures and Applications",
+      "credits": 3,
+      "category": "ESC"
+    },
+    "CS2102": {
+      "code": "CS2102",
+      "title": "Data Structures and Applications Lab",
+      "credits": 1,
+      "category": "ESC"
+    },
+    "CY1021": {
+      "code": "CY1021",
+      "title": "Chemistry of Energy Systems",
+      "credits": 2,
+      "category": "BSC"
+    },
+    "EC1521": {
+      "code": "EC1521",
+      "title": "Signals and Systems for Electrical Engineers",
+      "credits": 3,
+      "category": "ESC"
+    },
+    "EE1011": {
+      "code": "EE1011",
+      "title": "Basic Electrical Circuits",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE1021": {
+      "code": "EE1021",
+      "title": "Analog Electronics",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE1031": {
+      "code": "EE1031",
+      "title": "Electrical Network Analysis",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE2010": {
+      "code": "EE2010",
+      "title": "Minor Project (Audit Course) - I",
+      "credits": 0,
+      "category": "PCC"
+    },
+    "EE2011": {
+      "code": "EE2011",
+      "title": "Measurements and Instrumentation",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE2012": {
+      "code": "EE2012",
+      "title": "Analog and Digital Circuits Lab",
+      "credits": 2,
+      "category": "PCC"
+    },
+    "EE2021": {
+      "code": "EE2021",
+      "title": "DC Machines and Transformers",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE2022": {
+      "code": "EE2022",
+      "title": "Circuits and Measurements Lab",
+      "credits": 2,
+      "category": "PCC"
+    },
+    "EE2031": {
+      "code": "EE2031",
+      "title": "Power System Generation and Transmission",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE2032": {
+      "code": "EE2032",
+      "title": "DC Machines and Transformers Lab",
+      "credits": 2,
+      "category": "PCC"
+    },
+    "EE2041": {
+      "code": "EE2041",
+      "title": "Digital Electronics",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE2042": {
+      "code": "EE2042",
+      "title": "Control Systems Lab",
+      "credits": 2,
+      "category": "PCC"
+    },
+    "EE2051": {
+      "code": "EE2051",
+      "title": "AC Rotating Machines",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE2052": {
+      "code": "EE2052",
+      "title": "AC Rotating Machines Lab",
+      "credits": 2,
+      "category": "PCC"
+    },
+    "EE2061": {
+      "code": "EE2061",
+      "title": "Control Systems",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE2062": {
+      "code": "EE2062",
+      "title": "Power Systems & Renewable Energy Lab",
+      "credits": 2,
+      "category": "PCC"
+    },
+    "EE2071": {
+      "code": "EE2071",
+      "title": "Power Systems Analysis",
+      "credits": 4,
+      "category": "PCC"
+    },
+    "EE2601": {
+      "code": "EE2601",
+      "title": "Basics of Internet of Things",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE2611": {
+      "code": "EE2611",
+      "title": "Renewable Power Generation",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE2621": {
+      "code": "EE2621",
+      "title": "Introduction to Machine Learning",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3010": {
+      "code": "EE3010",
+      "title": "Minor Project (Audit Course)-II",
+      "credits": 0,
+      "category": "PCC"
+    },
+    "EE3011": {
+      "code": "EE3011",
+      "title": "Power Electronics",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE3012": {
+      "code": "EE3012",
+      "title": "Power Electronics Lab",
+      "credits": 2,
+      "category": "PCC"
+    },
+    "EE3021": {
+      "code": "EE3021",
+      "title": "Power System Protection and Control",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE3022": {
+      "code": "EE3022",
+      "title": "Embedded Systems Lab",
+      "credits": 1,
+      "category": "PCC"
+    },
+    "EE3031": {
+      "code": "EE3031",
+      "title": "Embedded Systems",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE3032": {
+      "code": "EE3032",
+      "title": "Electric Power Drives Lab",
+      "credits": 2,
+      "category": "PCC"
+    },
+    "EE3041": {
+      "code": "EE3041",
+      "title": "Electric Power Drives",
+      "credits": 3,
+      "category": "PCC"
+    },
+    "EE3601": {
+      "code": "EE3601",
+      "title": "Advanced Control Systems",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3611": {
+      "code": "EE3611",
+      "title": "Wind and Solar Electrical Systems",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3621": {
+      "code": "EE3621",
+      "title": "Digital Signal Processing",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3631": {
+      "code": "EE3631",
+      "title": "Soft Computing Techniques",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3641": {
+      "code": "EE3641",
+      "title": "Introduction to Electric Vehicles",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3651": {
+      "code": "EE3651",
+      "title": "Advanced Computer Methods in Power Systems",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3661": {
+      "code": "EE3661",
+      "title": "Advanced Power Electronics",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3671": {
+      "code": "EE3671",
+      "title": "Industrial Instrumentation and Automation",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3681": {
+      "code": "EE3681",
+      "title": "Converters for Renewable Energy Systems",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3691": {
+      "code": "EE3691",
+      "title": "Deep Learning Algorithms",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3701": {
+      "code": "EE3701",
+      "title": "Electrical Machine Design",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3711": {
+      "code": "EE3711",
+      "title": "Introduction to Smart Grid",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3721": {
+      "code": "EE3721",
+      "title": "Battery Energy Storage and EV Charging Systems",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3731": {
+      "code": "EE3731",
+      "title": "Power System Security and Reliability",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3741": {
+      "code": "EE3741",
+      "title": "Switched Mode Power Supplies",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE3751": {
+      "code": "EE3751",
+      "title": "New Venture Creation",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE4014": {
+      "code": "EE4014",
+      "title": "Professional Major Work",
+      "credits": 6,
+      "category": "PRC"
+    },
+    "EE4024": {
+      "code": "EE4024",
+      "title": "Semester-Long Internship",
+      "credits": 6,
+      "category": "SLI"
+    },
+    "EE4601": {
+      "code": "EE4601",
+      "title": "Energy Management and Audit",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE4611": {
+      "code": "EE4611",
+      "title": "Power Quality Improvement",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE4621": {
+      "code": "EE4621",
+      "title": "Distribution System Planning and Automation",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "EE4631": {
+      "code": "EE4631",
+      "title": "Special Machines",
+      "credits": 3,
+      "category": "DEC"
+    },
+    "HS1011": {
+      "code": "HS1011",
+      "title": "English for Engineers-I",
+      "credits": 2,
+      "category": "HSC"
+    },
+    "HS2011": {
+      "code": "HS2011",
+      "title": "Personality Development",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS2012": {
+      "code": "HS2012",
+      "title": "NCC/Social Services",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS2052": {
+      "code": "HS2052",
+      "title": "National Service Scheme",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3011": {
+      "code": "HS3011",
+      "title": "English for Engineers II",
+      "credits": 3,
+      "category": "HSC"
+    },
+    "HS3021": {
+      "code": "HS3021",
+      "title": "German/Other Foreign Languages",
+      "credits": 2,
+      "category": "HSC"
+    },
+    "HS3031": {
+      "code": "HS3031",
+      "title": "Indian Philosophy",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3041": {
+      "code": "HS3041",
+      "title": "Introduction to Psychology",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3051": {
+      "code": "HS3051",
+      "title": "Psychology of Wellbeing",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3061": {
+      "code": "HS3061",
+      "title": "Introduction to Mass Communication",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3071": {
+      "code": "HS3071",
+      "title": "Introduction to Media Studies",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3081": {
+      "code": "HS3081",
+      "title": "Vedic Maths",
+      "credits": 3,
+      "category": "HSC"
+    },
+    "HS3091": {
+      "code": "HS3091",
+      "title": "Indian Heritage and Culture",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3101": {
+      "code": "HS3101",
+      "title": "Indian Business History",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3111": {
+      "code": "HS3111",
+      "title": "Post-Harvest Technology",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3121": {
+      "code": "HS3121",
+      "title": "Ethics in Technology",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3131": {
+      "code": "HS3131",
+      "title": "Financial Marketing",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3141": {
+      "code": "HS3141",
+      "title": "Bharatiya Nyaya Sanhita: Indian Judicial Code – An Overview",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3151": {
+      "code": "HS3151",
+      "title": "Introduction to the Constitution of India",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3162": {
+      "code": "HS3162",
+      "title": "Photography",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3172": {
+      "code": "HS3172",
+      "title": "Pottery",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3182": {
+      "code": "HS3182",
+      "title": "Painting",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3192": {
+      "code": "HS3192",
+      "title": "Music",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3501": {
+      "code": "HS3501",
+      "title": "Sanskrit",
+      "credits": 3,
+      "category": "HSC"
+    },
+    "HS3511": {
+      "code": "HS3511",
+      "title": "Introduction to Academic Writing",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3521": {
+      "code": "HS3521",
+      "title": "Contemporary Issues in Philosophy of Mind & Cognition",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3531": {
+      "code": "HS3531",
+      "title": "Psychology and Mental Health",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3541": {
+      "code": "HS3541",
+      "title": "Psychology at Work",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3551": {
+      "code": "HS3551",
+      "title": "Introduction to Journalism",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3561": {
+      "code": "HS3561",
+      "title": "Introduction to Film Studies",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3571": {
+      "code": "HS3571",
+      "title": "Introduction to Anthropology",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3581": {
+      "code": "HS3581",
+      "title": "Ethics for AI",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3591": {
+      "code": "HS3591",
+      "title": "Introduction to Sociology",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3601": {
+      "code": "HS3601",
+      "title": "Personal Finance",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3611": {
+      "code": "HS3611",
+      "title": "Introductory Economics",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3621": {
+      "code": "HS3621",
+      "title": "Cyber Law for Engineers",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3631": {
+      "code": "HS3631",
+      "title": "Food and Nutrition",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3641": {
+      "code": "HS3641",
+      "title": "Youth, Gender and Identity",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3652": {
+      "code": "HS3652",
+      "title": "Dance",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3662": {
+      "code": "HS3662",
+      "title": "Theatre Arts",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3672": {
+      "code": "HS3672",
+      "title": "Sculpture",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "HS3682": {
+      "code": "HS3682",
+      "title": "Introduction to Animation",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "MA1011": {
+      "code": "MA1011",
+      "title": "Principles of Differential and Integral Calculus",
+      "credits": 3,
+      "category": "BSC"
+    },
+    "MA1021": {
+      "code": "MA1021",
+      "title": "Matrices and Differential Equations",
+      "credits": 3,
+      "category": "BSC"
+    },
+    "MA2051": {
+      "code": "MA2051",
+      "title": "Complex Variables and Mathematical Methods",
+      "credits": 3,
+      "category": "BSC"
+    },
+    "MA2092": {
+      "code": "MA2092",
+      "title": "Numerical Methods Lab",
+      "credits": 1,
+      "category": "BSC"
+    },
+    "ME1021": {
+      "code": "ME1021",
+      "title": "Basics of Mechanical Engineering",
+      "credits": 2,
+      "category": "ESC"
+    },
+    "ME1072": {
+      "code": "ME1072",
+      "title": "Engineering Graphics with CAD",
+      "credits": 1,
+      "category": "ESC"
+    },
+    "PE1012": {
+      "code": "PE1012",
+      "title": "Physical Education I",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "PE1022": {
+      "code": "PE1022",
+      "title": "Physical Education II",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "PE2012": {
+      "code": "PE2012",
+      "title": "Yoga",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "PH1021": {
+      "code": "PH1021",
+      "title": "Physics for Electrical Engineering",
+      "credits": 3,
+      "category": "BSC"
+    },
+    "SM3011": {
+      "code": "SM3011",
+      "title": "Introduction to Entrepreneurship",
+      "credits": 1,
+      "category": "HSC"
+    },
+    "SM3021": {
+      "code": "SM3021",
+      "title": "Design Thinking",
+      "credits": 1,
+      "category": "HSC"
+    }
+  },
+  "missing_courses": [
+    "EE3751",
+    "HS2052",
+    "HS3031",
+    "HS3041",
+    "HS3051",
+    "HS3061",
+    "HS3071",
+    "HS3091",
+    "HS3101",
+    "HS3111",
+    "HS3121",
+    "HS3131",
+    "HS3141",
+    "HS3151",
+    "HS3162",
+    "HS3172",
+    "HS3182",
+    "HS3192",
+    "HS3501",
+    "HS3511",
+    "HS3521",
+    "HS3531",
+    "HS3541",
+    "HS3551",
+    "HS3561",
+    "HS3571",
+    "HS3581",
+    "HS3591",
+    "HS3601",
+    "HS3611",
+    "HS3621",
+    "HS3631",
+    "HS3641",
+    "HS3652",
+    "HS3662",
+    "HS3672",
+    "HS3682",
+    "ME1072"
+  ]
+}

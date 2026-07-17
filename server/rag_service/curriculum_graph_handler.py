@@ -268,7 +268,7 @@ def parse_unified_csv(file_path: str) -> Tuple[List[Dict], List[Dict], List[Dict
         raise ValueError(f"Could not read CSV file with any supported encoding")
     
     # Parse CSV from string
-    import io
+    import io, re
     reader = csv.DictReader(io.StringIO(content))
     
     if not reader.fieldnames:
@@ -330,7 +330,6 @@ def parse_unified_csv(file_path: str) -> Tuple[List[Dict], List[Dict], List[Dict
         if lecture_num_col:
             lecture_str = row.get(lecture_num_col, '')
             if lecture_str:
-                import re
                 num_match = re.search(r'\d+', str(lecture_str))
                 if num_match:
                     lecture_num = int(num_match.group())
@@ -342,17 +341,68 @@ def parse_unified_csv(file_path: str) -> Tuple[List[Dict], List[Dict], List[Dict
             'order': lecture_num if lecture_num else row_num  # Use lecture_number or row order
         })
         
-        # Extract subtopics (comma-separated) - PRESERVE ORDER
+                # Extract subtopics (comma-separated) - PRESERVE ORDER
         if subtopic_col:
             subtopics_str = row.get(subtopic_col, '').strip()
             if subtopics_str:
+                # Strip trailing bibliographic sections (Textbooks, References, etc.)
+                for marker in ['textbooks:', 'references:', 'reference books:', 'suggested reading',
+                               'further reading', 'bibliography', 'department of electrical engineering']:
+                    idx = subtopics_str.lower().find(marker)
+                    if idx >= 0:
+                        subtopics_str = subtopics_str[:idx].strip()
+                        if subtopics_str.endswith(','):
+                            subtopics_str = subtopics_str[:-1].strip()
+                        break
+                if not subtopics_str:
+                    continue
                 # Split by comma and clean each subtopic - order matters!
                 subtopic_parts = [s.strip() for s in subtopics_str.split(',') if s.strip()]
                 for subtopic_order, subtopic_name in enumerate(subtopic_parts, start=1):
-                    subtopic_id = normalize_id(subtopic_name)
+                    # Skip non-curriculum entries
+                    stripped = subtopic_name.strip().strip('"').strip("'").strip()
+                    if not stripped:
+                        continue
+                    # Skip reference-like entries
+                    lower = stripped.lower()
+                    # Publisher name starts (exact or beginning of entry)
+                    publisher_prefixes = ('penguin', 'westland', 'springer', 'pearson', 'wiley', 'elsevier',
+                        'crc press', 'o\'reilly', 'addison-wesley', 'mcgraw-hill', 'mit press', 'cambridge',
+                        'oxford university press', 'prentice hall', 'mcgraw hill', 'oxford', 'excel books',
+                        'narus', 'khanna', 'ieee press', 'john wiley', 'taylor and francis', 'narosa',
+                        'cengage')
+                    if any(lower.startswith(p) for p in publisher_prefixes):
+                        continue
+                    # Author patterns: "I. Last", "Last I.", "I.I. Last"
+                    if re.match(r'^[A-Z][a-z]+\s[A-Z]\.$', stripped) or \
+                       re.match(r'^[A-Z]\.\s*[A-Z][a-z]+\s', stripped) or \
+                       re.match(r'^[A-Z]\.\s*[A-Z]\.\s*[A-Z][a-z]+', stripped):
+                        continue
+                    # Years: "2009", "2009. Something"
+                    if re.match(r'^\d{4}\b', stripped):
+                        continue
+                    # Contains year + book/publisher indicator
+                    if re.search(r'\d{4}', stripped) and any(p in lower for p in ('edition', 'books', 'publications', 'publishing')):
+                        continue
+                    # Page markers (e.g. "56 | Page", "54 | Page")
+                    if re.match(r'^\d+\s*\|\s*page', lower) or re.search(r'department of electrical engineering', lower):
+                        continue
+                    # Starts with "and" or "or" (comma-split artifacts)
+                    if lower.startswith('and ') or lower.startswith('or '):
+                        continue
+                    # Edition markers
+                    if re.match(r'^\d+\s*(st|nd|rd|th)\s+edition', lower):
+                        continue
+                    # Known non-curriculum phrases
+                    non_curric_phrases = ('b.d.singh', 'l. filby', 'g. kawasaki', 'guy kawasaki',
+                        'art of the start', 'battle-hardened guide', 'the lean startup',
+                        'connect the dots', 'ries, eric', 'heaton')
+                    if any(p in lower for p in non_curric_phrases):
+                        continue
+                    subtopic_id = normalize_id(stripped)
                     subtopics.append({
                         'id': subtopic_id,
-                        'name': subtopic_name,
+                        'name': stripped,
                         'topic_id': topic_id,
                         'order': subtopic_order  # Preserve comma-order as sequence
                     })

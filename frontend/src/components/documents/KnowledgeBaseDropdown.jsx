@@ -139,12 +139,12 @@ function CoursesTab({ onClose }) {
         return () => { mounted = false; };
     }, []);
 
-    const handleSelect = (courseName) => {
-        if (selectedSubject === courseName) {
+    const handleSelect = (code) => {
+        if (selectedSubject === code) {
             setSelectedSubject(null);
             setCourseViewerOpen(false);
         } else {
-            setSelectedSubject(courseName);
+            setSelectedSubject(code);
             setCourseViewerOpen(true);
         }
         onClose();
@@ -166,11 +166,12 @@ function CoursesTab({ onClose }) {
 
     return (
         <div className="space-y-1 py-1">
-            {courses.map((name) => {
-                const displayName = name.replace(/\.[^.]+$/, '');
-                const isSelected  = selectedSubject === name || selectedSubject === displayName;
+            {courses.map((course) => {
+                const code = course.code || course;
+                const name = course.name || code;
+                const isSelected  = selectedSubject === code;
                 return (
-                    <button key={name} onClick={() => handleSelect(name)}
+                    <button key={code} onClick={() => handleSelect(code)}
                         className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all group
                             ${isSelected
                                 ? 'bg-indigo-500/20 border border-indigo-500/40 text-white'
@@ -183,8 +184,9 @@ function CoursesTab({ onClose }) {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className={`text-xs font-medium truncate ${isSelected ? 'text-indigo-300' : ''}`}>
-                                {displayName}
+                                {name}
                             </p>
+                            <p className="text-[10px] text-gray-600 mt-0.5 font-mono">{code}</p>
                             {isSelected && <p className="text-[10px] text-indigo-400/70 mt-0.5">Active · RAG locked on · Lecture notes open</p>}
                         </div>
                         <ChevronRight size={12} className={`flex-shrink-0 transition-opacity text-gray-500 ${isSelected ? 'opacity-100 text-indigo-400' : 'opacity-0 group-hover:opacity-60'}`} />

@@ -2,11 +2,13 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const User = require('../models/User');
-const { queryPythonRagService } = require('../services/ragQueryService');
-const { getCurriculumStructure } = require('../services/socraticTutorService');
-const geminiService = require('../services/geminiService');
 const { callWithFallback } = require('../services/llmFallbackService');
 const log = require('../utils/logger');
+const conceptQuestionBankService = require('../services/conceptQuestionBankService');
+
+const QUIZ_GENERATE_TIMEOUT_MS = 40000; // Total timeout for quiz generation
+const QUIZ_EVAL_PER_QUESTION_TIMEOUT_MS = 8000; // Per-question AI evaluation timeout
+const QUIZ_SUBMIT_HARD_TIMEOUT_MS = 15000; // Hard outer timeout for entire submit request
 
 const PYTHON_RAG_URL = process.env.PYTHON_RAG_SERVICE_URL || 'http://127.0.0.1:2005';
 
@@ -65,22 +67,123 @@ router.get('/generate', async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found.' });
 
-        const questionGeneratorService = require('../services/questionGeneratorService');
-        const questions = await questionGeneratorService.generateSocraticQuiz({
+        const quizGenerator = require('../services/questionGeneratorService');
+
+        // ── STEP 1: Redis Quiz Cache ─────────────────────────────────────────
+        const { redisClient } = require('../config/redisClient');
+        const cacheKey = `quiz:generate:${courseName}:${moduleId || moduleName || 'all'}`;
+        if (redisClient?.isOpen) {
+            try {
+                const cached = await redisClient.get(cacheKey);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    log.info('QUIZ', `Redis cache HIT for ${cacheKey}`);
+                    return res.status(200).json({ success: true, ...parsed, _cache: 'redis' });
+                }
+            } catch (e) { log.warn('QUIZ', `Redis cache read failed: ${e.message}`); }
+        }
+
+        // ── STEP 2: MongoDB Quiz Cache ──────────────────────────────────────
+        try {
+            const Quiz = require('../models/Quiz');
+            const existing = await Quiz.findOne({
+                course: courseName,
+                module: moduleId || moduleName || 'all'
+            }).lean();
+            if (existing?.questions?.length > 0) {
+                log.info('QUIZ', `MongoDB quiz HIT for ${courseName}/${moduleId || moduleName || 'all'}`);
+                if (redisClient?.isOpen) {
+                    redisClient.setEx(cacheKey, 3600, JSON.stringify(existing)).catch(() => {});
+                }
+                return res.status(200).json({ success: true, questions: existing.questions, _cache: 'mongodb' });
+            }
+        } catch (e) { log.warn('QUIZ', `MongoDB quiz lookup failed: ${e.message}`); }
+
+        // ── STEP 3: Concept Question Bank ────────────────────────────────────
+        try {
+            const ConceptQuestionBank = require('../models/ConceptQuestionBank');
+            const bankQuestions = await ConceptQuestionBank.aggregate([
+                { $match: { course: courseName } },
+                { $sample: { size: 10 } }
+            ]);
+            if (bankQuestions?.length >= 4) {
+                const formatted = bankQuestions.map(q => ({
+                    instruction: q.question,
+                    type: q.options?.length > 0 ? 'MCQ' : 'Descriptive',
+                    options: q.options || [],
+                    correctIndex: q.correctIndex ?? 0,
+                    output: q.explanation || '',
+                    topic: q.concept || q.topic || 'General',
+                    difficulty: q.difficulty || 'medium',
+                    hint: ''
+                }));
+                log.info('QUIZ', `Question bank HIT: ${formatted.length} questions for ${courseName}`);
+                const payload = { questions: formatted, source: 'questionbank', generatedBy: 'questionbank' };
+                if (redisClient?.isOpen) {
+                    redisClient.setEx(cacheKey, 3600, JSON.stringify(payload)).catch(() => {});
+                }
+                return res.status(200).json({ success: true, ...payload, _cache: 'questionbank' });
+            }
+        } catch (e) { log.warn('QUIZ', `Question bank lookup failed: ${e.message}`); }
+
+        // ── STEP 4: Replay protection ────────────────────────────────────────
+        const seenQuestionIds = await quizGenerator.getSeenQuizQuestions(
+            userId,
+            courseName,
+            moduleName || moduleId || 'all'
+        );
+        log.info('QUIZ', `Replay protection: ${seenQuestionIds.length} questions already seen for ${courseName}/${moduleName || moduleId || 'all'}`);
+
+        // ── STEP 5: LLM Generation with provider health + timeout guard ──────
+        const generationPromise = quizGenerator.generateSocraticQuiz({
             courseName,
             moduleId,
             moduleName,
-            user
+            user,
+            seenQuestionIds
         });
 
-        res.status(200).json({
-            success: true,
-            questions
-        });
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Quiz generation timed out after ' + (QUIZ_GENERATE_TIMEOUT_MS / 1000) + 's. Please try again.')), QUIZ_GENERATE_TIMEOUT_MS)
+        );
+
+        try {
+            const questions = await Promise.race([generationPromise, timeoutPromise]);
+            const payload = Array.isArray(questions) ? { questions } : questions;
+
+            // Cache in Redis + MongoDB
+            if (redisClient?.isOpen) {
+                redisClient.setEx(cacheKey, 3600, JSON.stringify(payload)).catch(() => {});
+            }
+            try {
+                const Quiz = require('../models/Quiz');
+                await Quiz.findOneAndUpdate(
+                    { course: courseName, module: moduleId || moduleName || 'all' },
+                    { $set: { questions: payload.questions || [], source: payload.source || 'llm', generatedAt: new Date() } },
+                    { upsert: true }
+                );
+            } catch (e) { log.warn('QUIZ', `MongoDB quiz save failed: ${e.message}`); }
+
+            return res.status(200).json({ success: true, ...payload, _cache: 'llm' });
+        } catch (llmError) {
+            // ── STEP 6: Template Quiz Generator (final fallback) ─────────────
+            log.warn('QUIZ', `LLM generation failed, generating template quiz: ${llmError.message}`);
+            const templateQuestions = quizGenerator.generateSocraticOfflineFallback({ courseName, moduleName: moduleName || moduleId });
+            const payload = {
+                questions: templateQuestions,
+                source: 'template',
+                generatedBy: 'template_fallback'
+            };
+            // Cache template
+            if (redisClient?.isOpen) {
+                redisClient.setEx(cacheKey, 3600, JSON.stringify(payload)).catch(() => {});
+            }
+            return res.status(200).json({ success: true, ...payload, _cache: 'template' });
+        }
 
     } catch (error) {
         log.error('QUIZ', 'Failed to generate Socratic quiz', error);
-        res.status(500).json({ message: 'Failed to generate quiz.', error: error.message });
+        res.status(500).json({ message: error.message || 'Failed to generate quiz.' });
     }
 });
 
@@ -88,19 +191,31 @@ router.get('/generate', async (req, res) => {
 // @desc    Evaluate student answers, update topic mastery, and adapt learning stage
 // @access  Private
 router.post('/submit', async (req, res) => {
-    const { courseName, moduleId, moduleName, answers } = req.body; // answers: [ { topic, instruction, output, studentAnswer } ]
+    const submitStart = Date.now();
+    const { courseName, moduleId, moduleName, answers } = req.body;
     const userId = req.user._id;
 
     if (!courseName || !Array.isArray(answers) || answers.length === 0) {
         return res.status(400).json({ message: 'courseName and answers array are required.' });
     }
 
+    // Hard outer timeout — never block the client for more than 15s
+    let submitTimedOut = false;
+    const submitTimer = setTimeout(() => {
+        submitTimedOut = true;
+        log.warn('QUIZ', `Submit hard timeout reached (${QUIZ_SUBMIT_HARD_TIMEOUT_MS}ms) for ${courseName}`);
+    }, QUIZ_SUBMIT_HARD_TIMEOUT_MS);
+
+    let feedbackList = [];
+    let correctCount = 0;
+    let overallScore = 0;
+
     try {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found.' });
 
-        const feedbackList = [];
-        let correctCount = 0;
+        feedbackList = [];
+        correctCount = 0;
 
         // Ensure subdocument Map is initialized
         if (!user.profile.conceptMastery) {
@@ -139,9 +254,14 @@ JSON format:
   "feedbackText": "A constructive explanation of what was good and what was missing or incorrect."
 }
 `;
-                let evalResult = { result: 'incorrect', score: 0, feedbackText: 'Evaluation failed.' };
-                try {
-                    const preferredProvider = process.env.NODE_ENV === 'development' ? 'ollama' : 'sglang';
+                // Hard per-question timeout + rule-based fallback
+                const evalStart = Date.now();
+                const evalPromise = (async () => {
+                    const providerHealth = require('../services/providerHealthCache');
+                    const healthyProviders = providerHealth.getHealthyProviders(['sglang', 'groq', 'gemini', 'openai', 'ollama']);
+                    const preferredProvider = healthyProviders.length > 0
+                      ? healthyProviders[0]
+                      : (process.env.NODE_ENV === 'development' ? 'ollama' : 'sglang');
                     const fallbackResult = await callWithFallback({
                         userQuery: evalPrompt,
                         preferredProvider,
@@ -149,9 +269,45 @@ JSON format:
                     });
                     const responseText = fallbackResult.text;
                     let cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-                    evalResult = JSON.parse(cleanText);
+                    return JSON.parse(cleanText);
+                })();
+
+                const evalTimeout = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('AI evaluation timed out')), QUIZ_EVAL_PER_QUESTION_TIMEOUT_MS)
+                );
+
+                try {
+                    let evalResult;
+                    if (submitTimedOut) throw new Error('Submit timed out, using rule-based fallback');
+                    evalResult = await Promise.race([evalPromise, evalTimeout]);
+                    const elapsed = Date.now() - evalStart;
+                    if (elapsed > 5000) log.warn('QUIZ', `Slow AI evaluation for Q${i}: ${elapsed}ms`);
+                    log.info('QUIZ', `[SUBMIT] Q${i} AI eval: ${evalResult.result} score=${evalResult.score} ${elapsed}ms`);
+
+                    isCorrect = evalResult.result === 'correct' || evalResult.score >= 70;
+                    score = evalResult.score;
+                    feedbackText = evalResult.feedbackText;
                 } catch (err) {
-                    log.warn('QUIZ', `Failed evaluating answer ${i}: ${err.message}`);
+                    log.warn('QUIZ', `AI evaluation failed for Q${i}, using rule-based fallback: ${err.message}`);
+                    // Rule-based fallback: compare student answer to expected answer
+                    const sa = (studentAnswer || '').trim().toLowerCase();
+                    const exp = (output || '').trim().toLowerCase();
+                    const wordOverlap = sa.split(/\s+/).filter(w => exp.includes(w)).length;
+                    const overlapRatio = exp.length > 0 ? wordOverlap / Math.max(sa.split(/\s+/).length, 1) : 0;
+                    if (sa.length > 10 && overlapRatio >= 0.3) {
+                        isCorrect = true;
+                        score = Math.min(100, Math.round(overlapRatio * 100));
+                        feedbackText = 'Your answer covers some expected concepts. Review the full expected answer for completeness.';
+                    } else if (sa.length > 5) {
+                        isCorrect = false;
+                        score = Math.max(0, Math.round(overlapRatio * 50));
+                        feedbackText = 'Your answer partially addresses the topic but misses key points from the expected answer.';
+                    } else {
+                        isCorrect = false;
+                        score = 0;
+                        feedbackText = 'No substantial answer provided. Please review the material and try again.';
+                    }
+                    log.info('QUIZ', `[SUBMIT] Q${i} rule-based fallback: correct=${isCorrect} score=${score} overlap=${overlapRatio.toFixed(2)}`);
                 }
 
                 isCorrect = evalResult.result === 'correct' || evalResult.score >= 70;
@@ -163,6 +319,23 @@ JSON format:
                 correctCount++;
             }
 
+            // Record question attempt for analytics (match by question text)
+            if (instruction) {
+                try {
+                    const ConceptQuestionBank = require('../models/ConceptQuestionBank');
+                    const matchedQuestion = await ConceptQuestionBank.findOne({
+                        course: { $regex: new RegExp(`^${courseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+                        concept: { $regex: new RegExp(`^${topic.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+                        question: instruction
+                    }).lean();
+                    if (matchedQuestion?._id) {
+                        await conceptQuestionBankService.recordQuestionAttempt(matchedQuestion._id, userId, isCorrect);
+                    }
+                } catch (e) {
+                    log.warn('QUIZ', `Failed to record question attempt: ${e.message}`);
+                }
+            }
+
             feedbackList.push({
                 questionIndex: i,
                 topic: topic || 'General',
@@ -170,6 +343,20 @@ JSON format:
                 score: score,
                 feedbackText: feedbackText
             });
+
+            // ── REPLAY PROTECTION: Store seen question for this user/course/module ──────────────
+            if (instruction) {
+                try {
+                    await questionGeneratorService.addSeenQuizQuestions(
+                        userId,
+                        courseName,
+                        moduleName || moduleId || 'all',
+                        [instruction]
+                    );
+                } catch (e) {
+                    log.warn('QUIZ', `Failed to store seen question: ${e.message}`);
+                }
+            }
 
             // Update local Concept Mastery Map (rolling update)
             if (topic) {
@@ -208,7 +395,7 @@ JSON format:
         });
 
         // 3. Generate Socratic Remediation summary via LLM
-        const overallScore = Math.round((correctCount / answers.length) * 100);
+        overallScore = Math.round((correctCount / answers.length) * 100);
         let remediation = {
             strength: "Attempted quiz questions.",
             weakness: "Requires further concept reinforcement.",
@@ -217,7 +404,11 @@ JSON format:
         };
 
         try {
-            const preferredProvider = process.env.NODE_ENV === 'development' ? 'ollama' : 'sglang';
+            const providerHealth = require('../services/providerHealthCache');
+            const healthyProviders = providerHealth.getHealthyProviders(['sglang', 'groq', 'gemini', 'openai', 'ollama']);
+            const preferredProvider = healthyProviders.length > 0
+              ? healthyProviders[0]
+              : (process.env.NODE_ENV === 'development' ? 'ollama' : 'sglang');
             const remediationPrompt = `You are a Socratic learning auditor.
 Evaluate the student's overall performance on this quiz for the course "${courseName}" and module "${moduleName || 'all'}".
 Here is the breakdown of the quiz questions, student's answers, and evaluation feedback:
@@ -349,6 +540,19 @@ JSON format:
             log.error('QUIZ', 'Failed syncing mastery to StudentKnowledgeState after quiz submit', syncError);
         }
 
+        const totalElapsed = Date.now() - submitStart;
+        clearTimeout(submitTimer);
+        log.info('QUIZ', `[SUBMIT] ${courseName}/${moduleName || 'all'} complete: ${overallScore}% (${correctCount}/${answers.length}) ${totalElapsed}ms`);
+
+        if (totalElapsed > 10000) {
+            log.warn('QUIZ', `[SUBMIT_SLOW] ${courseName}/${moduleName || 'all'} took ${totalElapsed}ms (>10s)`);
+        }
+
+        // If submit timed out, return what we have rather than nothing
+        if (submitTimedOut) {
+            log.warn('QUIZ', `[SUBMIT_TIMEOUT] Returning partial results for ${courseName}`);
+        }
+
         res.status(200).json({
             success: true,
             score: overallScore,
@@ -356,11 +560,53 @@ JSON format:
             totalCount: answers.length,
             feedback: feedbackList,
             newStage: newStage,
-            remediation
+            remediation,
+            _elapsed: totalElapsed,
+            _timedOut: submitTimedOut,
         });
 
+        // ── REPLAY PROTECTION: Store seen questions after quiz submit ──────────────
+        try {
+            const questionGeneratorService = require('../services/questionGeneratorService');
+            const questionTexts = answers
+                .map(a => a.instruction || a.topic || a.output)
+                .filter(Boolean);
+            if (questionTexts.length > 0) {
+                await questionGeneratorService.addSeenQuizQuestions(
+                    userId,
+                    courseName,
+                    moduleName || 'general',
+                    questionTexts
+                );
+            }
+        } catch (e) {
+            log.warn('QUIZ', `Failed to store seen quiz questions: ${e.message}`);
+        }
     } catch (error) {
+        clearTimeout(submitTimer);
         log.error('QUIZ', 'Failed submitting quiz evaluation', error);
+        // Generate rule-based remediation on failure
+        const fallbackRemediation = {
+            strength: "Attempted quiz questions.",
+            weakness: "Requires further concept reinforcement.",
+            reason: "Evaluation could not be completed due to a system error.",
+            recommendation: "Review the module notes and retake the quiz."
+        };
+        // Return partial results if we have any
+        if (typeof correctCount !== 'undefined' && feedbackList.length > 0) {
+            const partialScore = Math.round((correctCount / answers.length) * 100);
+            return res.status(200).json({
+                success: true,
+                score: partialScore,
+                correctCount,
+                totalCount: answers.length,
+                feedback: feedbackList,
+                newStage: 'Beginner',
+                remediation: fallbackRemediation,
+                _partial: true,
+                _elapsed: Date.now() - submitStart,
+            });
+        }
         res.status(500).json({ message: 'Failed to submit quiz.', error: error.message });
     }
 });

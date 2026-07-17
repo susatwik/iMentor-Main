@@ -12,6 +12,7 @@ const { classifyQuery } = require('./queryClassifierService');
 const { selectModel, calculateComplexityScore } = require('./smartModelRouterService');
 const { resolveProviderByPreference, getProviderChain } = require('./providerPriorityService');
 const { getCachedRoutingDecision, cacheRoutingDecision } = require('./routingCacheService');
+const { getIntelligentRoutingDecision, TASK_TYPES, COMPLEXITY_LEVELS, ROUTING_MODES } = require('./intelligentRouterService');
 
 // SGLang — lazy-imported so the server starts cleanly when SGLANG_ENABLED=false
 const SGLANG_ENABLED = process.env.SGLANG_ENABLED === 'true';
@@ -155,8 +156,27 @@ async function selectLLM(query, context) {
   }
 
   if (routingMode === 'auto') {
+    // ── INTELLIGENT ROUTER (Sprint 3) ──────────────────────────────────────────
+    // Enhances routing decision with task classification, complexity estimation,
+    // intelligent model/provider selection, and health-aware scoring.
+    // Runs BEFORE existing cache/routing logic to improve initial decision.
+    let intelligentDecision = null;
     try {
-      // ── Check routing decision cache (Redis, 5-min TTL keyed by query hash+provider) ──
+      const { getIntelligentRoutingDecision } = require('./intelligentRouterService');
+      intelligentDecision = await getIntelligentRoutingDecision(query, {
+        ...context,
+        userId: effectiveUserId,
+        preferredProvider,
+        routingMode: context.routingMode,
+        latencyBudget: context.latencyBudget,
+      });
+      log.info('AI', `[IntelligentRouter] Task: ${intelligentDecision.taskType} | Complexity: ${intelligentDecision.complexity} | Provider: ${intelligentDecision.provider} | Model: ${intelligentDecision.model} | Score: ${intelligentDecision.providerScore} | Reasons: ${intelligentDecision.providerReasons}`);
+    } catch (intErr) {
+      log.warn('AI', `Intelligent router failed, continuing with legacy: ${intErr.message}`);
+    }
+
+    // ── Check routing decision cache (Redis, 5-min TTL keyed by query hash+provider) ──
+    try {
       const cachedModelId = await getCachedRoutingDecision(`${cacheKey}:${preferredProvider}`);
       if (cachedModelId) {
         const cachedModel = catalogFind({ modelId: cachedModelId }) || await LLMConfiguration.findOne({ modelId: cachedModelId }).lean();
@@ -179,6 +199,42 @@ async function selectLLM(query, context) {
       }
 
       if (!autoDecision) {
+        // Prefer intelligent router's model decision directly if available
+        if (intelligentDecision?.model && intelligentDecision?.provider) {
+          const intelligentModel = catalogFind({ modelId: intelligentDecision.model, provider: intelligentDecision.provider })
+            || await LLMConfiguration.findOne({ modelId: intelligentDecision.model, provider: intelligentDecision.provider }).lean();
+          
+          if (intelligentModel) {
+            log.info('AI', `[IntelligentRouter] Using model decision directly: ${intelligentDecision.model} (${intelligentDecision.provider})`);
+            await cacheRoutingDecision(`${cacheKey}:${preferredProvider}`, intelligentDecision.model);
+            if (redisClient && redisClient.isOpen) {
+              await redisClient.setEx(`router:model:${cacheKey}`, AUTO_ROUTING_TTL, JSON.stringify({
+                modelId: intelligentDecision.model,
+                provider: intelligentDecision.provider,
+                strategy: 'intelligent_router_direct',
+                complexityScore: intelligentDecision.complexityScore,
+                reasoningMode: intelligentDecision.reasoningDepth === 'deep' ? 'complex_reasoning' : 'standard',
+              }));
+            }
+            return {
+              chosenModel: { ...intelligentModel, workingUrl: workingOllamaUrl },
+              logic: 'intelligent_router_direct',
+              modelRoutingMode: routingMode,
+              routingDecision: {
+                provider: intelligentDecision.provider,
+                modelId: intelligentDecision.model,
+                strategy: 'intelligent_router_direct',
+                complexityScore: intelligentDecision.complexityScore,
+                reasoningMode: intelligentDecision.reasoningDepth === 'deep' ? 'complex_reasoning' : 'standard',
+              },
+              intelligentRouting: intelligentDecision,
+            };
+          }
+        }
+
+        // Fallback to smart model router with intelligent router's provider preference
+        const effectiveProvider = intelligentDecision?.provider || preferredProvider;
+        
         const catalog = catalogFindAll({ provider: { $in: ['ollama', 'gemini'] } });
         const catalogForAutoRoute = catalog.length ? catalog : await LLMConfiguration.find({ provider: { $in: ['ollama', 'gemini'] } }).lean();
         const tokenEstimate = Math.ceil(query.length / 3) + ((Array.isArray(context.chatHistory) ? context.chatHistory.length : 0) * 40);
@@ -191,9 +247,9 @@ async function selectLLM(query, context) {
           complexityScore,
           reasoningMode,
           tokenEstimate,
-          userPreference: preferredProvider,
+          userPreference: effectiveProvider,
           latencyBudget: context.latencyBudget || 'balanced',
-          localMode: preferredProvider === 'ollama',
+          localMode: effectiveProvider === 'ollama',
           isOllamaActive: isOllamaActuallyUp,
           catalog: catalogForAutoRoute,
         });
@@ -213,15 +269,24 @@ async function selectLLM(query, context) {
             logic: 'auto_smart_model_router',
             modelRoutingMode: routingMode,
             routingDecision: autoDecision,
+            intelligentRouting: intelligentDecision || null,
           };
         }
       }
 
-      if (autoDecision?.provider) {
+      // Use intelligent router's provider if smart model router didn't return one
+      if (intelligentDecision?.provider && !autoDecision?.provider) {
+        preferredProvider = intelligentDecision.provider;
+      } else if (autoDecision?.provider) {
         preferredProvider = autoDecision.provider;
       }
     } catch (autoRoutingError) {
       log.warn('AI', `Smart model routing failed, using legacy router: ${autoRoutingError.message}`);
+      
+      // Fallback to intelligent router's decision if available
+      if (intelligentDecision?.provider) {
+        preferredProvider = intelligentDecision.provider;
+      }
     }
   }
 

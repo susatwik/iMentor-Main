@@ -4,12 +4,14 @@ import Button from '../core/Button';
 import ConfirmationModal from '../core/ConfirmationModal';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const QuizInProgress = ({ quizData, onSubmit }) => {
+const QuizInProgress = ({ quizData = [], onSubmit }) => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [answers, setAnswers] = useState(new Array(quizData.length).fill(null));
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const currentQuestion = quizData[currentQuestionIndex];
     const totalQuestions = quizData.length;
+
+    if (!currentQuestion) return null;
 
     const handleSelectOption = (option) => {
         const newAnswers = [...answers];

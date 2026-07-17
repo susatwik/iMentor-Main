@@ -419,7 +419,7 @@ function QuizPanel({ selectedCourse, moduleId, onQuestionChange, questionResults
                                         Question {currentIndex + 1}
                                     </p>
                                     <p className="text-[13px] text-gray-100 leading-relaxed font-semibold">
-                                        {current?.instruction}
+                                        {current?.instruction || current?.question || ''}
                                     </p>
                                 </div>
                             </div>

@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-07-08T15:43:35.793264",
+  "step_1_audit": {
+    "courses_checked": 79,
+    "initial_empty": 37,
+    "initial_partial": 42,
+    "initial_complete": 0
+  },
+  "step_2_root_causes": {
+    "orphan_topics_no_module_link": 25,
+    "courses_with_no_data": 12,
+    "lab_courses_without_subtopics": 7
+  },
+  "step_3_repair": {
+    "phase_a_orphan_topics_fixed": 25,
+    "phase_b_courses_created": 12,
+    "phase_c_lab_subtopics_created": 70,
+    "modules_created_in_ee": 6,
+    "idempotent": true
+  },
+  "step_4_lecture_generation": {
+    "batch_triggered": true,
+    "courses_triggered": 79,
+    "subtopics_pending_generation": 3210,
+    "cached_lectures_so_far": 96,
+    "status": "running_background"
+  },
+  "step_5_lab_courses": {
+    "lab_courses_fixed": [
+      "EE2012",
+      "EE2022",
+      "EE2042",
+      "EE2052",
+      "EE2062",
+      "EE3012",
+      "EE3022",
+      "CS2102"
+    ],
+    "subtopics_created_per_course": 10,
+    "total_lab_subtopics": 80
+  },
+  "step_7_rag_verification": {
+    "courses_with_structure": 79,
+    "courses_without_structure": 0,
+    "total_modules": 99,
+    "total_topics": 150,
+    "total_subtopics": 3210
+  },
+  "step_8_course_explorer": {
+    "all_courses_have_more_than_0_modules": true,
+    "all_courses_have_more_than_0_topics": true,
+    "all_courses_have_more_than_0_subtopics": true
+  },
+  "step_10_final_validation": {
+    "total_courses": 79,
+    "courses_with_full_hierarchy": 79,
+    "courses_with_all_lectures": 0,
+    "courses_still_generating_lectures": 79,
+    "courses_broken": 0,
+    "errors": []
+  }
+}

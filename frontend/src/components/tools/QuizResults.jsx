@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import Button from '../core/Button';
 
-const QuizResults = ({ quizData, userAnswers, onRestart }) => {
+const QuizResults = ({ quizData = [], userAnswers = [], onRestart }) => {
     const score = useMemo(() => {
         return userAnswers.reduce((acc, answer, index) => {
             return acc + (answer === quizData[index].correctAnswer ? 1 : 0);

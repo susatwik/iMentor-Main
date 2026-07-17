@@ -57,8 +57,14 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
 
     const handleSubmitQuiz = async () => {
         setIsEvaluating(true);
+        // Frontend guard: if no response in 25s, force-exit loading state
+        const forceExitTimer = setTimeout(() => {
+            setIsEvaluating(false);
+            toast.error('Submission timed out. Please try again.');
+        }, 25000);
+
         try {
-            const formattedAnswers = questions.map((q, idx) => ({
+            const formattedAnswers = questionsNorm.map((q, idx) => ({
                 topic: q.topic,
                 instruction: q.instruction,
                 output: q.output,
@@ -69,6 +75,7 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
             }));
 
             const data = await api.submitSocraticQuiz(courseName, formattedAnswers, moduleId, moduleName);
+            clearTimeout(forceExitTimer);
             if (data.success) {
                 setEvaluationResult(data);
                 toast.success('Quiz submitted successfully! 🎉');
@@ -76,8 +83,10 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
                 toast.error('Failed to evaluate quiz.');
             }
         } catch (err) {
+            clearTimeout(forceExitTimer);
             toast.error(err.response?.data?.message || 'Error submitting quiz.');
         } finally {
+            clearTimeout(forceExitTimer);
             setIsEvaluating(false);
         }
     };
@@ -89,7 +98,13 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
         }));
     };
 
-    const currentQuestion = questions[currentIndex];
+    // Normalize question fields (support both `question` and `instruction`)
+    const normQ = (q) => ({
+        ...q,
+        instruction: q.instruction || q.question || '',
+    });
+    const questionsNorm = questions.map(normQ);
+    const currentQuestion = normQ(questions[currentIndex]);
     const cleanCourseName = courseName ? courseName.replace(/\.[^.]+$/, '') : '';
 
     return (
@@ -185,7 +200,7 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
                             {/* Detailed Feedbacks */}
                             <div className="space-y-3">
                                 <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Detailed Question Feedback</h5>
-                                {evaluationResult.feedback.map((item, idx) => (
+                                {(evaluationResult.feedback || []).map((item, idx) => (
                                     <div key={idx} className="border border-white/5 rounded-xl bg-white/2 overflow-hidden">
                                         <button 
                                             onClick={() => toggleFeedback(idx)}
@@ -199,7 +214,7 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
                                                 )}
                                                 <div className="min-w-0">
                                                     <p className="text-xs font-bold text-gray-300 truncate">Q{idx + 1}: {item.topic}</p>
-                                                    <p className="text-[11px] text-gray-500 truncate leading-snug mt-0.5">{questions[idx]?.instruction}</p>
+                                                    <p className="text-[11px] text-gray-500 truncate leading-snug mt-0.5">{questionsNorm[idx]?.instruction}</p>
                                                 </div>
                                             </div>
                                             <span className={`text-xs font-bold ${item.result === 'correct' ? 'text-green-400' : 'text-red-400'}`}>
@@ -212,8 +227,8 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
                                                 <div>
                                                     <span className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest">Your Answer:</span>
                                                     <p className="text-[12px] text-gray-300 mt-1 leading-relaxed whitespace-pre-wrap italic">
-                                                        {questions[idx]?.options && questions[idx].options[parseInt(studentAnswers[idx])] 
-                                                            ? `"${questions[idx].options[parseInt(studentAnswers[idx])]}"`
+                                                        {questionsNorm[idx]?.options && questionsNorm[idx].options[parseInt(studentAnswers[idx])] 
+                                                            ? `"${questionsNorm[idx].options[parseInt(studentAnswers[idx])]}"`
                                                             : `"${studentAnswers[idx] || '(No answer provided)'}"`}
                                                     </p>
                                                 </div>
@@ -226,9 +241,9 @@ export default function CourseQuizModal({ isOpen, onClose, courseName, moduleId,
                                                 <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10">
                                                     <span className="text-[9px] text-orange-400 font-bold uppercase tracking-widest">Expected Document Fact:</span>
                                                     <p className="text-[12px] text-orange-200/80 mt-1 leading-relaxed italic">
-                                                        {questions[idx]?.options && typeof questions[idx].correctIndex === 'number'
-                                                            ? `Correct option: "${questions[idx].options[questions[idx].correctIndex]}"`
-                                                            : `"${questions[idx]?.output}"`}
+                                                        {questionsNorm[idx]?.options && typeof questionsNorm[idx].correctIndex === 'number'
+                                                            ? `Correct option: "${questionsNorm[idx].options[questionsNorm[idx].correctIndex]}"`
+                                                            : `"${questionsNorm[idx]?.output}"`}
                                                     </p>
                                                 </div>
                                             </div>

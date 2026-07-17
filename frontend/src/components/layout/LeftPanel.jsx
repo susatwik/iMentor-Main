@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppState } from '../../contexts/AppStateContext.jsx';
 import {
     PanelLeftClose, ChevronDown, ChevronUp, FilePlus,
-    Library, History, GraduationCap, Zap,
+    Library, History, GraduationCap, Zap, Brain,
     BookMarked, Loader2, MessageSquareText, Plus
 } from 'lucide-react';
 import Animate from '../core/Animate.jsx';
@@ -191,6 +191,21 @@ function LeftPanel({ isChatProcessing, currentSessionId, handleSelectSessionFrom
                 >
                     <Zap size={16} className="text-blue-500" />
                     <span className="flex-1">Deep Research</span>
+                </button>
+            </div>
+
+            {/* Knowledge Assessment */}
+            <div className="mb-4">
+                <button
+                    onClick={() => navigate('/assessment')}
+                    className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-left transition-all duration-200 rounded-xl shadow-sm border ${
+                        location.pathname === '/assessment'
+                            ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300 ring-1 ring-indigo-500/20'
+                            : 'bg-gray-50 dark:bg-gray-800 border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                >
+                    <Brain size={16} className={location.pathname === '/assessment' ? 'text-indigo-400' : 'text-purple-500'} />
+                    <span className="flex-1">Knowledge Assessment</span>
                 </button>
             </div>
 

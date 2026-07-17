@@ -49,8 +49,8 @@ function KnowledgeSourceList({ onSelectSource, selectedSource, onRefreshNeeded, 
                     const subjectsData = await api.getSubjects();
                     if (subjectsData && Array.isArray(subjectsData.subjects)) {
                         const dynamicSubjects = subjectsData.subjects.map((sub, index) => ({
-                            _id: `dynamic_subject_${index}_${sub}`,
-                            title: sub,
+                            _id: `dynamic_subject_${index}_${sub.code}`,
+                            title: sub.name || sub.code,
                             sourceType: 'subject',
                             status: 'completed',
                             createdAt: new Date().toISOString()

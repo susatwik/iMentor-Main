@@ -66,7 +66,7 @@ async function generateContentWithHistory(
 
         let completion;
         let attempts = 0;
-        const maxAttempts = 12;
+        const maxAttempts = 3;
         while (attempts < maxAttempts) {
             try {
                 attempts++;
@@ -86,18 +86,8 @@ async function generateContentWithHistory(
                 const isRateLimit = status === 429 || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('rate_limit') || errMsg.toLowerCase().includes('quota');
                 
                 if (isRateLimit && attempts < maxAttempts) {
-                    let waitMs = 5000;
-                    const match = errMsg.match(/try again in (\d+(\.\d+)?)s/i);
-                    if (match) {
-                        waitMs = Math.ceil(parseFloat(match[1]) * 1000) + 1500; // add 1.5s buffer
-                    } else {
-                        const msMatch = errMsg.match(/try again in (\d+)ms/i);
-                        if (msMatch) {
-                            waitMs = parseInt(msMatch[1], 10) + 500;
-                        } else {
-                            waitMs = attempts * 5000;
-                        }
-                    }
+                    // Exponential backoff: 2s, 4s, 8s
+                    const waitMs = Math.min(2000 * Math.pow(2, attempts - 1), 8000);
                     log.warn('AI', `Groq rate limit hit. Attempt ${attempts}/${maxAttempts}. Waiting ${waitMs}ms before retrying...`);
                     await new Promise(resolve => setTimeout(resolve, waitMs));
                 } else {

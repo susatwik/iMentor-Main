@@ -15,9 +15,11 @@ const SkillTreeLanding = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const hasGames = location.state?.hasGames ?? false;
+    const fromCsvUpload = location.state?.fromCsvUpload;
+    const csvPrefillTopic = location.state?.topic || '';
     const [isHovering, setIsHovering] = useState(false);
-    const [step, setStep] = useState('start'); // 'start', 'topic', 'replay', 'assessment', 'complete'
-    const [topic, setTopic] = useState('');
+    const [step, setStep] = useState(fromCsvUpload && csvPrefillTopic ? 'topic' : 'start');
+    const [topic, setTopic] = useState(csvPrefillTopic);
     const [questions, setQuestions] = useState([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [answers, setAnswers] = useState([]);
@@ -39,6 +41,24 @@ const SkillTreeLanding = () => {
         };
         fetchCourses();
     }, []);
+
+    // Auto-start topic check when coming from CSV upload with pre-filled topic
+    React.useEffect(() => {
+        if (fromCsvUpload && csvPrefillTopic && step === 'topic') {
+            const timer = setTimeout(() => {
+                handleNext();
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [fromCsvUpload, csvPrefillTopic, step]);
+
+    const getCourseDisplay = (course) => {
+        if (typeof course === 'object' && course !== null) {
+            return { code: course.code || '', name: course.name || course.code || '' };
+        }
+        const s = String(course || '');
+        return { code: s, name: s };
+    };
 
     const handleStartGame = () => {
         setStep('topic');
@@ -106,14 +126,14 @@ const SkillTreeLanding = () => {
                 setQuestions(q);
                 setStep('assessment');
             } else {
-                toast('AI service returned no questions. Please try again.', {
+                toast('Generating diagnostic questions failed. Please try again.', {
                     icon: '⚠️',
                     style: { background: '#18181b', color: '#fff', border: '1px solid #3f3f46', fontWeight: '500' }
                 });
             }
         } catch (error) {
             console.error('[SkillTreeLanding] Error generating questions:', error);
-            const errorMessage = error.response?.data?.message || 'Unable to connect to AI service. Please try again later.';
+            const errorMessage = error.response?.data?.message || 'Question generation failed. Please try again.';
             toast(errorMessage, {
                 icon: '⚠️',
                 style: { background: '#18181b', color: '#fff', border: '1px solid #3f3f46', fontWeight: '500' }
@@ -326,9 +346,10 @@ const SkillTreeLanding = () => {
                                     disabled={loading}
                                 >
                                     <option value="" disabled>Select a course...</option>
-                                    {courses.map(c => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
+                                    {courses.map(c => {
+                                        const { code, name } = getCourseDisplay(c);
+                                        return <option key={code} value={code}>{name}</option>;
+                                    })}
                                     <option value="other">Other Topic...</option>
                                 </select>
 
@@ -377,6 +398,14 @@ const SkillTreeLanding = () => {
                                         )}
                                     </button>
                                 </div>
+                            </div>
+                            <div className="mt-4 text-center">
+                                <button
+                                    onClick={() => navigate('/gamification/skill-tree/upload')}
+                                    className="text-sm text-zinc-500 hover:text-white transition-colors underline underline-offset-2"
+                                >
+                                    Upload a CSV syllabus instead
+                                </button>
                             </div>
                         </Animate>
                     )}

@@ -1,0 +1,215 @@
+{
+  "courses": [
+    {
+      "courseName": "CS1031",
+      "name": "CS1031",
+      "aliases": []
+    },
+    {
+      "courseName": "CS1032",
+      "name": "CS1032",
+      "aliases": []
+    },
+    {
+      "courseName": "CS2101",
+      "name": "CS2101",
+      "aliases": []
+    },
+    {
+      "courseName": "CS2102",
+      "name": "CS2102",
+      "aliases": []
+    },
+    {
+      "courseName": "CY1021",
+      "name": "CY1021",
+      "aliases": []
+    },
+    {
+      "courseName": "EC1521",
+      "name": "EC1521",
+      "aliases": []
+    },
+    {
+      "courseName": "EE",
+      "name": "EE",
+      "aliases": []
+    },
+    {
+      "courseName": "EE1011",
+      "name": "EE1011",
+      "aliases": []
+    },
+    {
+      "courseName": "EE1021",
+      "name": "EE1021",
+      "aliases": []
+    },
+    {
+      "courseName": "EE1031",
+      "name": "EE1031",
+      "aliases": []
+    },
+    {
+      "courseName": "EE2011",
+      "name": "EE2011",
+      "aliases": []
+    },
+    {
+      "courseName": "EE2021",
+      "name": "EE2021",
+      "aliases": []
+    },
+    {
+      "courseName": "EE2041",
+      "name": "EE2041",
+      "aliases": []
+    },
+    {
+      "courseName": "EE2051",
+      "name": "EE2051",
+      "aliases": []
+    },
+    {
+      "courseName": "EE2061",
+      "name": "EE2061",
+      "aliases": []
+    },
+    {
+      "courseName": "EE2071",
+      "name": "EE2071",
+      "aliases": []
+    },
+    {
+      "courseName": "EE3011",
+      "name": "EE3011",
+      "aliases": []
+    },
+    {
+      "courseName": "EE3021",
+      "name": "EE3021",
+      "aliases": []
+    },
+    {
+      "courseName": "EE3031",
+      "name": "EE3031",
+      "aliases": []
+    },
+    {
+      "courseName": "EE3041",
+      "name": "EE3041",
+      "aliases": []
+    },
+    {
+      "courseName": "EE_101",
+      "name": "EE_101",
+      "aliases": []
+    },
+    {
+      "courseName": "EE_201",
+      "name": "EE_201",
+      "aliases": []
+    },
+    {
+      "courseName": "EE_202",
+      "name": "EE_202",
+      "aliases": []
+    },
+    {
+      "courseName": "HS1011",
+      "name": "HS1011",
+      "aliases": []
+    },
+    {
+      "courseName": "HS2011",
+      "name": "HS2011",
+      "aliases": []
+    },
+    {
+      "courseName": "HS2012",
+      "name": "HS2012",
+      "aliases": []
+    },
+    {
+      "courseName": "HS3011",
+      "name": "HS3011",
+      "aliases": []
+    },
+    {
+      "courseName": "HS3021",
+      "name": "HS3021",
+      "aliases": []
+    },
+    {
+      "courseName": "HS3081",
+      "name": "HS3081",
+      "aliases": []
+    },
+    {
+      "courseName": "MA1011",
+      "name": "MA1011",
+      "aliases": []
+    },
+    {
+      "courseName": "MA1021",
+      "name": "MA1021",
+      "aliases": []
+    },
+    {
+      "courseName": "MA2051",
+      "name": "MA2051",
+      "aliases": []
+    },
+    {
+      "courseName": "MA2092",
+      "name": "MA2092",
+      "aliases": []
+    },
+    {
+      "courseName": "ME1013",
+      "name": "ME1013",
+      "aliases": []
+    },
+    {
+      "courseName": "ME1021",
+      "name": "ME1021",
+      "aliases": []
+    },
+    {
+      "courseName": "Machine Learning",
+      "name": "Machine Learning",
+      "aliases": []
+    },
+    {
+      "courseName": "PE1012",
+      "name": "PE1012",
+      "aliases": []
+    },
+    {
+      "courseName": "PE1022",
+      "name": "PE1022",
+      "aliases": []
+    },
+    {
+      "courseName": "PE2012",
+      "name": "PE2012",
+      "aliases": []
+    },
+    {
+      "courseName": "PH1021",
+      "name": "PH1021",
+      "aliases": []
+    },
+    {
+      "courseName": "SM3011",
+      "name": "SM3011",
+      "aliases": []
+    },
+    {
+      "courseName": "SM3021",
+      "name": "SM3021",
+      "aliases": []
+    }
+  ],
+  "masterTopicList": []
+}

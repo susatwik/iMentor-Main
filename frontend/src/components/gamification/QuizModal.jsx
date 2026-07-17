@@ -9,7 +9,7 @@ const QuizModal = ({ isOpen, onClose, bounty, onQuizCompleted }) => {
     const [answers, setAnswers] = useState({}); // { 0: 1, 1: 3 } (questionIndex: answerIndex)
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!isOpen || !bounty || !bounty.quizData) return null;
+    if (!isOpen || !bounty || !Array.isArray(bounty.quizData) || bounty.quizData.length === 0) return null;
 
     const questions = bounty.quizData;
     const currentQuestion = questions[currentQuestionIndex];

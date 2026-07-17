@@ -72,6 +72,9 @@ const SkillTreeGameMap = () => {
     const [currentGameId, setCurrentGameId] = useState(initialGameId);
     const [levelLoadError, setLevelLoadError] = useState('');
     const [questionsFetching, setQuestionsFetching] = useState(false);
+    const [showExplanation, setShowExplanation] = useState(false);
+    const [answerSubmitted, setAnswerSubmitted] = useState(false);
+    const [questionXp, setQuestionXp] = useState(0);
 
     // Data fetching
     useEffect(() => {
@@ -255,25 +258,32 @@ const SkillTreeGameMap = () => {
     };
 
     const handleAnswerSelect = (index) => {
-        if (selectedAnswer !== null) return;
+        if (selectedAnswer !== null || answerSubmitted) return;
         setSelectedAnswer(index);
+        setAnswerSubmitted(true);
         
-        const currentQuestion = levelQuestions[currentQuestionIndex];
-        const isCorrect = index === currentQuestion.correctIndex;
+        const currentQuestion = levelQuestions?.[currentQuestionIndex];
+        const isCorrect = index === currentQuestion?.correctIndex;
         const newScore = isCorrect ? score + 1 : score;
+        const earnedXp = isCorrect ? 10 : 2;
         
         if (isCorrect) {
             setScore(newScore);
         }
+        setQuestionXp(earnedXp);
+        setShowExplanation(true);
+    };
 
-        setTimeout(() => {
-            if (currentQuestionIndex < levelQuestions.length - 1) {
-                setCurrentQuestionIndex(prev => prev + 1);
-                setSelectedAnswer(null);
-            } else {
-                completeLevel(newScore);
-            }
-        }, 1500);
+    const handleNextQuestion = () => {
+        if (currentQuestionIndex < levelQuestions.length - 1) {
+            setCurrentQuestionIndex(prev => prev + 1);
+            setSelectedAnswer(null);
+            setShowExplanation(false);
+            setAnswerSubmitted(false);
+            setQuestionXp(0);
+        } else {
+            completeLevel(score);
+        }
     };
 
     const completeLevel = async (completedScore) => {
@@ -362,6 +372,9 @@ const SkillTreeGameMap = () => {
         setScore(0);
         setFinalScore(0);
         setSelectedAnswer(null);
+        setShowExplanation(false);
+        setAnswerSubmitted(false);
+        setQuestionXp(0);
     };
 
     const goToNextLevel = () => {
@@ -370,11 +383,13 @@ const SkillTreeGameMap = () => {
         const nextLevel = levels[currentIndex + 1];
 
         if (nextLevel && nextLevel.status === 'unlocked') {
-            // Reset current level state
             setLevelQuestions([]);
             setShowResults(false);
             setScore(0);
             setFinalScore(0);
+            setShowExplanation(false);
+            setAnswerSubmitted(false);
+            setQuestionXp(0);
             setCurrentQuestionIndex(0);
             setSelectedAnswer(null);
 
@@ -507,57 +522,47 @@ const SkillTreeGameMap = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-black flex items-center justify-center">
-                <div
-                   
-                   
-                    className="text-center"
-                >
+                <div className="text-center">
                     <Loader2 className="w-16 h-16 text-slate-300 animate-spin mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-white mb-2">Building Your Skill Tree</h2>
-                    <p className="text-slate-400">Personalizing levels for {topic}...</p>
+                    <div className="space-y-1 text-sm text-slate-400 mb-2">
+                        <p>⏳ Checking cache…</p>
+                        <p>🔍 Searching database…</p>
+                        <p className="text-slate-500">🤖 Generating via AI…</p>
+                    </div>
+                    <p className="text-slate-500">Personalizing levels for {topic}...</p>
                 </div>
             </div>
         );
     }
 
-    // Error state - AI failed to generate levels
+    // Error / auto-retry state — backend auto-generates levels now
     if (levelLoadError && levels.length === 0) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-black flex items-center justify-center p-6">
-                <div
-                   
-                   
-                    className="bg-slate-800/80 backdrop-blur-sm rounded-3xl p-8 max-w-md w-full text-center border border-slate-500/30"
-                >
-                    <div className="w-16 h-16 bg-slate-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-3xl">⚠️</span>
-                    </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">AI Service Unavailable</h2>
-                    <p className="text-slate-300 mb-6">{levelLoadError}</p>
-                    <div className="flex flex-col gap-3">
-                        <button
-                            onClick={() => {
-                                setLevelLoadError('');
-                                generateLevels();
-                            }}
-                            className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors"
-                           
-                           
-                        >
-                            Try Again
-                        </button>
-                        <button
-                            onClick={() => navigate('/gamification/skill-tree')}
-                            className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors"
-                           
-                           
-                        >
-                            <span className="flex items-center justify-center gap-2">
-                                <ArrowLeft className="w-4 h-4" />
-                                Back to Skill Trees
-                            </span>
-                        </button>
-                    </div>
+                <div className="bg-slate-800/80 backdrop-blur-sm rounded-3xl p-8 max-w-md w-full text-center border border-slate-500/30">
+                    <Loader2 className="w-12 h-12 text-slate-300 animate-spin mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-white mb-2">Generating Your Skill Tree</h2>
+                    <p className="text-slate-300 mb-2">{levelLoadError}</p>
+                    <p className="text-slate-500 text-sm mb-6">Creating personalized levels for {topic}...</p>
+                    <button
+                        onClick={() => {
+                            setLevelLoadError('');
+                            generateLevels();
+                        }}
+                        className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors"
+                    >
+                        Retry
+                    </button>
+                    <button
+                        onClick={() => navigate('/gamification/skill-tree')}
+                        className="w-full py-3 mt-2 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded-xl font-medium transition-colors text-sm"
+                    >
+                        <span className="flex items-center justify-center gap-2">
+                            <ArrowLeft className="w-4 h-4" />
+                            Back to Skill Trees
+                        </span>
+                    </button>
                 </div>
             </div>
         );
@@ -575,9 +580,13 @@ const SkillTreeGameMap = () => {
                         </div>
                     </div>
                     <h2 className="text-2xl font-bold text-white mb-2">Preparing Questions</h2>
-                    <p className="text-slate-400 mb-1">Generating fresh questions for</p>
+                    <div className="space-y-1 text-sm text-slate-400 mb-2">
+                        <p>⏳ Checking cache…</p>
+                        <p>🔍 Checking question bank…</p>
+                        <p className="text-slate-500">🤖 Generating via AI if needed…</p>
+                    </div>
                     <p className="text-slate-200 font-semibold">{playingLevel.name}</p>
-                    <p className="text-slate-500 text-sm mt-4">This may take a few seconds…</p>
+                    <p className="text-slate-500 text-sm mt-2">This may take a few seconds…</p>
                 </div>
             </div>
         );
@@ -672,6 +681,9 @@ const SkillTreeGameMap = () => {
                                         setScore(0);
                                         setFinalScore(0);
                                         setSelectedAnswer(null);
+                                        setShowExplanation(false);
+                                        setAnswerSubmitted(false);
+                                        setQuestionXp(0);
                                         setLevelLoadError('');
                                         // Re-fetch fresh questions so retry never repeats the same set
                                         const errorMsg = await fetchLevelQuestions(playingLevel);
@@ -743,20 +755,18 @@ const SkillTreeGameMap = () => {
                         </div>
                     </div>
 
-                    {/* Question Card - Scrollable */}
+                    {/* Question + Explanation - Scrollable */}
                     <div className="flex-1 overflow-y-auto pr-2 game-scrollbar">
                         <div
                             key={currentQuestionIndex}
-                           
-                           
                             className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-600/50 mb-4"
                         >
                             <h2 className="text-xl font-semibold text-white mb-6 leading-relaxed">
-                                {currentQuestion.question}
+                                {currentQuestion?.question || ''}
                             </h2>
 
                             <div className="space-y-3">
-                                {currentQuestion.options.map((option, idx) => {
+                                {(currentQuestion?.options || []).map((option, idx) => {
                                     const isSelected = selectedAnswer === idx;
                                     const isCorrect = idx === currentQuestion.correctIndex;
                                     const showResult = selectedAnswer !== null;
@@ -769,28 +779,105 @@ const SkillTreeGameMap = () => {
                                             className={`w-full p-4 rounded-xl text-left transition-all ${
                                                 showResult
                                                     ? isCorrect
-                                                        ? 'bg-slate-200/20 border-2 border-slate-300 text-slate-200'
+                                                        ? 'bg-emerald-500/10 border-2 border-emerald-500 text-emerald-300'
                                                         : isSelected
-                                                            ? 'bg-slate-500/20 border-2 border-red-500 text-red-300'
-                                                            : 'bg-slate-700/50 border border-slate-600 text-slate-400'
+                                                            ? 'bg-red-500/10 border-2 border-red-500 text-red-300'
+                                                            : 'bg-slate-700/50 border border-slate-600 text-slate-500'
                                                     : 'bg-slate-700/50 border border-slate-600 text-white hover:bg-slate-700 hover:border-slate-500'
                                             }`}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                                                    showResult && isCorrect ? 'bg-slate-400 text-white' :
-                                                    showResult && isSelected ? 'bg-slate-600 text-white' :
+                                                    showResult && isCorrect ? 'bg-emerald-500 text-white' :
+                                                    showResult && isSelected ? 'bg-red-500 text-white' :
                                                     'bg-slate-600 text-slate-300'
                                                 }`}>
                                                     {String.fromCharCode(65 + idx)}
                                                 </span>
                                                 <span className="flex-1">{option}</span>
-                                                {showResult && isCorrect && <Check className="w-5 h-5 text-white" />}
+                                                {showResult && isCorrect && <Check className="w-5 h-5 text-emerald-400" />}
+                                                {showResult && isSelected && !isCorrect && <span className="text-red-400 text-sm font-medium">✗</span>}
                                             </div>
                                         </button>
                                     );
                                 })}
                             </div>
+
+                            {/* ── Explanation Screen ── */}
+                            {showExplanation && (
+                                <div className="mt-6 pt-6 border-t border-slate-600/40 space-y-4">
+                                    {/* Correct/Incorrect */}
+                                    <div className={`flex items-center gap-3 p-3 rounded-xl ${
+                                        selectedAnswer === currentQuestion.correctIndex
+                                            ? 'bg-emerald-500/10 border border-emerald-500/30'
+                                            : 'bg-red-500/10 border border-red-500/30'
+                                    }`}>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                            selectedAnswer === currentQuestion.correctIndex
+                                                ? 'bg-emerald-500/20 text-emerald-400'
+                                                : 'bg-red-500/20 text-red-400'
+                                        }`}>
+                                            {selectedAnswer === currentQuestion.correctIndex ? (
+                                                <Check className="w-5 h-5" />
+                                            ) : (
+                                                <span className="text-lg font-bold">✗</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className={`font-semibold ${
+                                                selectedAnswer === currentQuestion.correctIndex
+                                                    ? 'text-emerald-300' : 'text-red-300'
+                                            }`}>
+                                                {selectedAnswer === currentQuestion.correctIndex ? 'Correct!' : 'Incorrect'}
+                                            </p>
+                                            <p className="text-sm text-slate-400">
+                                                {selectedAnswer === currentQuestion.correctIndex
+                                                    ? `+${questionXp} XP`
+                                                    : `Correct answer: ${String.fromCharCode(65 + (currentQuestion.correctIndex ?? 0))}`}
+                                            </p>
+                                        </div>
+                                        <div className="ml-auto text-xs text-slate-500">
+                                            +{questionXp} XP
+                                        </div>
+                                    </div>
+
+                                    {/* Detailed Explanation */}
+                                    {currentQuestion.explanation && (
+                                        <div className="bg-slate-900/50 rounded-xl p-4">
+                                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Explanation</p>
+                                            <p className="text-sm text-slate-200 leading-relaxed">{currentQuestion.explanation}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Why other options are wrong */}
+                                    <div className="bg-slate-900/50 rounded-xl p-4">
+                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Why Other Options Are Incorrect</p>
+                                        <div className="space-y-2">
+                                            {(currentQuestion?.options || []).map((option, idx) => {
+                                                if (idx === currentQuestion.correctIndex) return null;
+                                                const isUsersChoice = selectedAnswer === idx;
+                                                return (
+                                                    <div key={idx} className={`text-sm p-2 rounded-lg ${
+                                                        isUsersChoice ? 'bg-red-500/10 border border-red-500/20' : ''
+                                                    }`}>
+                                                        <span className="text-slate-400 font-mono mr-2">{String.fromCharCode(65 + idx)}.</span>
+                                                        <span className={isUsersChoice ? 'text-red-300' : 'text-slate-400'}>{option}</span>
+                                                        {isUsersChoice && <span className="ml-2 text-red-400 text-xs">(your choice)</span>}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Next Question Button */}
+                                    <button
+                                        onClick={handleNextQuestion}
+                                        className="w-full py-3 bg-gradient-to-r from-slate-500 to-slate-400 hover:from-slate-400 hover:to-slate-300 text-white rounded-xl font-semibold transition-all"
+                                    >
+                                        {currentQuestionIndex < levelQuestions.length - 1 ? 'Next Question →' : 'See Results'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
