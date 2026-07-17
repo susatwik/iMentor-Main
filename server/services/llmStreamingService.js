@@ -33,6 +33,10 @@ async function streamCompletion({
         throw new Error('onToken callback is required for streaming');
     }
 
+    const tokenOptimizer = require('../utils/tokenOptimizer');
+    const optimizedSystemPrompt = tokenOptimizer.minifyPrompt(tokenOptimizer.injectSystemInstruction(systemPrompt));
+    const optimizedMessages = tokenOptimizer.optimizeIncomingMessages(messages || []);
+
     // Wrap onToken to handle thinking tags if requested
     let finalOnToken = onToken;
     let isThinking = false;
@@ -74,31 +78,55 @@ async function streamCompletion({
         };
     }
 
+    // Wrap finalOnToken with token expansion (StreamingTokenExpander)
+    const expander = new tokenOptimizer.StreamingTokenExpander((expandedText) => {
+        if (options.handleThinkingTags) {
+            finalOnToken(expandedText);
+        } else {
+            finalOnToken({ type: 'token', content: expandedText });
+        }
+    });
+
+    const providerOnToken = (chunk) => {
+        if (options.handleThinkingTags) {
+            // Providers pass strings
+            expander.processChunk(chunk);
+        } else {
+            // Providers pass { type: 'token', content: '...' }
+            if (chunk && typeof chunk.content === 'string') {
+                expander.processChunk(chunk.content);
+            }
+        }
+    };
+
     try {
         let result;
         if (provider === 'gemini') {
-            result = await streamGemini({ messages, model, apiKey, systemPrompt, onToken: finalOnToken, options });
+            result = await streamGemini({ messages: optimizedMessages, model, apiKey, systemPrompt: optimizedSystemPrompt, onToken: providerOnToken, options });
         } else if (provider === 'groq') {
-            result = await streamGroq({ messages, model, apiKey, systemPrompt, onToken: finalOnToken, options });
+            result = await streamGroq({ messages: optimizedMessages, model, apiKey, systemPrompt: optimizedSystemPrompt, onToken: providerOnToken, options });
         } else if (provider === 'ollama') {
-            result = await streamOllama({ messages, model, systemPrompt, onToken: finalOnToken, options });
+            result = await streamOllama({ messages: optimizedMessages, model, systemPrompt: optimizedSystemPrompt, onToken: providerOnToken, options });
         } else if (provider === 'sglang') {
             if (!SGLANG_ENABLED) {
                 log.warn('AI', 'SGLang requested but SGLANG_ENABLED=false — routing to Groq');
-                result = await streamGroq({ messages, model: model || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile', apiKey: process.env.GROQ_API_KEY, systemPrompt, onToken: finalOnToken, options });
+                result = await streamGroq({ messages: optimizedMessages, model: model || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile', apiKey: process.env.GROQ_API_KEY, systemPrompt: optimizedSystemPrompt, onToken: providerOnToken, options });
             } else {
-                result = await streamSGLang({ messages, model, systemPrompt, onToken: finalOnToken, options });
+                result = await streamSGLang({ messages: optimizedMessages, model, systemPrompt: optimizedSystemPrompt, onToken: providerOnToken, options });
             }
         } else {
             throw new Error(`Streaming not implemented for provider: ${provider}`);
         }
+
+        // Flush remaining buffer in the expander
+        expander.flush();
 
         // Flush remaining buffer if using thinking wrapper
         if (options.handleThinkingTags && buffer) {
             onToken({ type: isThinking ? 'thought' : 'token', content: buffer });
         }
 
-        return result;
+        return tokenOptimizer.expandOutgoingResponse(result);
     } catch (error) {
         const status = error.status || error.response?.status || 500;
         log.warn('AI', `Stream error (${provider}): ${error.message?.split('\n')[0]}`);

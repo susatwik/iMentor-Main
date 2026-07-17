@@ -89,8 +89,13 @@ async function generateContentWithHistory(chatHistory, userQuery, systemPrompt =
         || 'Qwen/Qwen2.5-14B-Instruct';
 
     const client   = _getClient(endpoint);
-    const messages = _formatHistory(chatHistory, systemPrompt);
-    messages.push({ role: 'user', content: userQuery });
+    const tokenOptimizer = require('../utils/tokenOptimizer');
+    const optimizedSystemPrompt = tokenOptimizer.minifyPrompt(tokenOptimizer.injectSystemInstruction(systemPrompt));
+    const optimizedUserQuery = tokenOptimizer.minifyPrompt(userQuery);
+    const optimizedHistory = tokenOptimizer.optimizeIncomingMessages(chatHistory || []);
+
+    const messages = _formatHistory(optimizedHistory, optimizedSystemPrompt);
+    messages.push({ role: 'user', content: optimizedUserQuery });
 
     // Estimate input tokens and adjust maxTokens to prevent context overflow
     const allMessagesText = messages.map(m => m.content).join(' ');
@@ -114,7 +119,7 @@ async function generateContentWithHistory(chatHistory, userQuery, systemPrompt =
 
         const text = completion.choices?.[0]?.message?.content?.trim() || '';
         log.success('AI', `[SGLang] response received (${text.length} chars)`);
-        return text;
+        return tokenOptimizer.expandOutgoingResponse(text);
 
     } catch (err) {
         log.error('AI', `[SGLang] generate failed: ${err.message}`);

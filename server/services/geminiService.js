@@ -1,6 +1,7 @@
 const log = require('../utils/logger');
 // server/services/geminiService.js
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
+const tokenOptimizer = require('../utils/tokenOptimizer');
 
 const SECONDARY_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.0-flash";
@@ -42,6 +43,10 @@ async function generateContentWithHistory(
             throw new Error("currentUserQuery must be a non-empty string.");
         }
 
+        const optimizedSystemPrompt = tokenOptimizer.minifyPrompt(tokenOptimizer.injectSystemInstruction(systemPromptText));
+        const optimizedQuery = tokenOptimizer.minifyPrompt(currentUserQuery);
+        const optimizedHistory = tokenOptimizer.optimizeIncomingMessages(chatHistory || []);
+
         const generationConfig = {
             temperature: 0.7,
             maxOutputTokens: options.maxOutputTokens || DEFAULT_MAX_OUTPUT_TOKENS_CHAT,
@@ -49,12 +54,11 @@ async function generateContentWithHistory(
 
         const model = genAI.getGenerativeModel({
             model: modelNameToUse,
-            systemInstruction: (systemPromptText && typeof systemPromptText === 'string' && systemPromptText.trim() !== '') ?
-                { parts: [{ text: systemPromptText.trim() }] } : undefined,
+            systemInstruction: { parts: [{ text: optimizedSystemPrompt }] },
             safetySettings: baseSafetySettings,
         });
 
-        const historyForStartChat = (chatHistory || [])
+        const historyForStartChat = optimizedHistory
             .map(msg => ({
                 role: msg.role,
                 parts: Array.isArray(msg.parts) ? msg.parts.map(part => ({ text: part.text || '' })) : [{ text: msg.text || '' }]
@@ -68,7 +72,7 @@ async function generateContentWithHistory(
 
         // log.info('AI', `Gemini request initiated (history: ${historyForStartChat.length})`);
 
-        const result = await chat.sendMessage(currentUserQuery);
+        const result = await chat.sendMessage(optimizedQuery);
 
         const response = result.response;
         const candidate = response?.candidates?.[0];
@@ -78,9 +82,12 @@ async function generateContentWithHistory(
             if (candidate.finishReason === 'MAX_TOKENS') {
                 log.warn('AI', "Gemini response was truncated due to token limit.");
             }
-            log.success('AI', `Gemini response received (${responseText.length} chars)`);
-            return responseText;
+            const expandedResponse = tokenOptimizer.expandOutgoingResponse(responseText);
+            log.success('AI', `Gemini response received (${responseText.length} chars, expanded to ${expandedResponse.length} chars)`);
+            return expandedResponse;
         } else {
+            const finishReason = candidate?.finishReason || 'UNKNOWN';
+            const safetyRatings = candidate?.safetyRatings;
             log.warn('AI', `Gemini response issues: ${finishReason}`);
             let blockMessage = `AI response generation failed or was blocked.`;
             if (finishReason === 'SAFETY') {
@@ -138,15 +145,20 @@ const generateText = async (prompt, config = {}) => {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: modelName });
+        const optimizedSystemPrompt = tokenOptimizer.injectSystemInstruction(config.systemPrompt);
+        const model = genAI.getGenerativeModel({
+            model: modelName,
+            systemInstruction: optimizedSystemPrompt
+        });
 
         // log.info('AI', `Gemini text generation request (model: ${modelName})`);
 
-        const result = await model.generateContent(prompt);
+        const optimizedPrompt = tokenOptimizer.minifyPrompt(prompt);
+        const result = await model.generateContent(optimizedPrompt);
         const response = result.response;
         const text = response.text();
 
-        return text;
+        return tokenOptimizer.expandOutgoingResponse(text);
     } catch (error) {
         log.error('AI', `Gemini generateText error: ${error.message}`, error);
         const enhancedError = new Error('Failed to generate text from AI service.');
@@ -179,16 +191,17 @@ const generateContentWithVision = async (textPrompt, imageData, options = {}) =>
     try {
         const genAI = new GoogleGenerativeAI(apiKeyToUse);
 
+        const optimizedSystemPrompt = tokenOptimizer.minifyPrompt(tokenOptimizer.injectSystemInstruction(options.systemPrompt));
+        const optimizedTextPrompt = tokenOptimizer.minifyPrompt(textPrompt);
+
         const model = genAI.getGenerativeModel({
             model: modelNameToUse.startsWith('models/') ? modelNameToUse : `models/${modelNameToUse}`,
-            systemInstruction: options.systemPrompt
-                ? { parts: [{ text: options.systemPrompt }] }
-                : undefined,
+            systemInstruction: { parts: [{ text: optimizedSystemPrompt }] },
             safetySettings: baseSafetySettings,
         });
 
         const parts = [
-            { text: textPrompt },
+            { text: optimizedTextPrompt },
             {
                 inlineData: {
                     mimeType: imageData.mimeType,
@@ -203,8 +216,9 @@ const generateContentWithVision = async (textPrompt, imageData, options = {}) =>
 
         if (candidate && (candidate.finishReason === 'STOP' || candidate.finishReason === 'MAX_TOKENS')) {
             const responseText = candidate?.content?.parts?.[0]?.text || "";
-            log.success('AI', `Gemini Vision response received (${responseText.length} chars)`);
-            return responseText;
+            const expandedResponse = tokenOptimizer.expandOutgoingResponse(responseText);
+            log.success('AI', `Gemini Vision response received (${responseText.length} chars, expanded to ${expandedResponse.length})`);
+            return expandedResponse;
         } else {
             const finishReason = candidate?.finishReason || 'UNKNOWN';
             throw new Error(`Gemini Vision response blocked or failed. Reason: ${finishReason}`);

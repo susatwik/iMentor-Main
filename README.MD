@@ -1,10 +1,32 @@
-# EE Syllabi Pipeline & Startup Configuration Update
+# Team - 2 Changes
 
-This document describes the changes introduced in the `ee-syllabi-generator` branch, the architecture of the new Electrical Engineering (EE) syllabi pipeline, and the test cases/verification steps for the testing team.
+This branch incorporates the **Token Optimization Framework** alongside existing EE Syllabi Pipeline and startup configuration updates.
 
 ---
 
-## 1. Summary of Changes
+## 1. Token Optimization Framework
+
+We have implemented an end-to-end token optimization pipeline designed to minimize LLM token consumption, reduce latency, and lower API usage costs across both standard text/history prompts and real-time streaming operations.
+
+### Key Optimization Components
+* **Input Minification (`server/utils/tokenOptimizer.js`):**
+  * Automatically removes HTML/markdown comments and collapses unnecessary whitespace/newlines before payloads are sent to LLMs.
+  * Respects code blocks (delimited by ` ``` `), keeping indentation and block content completely intact.
+* **Shorthand Abbreviation System:**
+  * Injects a token-saving directive into system prompts instructing the models to respond using standard, predefined abbreviations (e.g. `w/` for `with`, `db` for `database`, `ctx` for `context`, etc.).
+* **Response Expansion (Standard & Streaming):**
+  * Intercepts outbound model completions and restores all abbreviated terms back to their full, human-readable forms.
+  * Incorporates a stateful `StreamingTokenExpander` in `server/services/llmStreamingService.js` that tracks partial chunk buffers to perform seamless word-boundary-aware expansion during streaming (so words are not fragmented).
+* **Multi-Provider Support:**
+  * Automatically optimizes inputs and expands outputs for **Gemini** (`geminiService.js`), **Groq** (`groqService.js`), and **SGLang** (`sglangService.js`).
+
+---
+
+## 2. EE Syllabi Pipeline & Startup Configuration Update
+
+This section describes the changes introduced in the `ee-syllabi-generator` branch, the architecture of the new Electrical Engineering (EE) syllabi pipeline, and the test cases/verification steps for the testing team.
+
+### 2.1. Summary of Changes
 
 ### A. Dynamic Startup Configuration (`startup.sh`)
 * **Before:** `PROJECT_DIR` was hardcoded to `/run/media/komeshbathula/New Volume1/NIT Projects/iMentor-Main`.
@@ -30,7 +52,7 @@ This document describes the changes introduced in the `ee-syllabi-generator` bra
 
 ---
 
-## 2. Ingestion Architecture Flow
+### 2.2. Ingestion Architecture Flow
 
 ```mermaid
 graph TD
@@ -44,7 +66,7 @@ graph TD
 
 ---
 
-## 3. Testing Team Instructions
+### 2.3. Testing Team Instructions
 
 Please follow the verification steps below to test the dynamic path configuration, syllabus generation, and STN ingestion.
 
