@@ -22,11 +22,30 @@ We have implemented an end-to-end token optimization pipeline designed to minimi
 
 ---
 
-## 2. EE Syllabi Pipeline & Startup Configuration Update
+## 2. Model Optimization Framework
+
+We have implemented a comprehensive Model Optimization Framework that improves model routing decisions, tunes parameters dynamically on the fly, manages context windows safely, and ensures fault-tolerant provider recovery.
+
+### Key Optimization Components
+* **Dynamic Context-Aware Parameter Tuning (`server/services/smartModelRouterService.js`):**
+  * Analyzes the query syntax for specific domain signals (e.g. code keywords, mathematical syntax).
+  * Automatically forces a highly deterministic low temperature (`0.2`) for math/code tasks to ensure precision.
+  * Adjusts `temperature` and `maxOutputTokens` dynamically (e.g. up to `8192` tokens and `0.2` temperature for deep research/reasoning modes).
+* **Hybrid Quality-Cost Routing:**
+  * Even when local SLMs/Ollama are active to minimize cost, the router will automatically pivot to more capable cloud models (Groq Llama 3.3 70B or Gemini 2.0 Flash) for high-complexity queries (score `>= 75`), preventing output quality degradation.
+* **Automatic Context Window Management & History Truncation:**
+  * Prevents API crashes (HTTP 400/context overflow) by dynamically checking the total character/token length of the request.
+  * Safely truncates the oldest history messages first while ensuring the developer/system message and the current query are always preserved.
+* **Resilient Provider Fallback & Health-Checks (`server/services/llmFallbackService.js`):**
+  * Fixed syntax errors, duplicate variable declarations, and duplicate switch cases to ensure the fallback engine works correctly across all providers (Gemini, Groq, SGLang, Ollama).
+
+---
+
+## 3. EE Syllabi Pipeline & Startup Configuration Update
 
 This section describes the changes introduced in the `ee-syllabi-generator` branch, the architecture of the new Electrical Engineering (EE) syllabi pipeline, and the test cases/verification steps for the testing team.
 
-### 2.1. Summary of Changes
+### 3.1. Summary of Changes
 
 ### A. Dynamic Startup Configuration (`startup.sh`)
 * **Before:** `PROJECT_DIR` was hardcoded to `/run/media/komeshbathula/New Volume1/NIT Projects/iMentor-Main`.
@@ -52,7 +71,7 @@ This section describes the changes introduced in the `ee-syllabi-generator` bran
 
 ---
 
-### 2.2. Ingestion Architecture Flow
+### 3.2. Ingestion Architecture Flow
 
 ```mermaid
 graph TD
@@ -66,7 +85,7 @@ graph TD
 
 ---
 
-### 2.3. Testing Team Instructions
+### 3.3. Testing Team Instructions
 
 Please follow the verification steps below to test the dynamic path configuration, syllabus generation, and STN ingestion.
 
