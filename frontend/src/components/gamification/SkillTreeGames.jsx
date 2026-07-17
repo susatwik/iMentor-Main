@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Animate from '../core/Animate.jsx';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const SkillTreeGames = () => {
     const navigate = useNavigate();
@@ -18,6 +19,7 @@ const SkillTreeGames = () => {
     const [creditsHistory, setCreditsHistory] = useState([]);
     const [historyOpen, setHistoryOpen] = useState(false);
     const [csvLoading, setCsvLoading] = useState(false);
+    const [courseCatalog, setCourseCatalog] = useState([]);
 
     // Check if we just created a new game from assessment
     const newGameData = location.state?.newGame;
@@ -28,6 +30,23 @@ const SkillTreeGames = () => {
     useEffect(() => {
         fetchGames();
         fetchProfileCredits();
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        api.getSubjects()
+            .then(data => {
+                if (cancelled) return;
+                setCourseCatalog(Array.isArray(data?.subjects) ? data.subjects : []);
+            })
+            .catch(() => {
+                // Presentation-only fallback: if the catalog is unavailable, we keep using the raw game topic.
+            });
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
@@ -187,6 +206,61 @@ const SkillTreeGames = () => {
             .reduce((sum, e) => sum + (e.amount || 0), 0);
     };
 
+    const courseLookup = useMemo(() => {
+        const byCode = new Map();
+        const byName = new Map();
+
+        courseCatalog.forEach(course => {
+            const code = String(course?.code || '').trim().toLowerCase();
+            const name = String(course?.name || '').trim().toLowerCase();
+
+            if (code && !byCode.has(code)) {
+                byCode.set(code, course);
+            }
+
+            if (name && !byName.has(name)) {
+                byName.set(name, course);
+            }
+        });
+
+        return { byCode, byName };
+    }, [courseCatalog]);
+
+    const getCourseCardMeta = (game) => {
+        const rawTopic = String(game?.topic || '').trim();
+        const directTitle = [
+            game?.courseTitle,
+            game?.courseName,
+            game?.title,
+            game?.displayName,
+        ].map(value => String(value || '').trim()).find(Boolean);
+
+        const directCode = [
+            game?.courseCode,
+            game?.code,
+        ].map(value => String(value || '').trim()).find(Boolean);
+
+        const matchedByCode = rawTopic ? courseLookup.byCode.get(rawTopic.toLowerCase()) : null;
+        const matchedByName = rawTopic ? courseLookup.byName.get(rawTopic.toLowerCase()) : null;
+        const matchedCourse = matchedByCode || matchedByName || null;
+
+        const displayTitle = directTitle
+            || matchedCourse?.name
+            || (rawTopic ? formatTopic(rawTopic) : '')
+            || directCode
+            || 'Skill Tree';
+
+        const courseCode = directCode
+            || matchedCourse?.code
+            || (rawTopic && rawTopic !== displayTitle ? rawTopic : '')
+            || (displayTitle !== rawTopic ? rawTopic : '');
+
+        return {
+            displayTitle,
+            courseCode,
+        };
+    };
+
     if (csvLoading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
@@ -274,6 +348,7 @@ const SkillTreeGames = () => {
                         const maxStars = getMaxStars(game);
                         const completedLevels = game.levels?.filter(l => l.status === 'completed').length || 0;
                         const totalLevels = game.levels?.length || 0;
+                        const { displayTitle, courseCode } = getCourseCardMeta(game);
 
                         return (
                             <Animate
@@ -303,9 +378,14 @@ const SkillTreeGames = () => {
 
                                 {/* Card Content */}
                                 <div className="p-5">
-                                    <h3 className="text-xl font-bold text-white mb-1 truncate capitalize tracking-tight">
-                                        {formatTopic(game.topic)}
+                                    <h3 className="text-xl font-bold text-white mb-1 truncate tracking-tight">
+                                        {displayTitle}
                                     </h3>
+                                    {courseCode && courseCode !== displayTitle && (
+                                        <p className="text-[11px] text-zinc-500 mb-1 font-mono uppercase tracking-[0.18em]">
+                                            {courseCode}
+                                        </p>
+                                    )}
                                     <p className="text-sm text-zinc-500 mb-4 flex items-center gap-2 font-mono">
                                         <Clock className="w-3 h-3" />
                                         {new Date(game.updatedAt || game.createdAt).toLocaleDateString()}
