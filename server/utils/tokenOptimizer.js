@@ -24,32 +24,86 @@ const ABBREVIATIONS = {
 };
 
 /**
+ * Helper to preserve case when expanding abbreviations.
+ */
+function getCasePreservedExpansion(match, full) {
+    const letters = match.replace(/[^a-zA-Z]/g, '');
+    if (letters.length === 0) return full;
+
+    if (letters === letters.toUpperCase()) {
+        // If it's a single letter (e.g., "W/" -> "With"), default to capitalized
+        if (letters.length === 1) {
+            return full.charAt(0).toUpperCase() + full.slice(1).toLowerCase();
+        }
+        return full.toUpperCase();
+    }
+    if (letters[0] === letters[0].toUpperCase()) {
+        return full.charAt(0).toUpperCase() + full.slice(1).toLowerCase();
+    }
+    return full.toLowerCase();
+}
+
+/**
  * Expand abbreviated text to its full form, preserving code blocks.
  */
 function expandText(text) {
     if (!text || typeof text !== 'string') return text;
     let result = text;
 
-    // Expand w/o first, then w/ using negative lookahead to prevent false match inside w/o
-    result = result.replace(/\bw\/o\b/g, 'without');
-    result = result.replace(/\bw\/(?!\w)/g, 'with');
+    // Expand w/o and w/ preserving case
+    result = result.replace(/\bw\/o\b/gi, (match) => getCasePreservedExpansion(match, 'without'));
+    result = result.replace(/\bw\/(?!\w)/gi, (match) => getCasePreservedExpansion(match, 'with'));
 
-    // For other abbreviations, use a word-boundary regex replacement
+    // For other abbreviations, use a word-boundary regex replacement preserving case
     for (const [abbr, full] of Object.entries(ABBREVIATIONS)) {
         if (abbr === 'w/' || abbr === 'w/o') continue;
-        const regex = new RegExp(`\\b${abbr}\\b`, 'g');
-        result = result.replace(regex, full);
+        const regex = new RegExp(`\\b${abbr}\\b`, 'gi');
+        result = result.replace(regex, (match) => getCasePreservedExpansion(match, full));
     }
 
     return result;
 }
 
 /**
+ * Helper to recursively traverse and expand JSON string values only, leaving keys intact.
+ */
+function expandJsonValues(obj) {
+    if (typeof obj === 'string') {
+        return expandText(obj);
+    }
+    if (Array.isArray(obj)) {
+        return obj.map(item => expandJsonValues(item));
+    }
+    if (obj !== null && typeof obj === 'object') {
+        const newObj = {};
+        for (const [key, value] of Object.entries(obj)) {
+            newObj[key] = expandJsonValues(value);
+        }
+        return newObj;
+    }
+    return obj;
+}
+
+/**
  * Safely expands the outgoing response text by protecting code blocks
  * and only replacing abbreviations outside of code blocks.
+ * Also automatically parses raw JSON blocks to only expand JSON string values,
+ * ensuring no structural JSON keys are broken.
  */
 function expandOutgoingResponse(responseText) {
     if (!responseText || typeof responseText !== 'string') return responseText;
+
+    const trimmed = responseText.trim();
+    // Check if the entire response is a JSON block
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            const expandedObj = expandJsonValues(parsed);
+            return JSON.stringify(expandedObj);
+        } catch (e) {
+            // Not valid JSON or failed to parse, fall back to standard code block split
+        }
+    }
 
     const parts = responseText.split('```');
     for (let i = 0; i < parts.length; i++) {
@@ -186,19 +240,30 @@ class StreamingTokenExpander {
                     textToProcess = this.buffer.substring(0, index);
                     remaining = this.buffer.substring(index);
                 } else {
+                    // Check if buffer ends with backticks that could form a code block marker
+                    let backtickLen = 0;
+                    if (this.buffer.endsWith('``')) {
+                        backtickLen = 2;
+                    } else if (this.buffer.endsWith('`')) {
+                        backtickLen = 1;
+                    }
+
+                    // Temporarily look at buffer without trailing backticks
+                    const bufferToSearch = backtickLen > 0 ? this.buffer.substring(0, this.buffer.length - backtickLen) : this.buffer;
+
                     // Find the last word separator (whitespace or common punctuation)
                     const lastSep = Math.max(
-                        this.buffer.lastIndexOf(' '),
-                        this.buffer.lastIndexOf('\n'),
-                        this.buffer.lastIndexOf('\t'),
-                        this.buffer.lastIndexOf('.'),
-                        this.buffer.lastIndexOf(','),
-                        this.buffer.lastIndexOf('!'),
-                        this.buffer.lastIndexOf('?'),
-                        this.buffer.lastIndexOf(';'),
-                        this.buffer.lastIndexOf(':'),
-                        this.buffer.lastIndexOf('-'),
-                        this.buffer.lastIndexOf('/')
+                        bufferToSearch.lastIndexOf(' '),
+                        bufferToSearch.lastIndexOf('\n'),
+                        bufferToSearch.lastIndexOf('\t'),
+                        bufferToSearch.lastIndexOf('.'),
+                        bufferToSearch.lastIndexOf(','),
+                        bufferToSearch.lastIndexOf('!'),
+                        bufferToSearch.lastIndexOf('?'),
+                        bufferToSearch.lastIndexOf(';'),
+                        bufferToSearch.lastIndexOf(':'),
+                        bufferToSearch.lastIndexOf('-'),
+                        bufferToSearch.lastIndexOf('/')
                     );
 
                     if (lastSep !== -1) {

@@ -59,7 +59,36 @@ function testExpandOutgoingResponse() {
 }
 
 // -------------------------------------------------------------
-// Test 3: Streaming Token Expander
+// Test 3: Case-Preserving Expansion
+// -------------------------------------------------------------
+function testCasePreservation() {
+    console.log('Running testCasePreservation...');
+
+    const text = "Esp check the DB config. MSG received, w/o issues. W/O delay, W/ info.";
+    const expected = "Especially check the DATABASE configuration. MESSAGE received, without issues. WITHOUT delay, With information.";
+
+    const actual = tokenOptimizer.expandOutgoingResponse(text);
+    assert.strictEqual(actual, expected);
+    console.log('✓ testCasePreservation passed.');
+}
+
+// -------------------------------------------------------------
+// Test 4: JSON Key Protection
+// -------------------------------------------------------------
+function testJsonKeyProtection() {
+    console.log('Running testJsonKeyProtection...');
+
+    const jsonResponse = '{"status":"success","msg":"everything is w/o errors","config":{"db":"mongo","param":10}}';
+    const expectedJson = '{"status":"success","msg":"everything is without errors","config":{"db":"mongo","param":10}}';
+
+    const actual = tokenOptimizer.expandOutgoingResponse(jsonResponse);
+    // Parse both to ensure semantically identical JSON objects to ignore ordering differences
+    assert.deepStrictEqual(JSON.parse(actual), JSON.parse(expectedJson));
+    console.log('✓ testJsonKeyProtection passed.');
+}
+
+// -------------------------------------------------------------
+// Test 5: Streaming Token Expander & Split Backticks
 // -------------------------------------------------------------
 function testStreamingTokenExpander() {
     console.log('Running testStreamingTokenExpander...');
@@ -76,9 +105,11 @@ function testStreamingTokenExpander() {
     expander.processChunk("/");
     expander.processChunk(" the doc. ");
     
-    // Start code block
-    expander.processChunk("Here is the code:\n```javascript\ncon");
-    expander.processChunk("st db = 'test';\n```\nNow a finishing ");
+    // Simulate split code block marker
+    expander.processChunk("Here is the code:\n``");
+    expander.processChunk("`javascript\ncon");
+    expander.processChunk("st db = 'test';\n``");
+    expander.processChunk("`\nNow a finishing ");
     expander.processChunk("msg.");
     
     expander.flush();
@@ -94,8 +125,10 @@ function testStreamingTokenExpander() {
 try {
     testMinifyPrompt();
     testExpandOutgoingResponse();
+    testCasePreservation();
+    testJsonKeyProtection();
     testStreamingTokenExpander();
-    console.log('\n=== All Token Optimizer Tests Passed Successfully! ===');
+    console.log('\n=== All Hardened Token Optimizer Tests Passed Successfully! ===');
 } catch (error) {
     console.error('\n❌ Test failed:');
     console.error(error);
